@@ -1,0 +1,17 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+.vite/
+
+# Environment / secrets — never commit an API key
+.env
+.env.*
+!.env.example
+
+# Agent tooling: keep committed skills, ignore local machine settings
+.claude/settings.local.json
+
+# OS
+.DS_Store

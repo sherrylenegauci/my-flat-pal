@@ -115,6 +115,8 @@ describe('what each row shows', () => {
 
     const row = within(await screen.findByRole('listitem'))
     expect(row.getByText(/never done/i)).toBeTruthy()
-    expect(row.queryByText(/due/i)).toBeNull()
+    // No date of any kind. `queryByText(/due/i)` used to stand here and could
+    // never match the rendered "Next 14 June 2027", so it passed regardless.
+    expect(screen.getByRole('listitem').textContent).not.toMatch(/\d{4}/)
   })
 })

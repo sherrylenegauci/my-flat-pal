@@ -94,3 +94,47 @@ describe('useCurrentDate', () => {
     expect(removeSpy).toHaveBeenCalledWith('visibilitychange', expect.any(Function))
   })
 })
+
+/**
+ * SC-003 through the app, not through a probe.
+ *
+ * The tests above exercise `useCurrentDate` via a bespoke `Probe` component, and
+ * `tests/domain/status.test.ts` exercises the classifier. Nothing composed them:
+ * a regression that disconnected the hook from the schedule would have passed
+ * the entire suite. SC-003's actual wording is "with no user action required to
+ * refresh them", and that is what this asserts.
+ */
+describe('SC-003 — the schedule re-classifies itself at midnight', () => {
+  it('turns a due job into an overdue one with no user interaction', async () => {
+    const { App } = await import('../../src/ui/App')
+    const { save } = await import('../../src/storage/repository')
+    const { emptyDocument } = await import('../../src/storage/schema')
+
+    vi.setSystemTime(new Date(2026, 7, 8, 23, 59, 50))
+    save({
+      ...emptyDocument(),
+      items: [
+        {
+          id: 'itm_1',
+          name: 'Smoke alarms',
+          interval: { count: 1, unit: 'year' },
+          createdAt: '2025-08-08',
+          completions: [
+            { id: 'c1', completedOn: '2025-08-08', recordedAt: '2025-08-08T09:00:00.000Z' },
+          ],
+        },
+      ],
+    })
+
+    render(<App />)
+    expect(await screen.findByText(/due today/i)).toBeTruthy()
+
+    // Nothing is clicked. Nothing is reloaded. The day simply turns.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(15_000)
+    })
+
+    expect(await screen.findByText(/overdue/i)).toBeTruthy()
+    expect(screen.queryByText(/due today/i)).toBeNull()
+  })
+})

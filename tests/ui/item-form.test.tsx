@@ -50,8 +50,15 @@ describe('adding a job', () => {
     expect(screen.getByText(/14 June 2027|2027-06-14/)).toBeTruthy()
   })
 
-  it('accepts every interval unit', async () => {
+  it('accepts every interval unit, and each one changes the due date', async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    // Last done 1 Aug 2026, interval of 2 — one distinct due date per unit.
+    const expectedDue: Record<string, string> = {
+      day: '3 August 2026',
+      week: '15 August 2026',
+      month: '1 October 2026',
+      year: '1 August 2028',
+    }
 
     for (const unit of ['day', 'week', 'month', 'year']) {
       localStorage.clear()
@@ -61,7 +68,11 @@ describe('adding a job', () => {
       await fillIn(user, { name: `Every ${unit}`, count: '2', unit, lastDone: '2026-08-01' })
       await user.click(screen.getByRole('button', { name: /save|add/i }))
 
-      expect(await screen.findByText(`Every ${unit}`)).toBeTruthy()
+      await screen.findByText(`Every ${unit}`)
+      // Assert the interval actually round-tripped. Checking only that the name
+      // appeared would pass even if the unit were discarded and everything
+      // treated as annual.
+      expect(screen.getByRole('listitem').textContent).toContain(expectedDue[unit])
       unmount()
     }
   })
@@ -77,7 +88,14 @@ describe('adding a job', () => {
 
     expect(await screen.findByText('Boiler service')).toBeTruthy()
     expect(screen.getByText(/never done/i)).toBeTruthy()
-    expect(screen.queryByText(/next due/i)).toBeNull()
+
+    // Assert no date is rendered at all, rather than matching a phrase.
+    // The previous assertion was `queryByText(/next due/i)` — the row renders
+    // "Next 14 June 2027", which that regex never matches, so it passed whether
+    // or not a fabricated date was shown. FR-004a's whole point is that the app
+    // must not invent a service history, and nothing was guarding it.
+    const row = screen.getByRole('listitem')
+    expect(row.textContent).not.toMatch(/\d{4}/)
   })
 
   it('refuses an empty name, and says so against the field', async () => {

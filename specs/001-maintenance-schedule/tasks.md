@@ -39,7 +39,7 @@ the same handful of files.
 - [X] T003 Configure Vitest in `vite.config.ts`: no environment for `tests/domain/**` and `tests/storage/**`, jsdom for `tests/ui/**`
 - [X] T004 Create `tests/setup.ts` for RTL cleanup, and point `setupFiles` at it from `vite.config.ts` (depends on T003 — same config file)
 - [X] T005 [P] Add `tests/ui/axe-helper.ts` wrapping `axe-core` for structural scans of a rendered container
-- [X] T006 [P] Add `public/manifest.webmanifest` with name, `standalone` display, and `start_url`, plus `public/icons/` at the sizes iOS and Android require
+- [X] T006 [P] Generate the web manifest via `vite-plugin-pwa` (not a static `public/manifest.webmanifest` as originally worded — the plugin emits it to `dist/`) with name, `standalone` display, and `start_url`, plus `public/icons/` at the sizes iOS and Android require
 - [X] T007 Configure `vite-plugin-pwa` in `vite.config.ts` for precache generation and an update flow that cannot strand an installed user on a stale bundle (depends on T003, T004 — same config file)
 - [X] T008 [P] Define colour tokens in `src/ui/tokens.css`, auditing every foreground/background pair against WCAG 2.1 AA and recording measured ratios in a comment
 - [X] T009 [P] Define a visible focus style in `src/ui/focus.css`, meeting AA non-text contrast against every surface it appears on (Principle II — "a visible focus indicator at all times")

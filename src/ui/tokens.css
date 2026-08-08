@@ -1,12 +1,17 @@
 /**
- * Colour tokens (T008).
+ * Colour tokens.
  *
- * Every pair below is audited against WCAG 2.1 AA and the measured ratio is
+ * Every pair below is audited against WCAG 2.1 AA and its computed ratio is
  * recorded. Contrast cannot be checked automatically in jsdom — it computes no
  * layout and resolves no cascaded colour — so it is guaranteed here at source
  * and measured again per view in a real browser (T074).
  *
  * Required: 4.5:1 for body text, 3:1 for large text and interface components.
+ *
+ * **Every ratio below is computed.** An earlier revision recorded estimates and
+ * labelled them "measured"; all twelve were wrong, and the one error in the
+ * unsafe direction hid a genuine AA failure on the focus ring. If you change a
+ * colour, recompute — do not eyeball it.
  */
 
 :root {
@@ -17,11 +22,11 @@
   --border: #d3d3cd;
   --border-strong: #6b6b64;
 
-  /* Text
-     --text on --surface          → 15.9:1  ✅ AA body
-     --text on --surface-sunken   → 14.6:1  ✅ AA body
-     --text-muted on --surface    →  5.7:1  ✅ AA body
-     --text-muted on --surface-sunken → 5.2:1 ✅ AA body */
+  /* Text — computed, not estimated (see the note at the top of focus.css)
+     --text on --surface              → 17.44:1  ✅ AA body
+     --text on --surface-sunken       → 15.84:1  ✅ AA body
+     --text-muted on --surface        →  6.44:1  ✅ AA body
+     --text-muted on --surface-sunken →  5.85:1  ✅ AA body */
   --text: #1a1a17;
   --text-muted: #5f5f57;
 
@@ -30,11 +35,11 @@
      signal — status is always carried by words as well (SC-004 colour
      independence).
 
-     --overdue-text  on --surface →  5.9:1  ✅ AA body
-     --due-text      on --surface →  5.1:1  ✅ AA body
-     --ok-text       on --surface →  4.8:1  ✅ AA body
-     --overdue-edge  on --surface →  3.4:1  ✅ AA non-text
-     --due-edge      on --surface →  3.1:1  ✅ AA non-text */
+     --overdue-text  on --surface →  7.46:1  ✅ AA body
+     --due-text      on --surface →  6.39:1  ✅ AA body
+     --ok-text       on --surface →  6.37:1  ✅ AA body
+     --overdue-edge  on --surface →  5.27:1  ✅ AA non-text
+     --due-edge      on --surface →  4.17:1  ✅ AA non-text */
   --overdue-text: #a3231b;
   --overdue-edge: #c8342b;
   --overdue-wash: #fdf0ef;
@@ -48,14 +53,16 @@
 
   /* Never-done reads as "needs attention" but not as an error — it is not the
      user's fault the history is unknown.
-     --unknown-text on --surface → 5.4:1 ✅ AA body */
+     --unknown-text on --surface → 7.80:1 ✅ AA body
+     --unknown-edge on --surface → 4.61:1 ✅ AA non-text */
   --unknown-text: #4a4f7a;
   --unknown-edge: #6b71a8;
   --unknown-wash: #f1f2f8;
 
   /* Interactive
-     --accent-text on --surface        → 6.1:1 ✅ AA body
-     --surface on --accent             → 5.9:1 ✅ AA body (button label) */
+     --accent-text on --surface → 6.96:1 ✅ AA body
+     #ffffff on --accent        → 6.88:1 ✅ AA body (button label)
+     --border-strong on --surface → 5.37:1 ✅ AA non-text */
   --accent: #2f5d8a;
   --accent-text: #275d8a;
   --accent-hover: #24486b;

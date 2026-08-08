@@ -41,13 +41,22 @@
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
 Gates derived from the project constitution (`.specify/memory/constitution.md`, v1.2.2).
-Mark each PASS or FAIL. Any FAIL must be justified in Complexity Tracking below.
+Mark each PASS, FAIL, or PLANNED. Any FAIL must be justified in Complexity Tracking below.
+
+**Use PLANNED, not PASS, for any gate whose test is a completed verification.** A plan cannot
+truthfully claim something was "verified on a real device" before code exists. Name the task that
+will discharge it. A gate marked PASS is a statement that it already holds.
+
+**Record violations as violations.** Principle I offers no category for a SHOULD you overrode and
+would rather not call a violation — a justified override is still a violation, and it belongs in
+Complexity Tracking. Listing one there while the section says "no violations" is how a gate reads
+PASS when it has not earned it.
 
 | # | Gate | Constitution | Status |
 |---|------|--------------|--------|
-| 1 | Every new dependency is named and justified; no abstraction introduced before a second concrete use case | I. Simplicity & Minimal Dependencies | [PASS/FAIL] |
-| 2 | UI designed at 375px first; 44x44px touch targets; semantic HTML, full keyboard operation, visible focus, WCAG 2.1 AA contrast planned | II. Accessibility & Mobile-First | [PASS/FAIL] |
-| 2b | Works installed: standalone-window navigation (no reliance on browser back/URL bar), safe-area insets respected, verified on a real device | II + Technology Constraints — PWA | [PASS/FAIL] |
+| 1 | Every new dependency is named and justified; **a dependency used at fewer than three non-trivial call sites SHOULD be local code instead**; no abstraction introduced before a second concrete use case; **every violation of any of these recorded in Complexity Tracking below** | I. Simplicity & Minimal Dependencies | [PASS/FAIL] |
+| 2 | UI designed at 375px first; 44x44px touch targets; semantic HTML; full keyboard operation with a visible focus indicator; **text alternatives on meaningful images and icons**; WCAG 2.1 AA contrast; **verified per view before the feature is complete, not deferred to polish** | II. Accessibility & Mobile-First | [PASS/FAIL/PLANNED] |
+| 2b | Works installed: standalone-window navigation (no reliance on browser back/URL bar), safe-area insets respected, verified on a real device | II + Technology Constraints — PWA | [PASS/FAIL/PLANNED] |
 | 3 | Tests precede implementation for every behaviour; each user story has a test covering its acceptance scenarios | III. Test-First (NON-NEGOTIABLE) | [PASS/FAIL] |
 | 4 | Remains a static-deployable React/Vite SPA; any external or AI-backed service sits behind one interface and is not required for maintenance tracking to work | Technology Constraints | [PASS/FAIL] |
 | 5 | No secrets committed or embedded in the client bundle | Technology Constraints | [PASS/FAIL] |

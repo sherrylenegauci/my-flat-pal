@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "revision": 3,
+  "items": [
+    {
+      "id": "itm_fixture001",
+      "name": "Boiler service",
+      "interval": { "count": 1, "unit": "year" },
+      "createdAt": "2026-01-15",
+      "completions": [
+        {
+          "id": "cmp_fixture001",
+          "completedOn": "2026-06-14",
+          "recordedAt": "2026-06-14T09:21:44.512Z"
+        }
+      ]
+    },
+    {
+      "id": "itm_fixture002",
+      "name": "Smoke alarm test",
+      "interval": { "count": 3, "unit": "month" },
+      "createdAt": "2026-01-15",
+      "completions": []
+    }
+  ]
+}

@@ -13,10 +13,10 @@ description: "Task list for maintenance schedule implementation"
 has test tasks, they are listed before the implementation they cover, and each MUST be observed
 failing before that implementation begins.
 
-> **Note on the Spec Kit default**: `.claude/skills/speckit-tasks/SKILL.md` still instructs that
-> test tasks are optional. That instruction conflicts with Principle III, and the constitution's
-> Governance section requires the conflicting artifact to be corrected rather than worked around.
-> Correcting it is tracked in Phase 6.
+> **Corrected 2026-08-08 (T080)**: `.claude/skills/speckit-tasks/SKILL.md` used to instruct that
+> test tasks were optional, and each generated `tasks.md` worked around it in prose. The
+> constitution's Governance section requires the conflicting artifact to be fixed instead, so the
+> skill now says tests are mandatory. Future task lists inherit that without needing this note.
 
 **Test file layout**: test files are split by behaviour rather than by view, so that tasks marked
 `[P]` genuinely touch different files. A previous revision marked 21 tasks parallel that all wrote
@@ -34,15 +34,15 @@ the same handful of files.
 
 ## Phase 1: Setup (Shared Infrastructure)
 
-- [ ] T001 Scaffold a Vite + React + TypeScript project at the repository root per plan.md § Project Structure, creating `src/`, `public/`, `tests/`, and `vite.config.ts`
-- [ ] T002 Add scripts to `package.json`: `dev`, `build`, `preview`, `test`, `test:run`
-- [ ] T003 Configure Vitest in `vite.config.ts`: no environment for `tests/domain/**` and `tests/storage/**`, jsdom for `tests/ui/**`
-- [ ] T004 Create `tests/setup.ts` for RTL cleanup, and point `setupFiles` at it from `vite.config.ts` (depends on T003 — same config file)
-- [ ] T005 [P] Add `tests/ui/axe-helper.ts` wrapping `axe-core` for structural scans of a rendered container
-- [ ] T006 [P] Add `public/manifest.webmanifest` with name, `standalone` display, and `start_url`, plus `public/icons/` at the sizes iOS and Android require
-- [ ] T007 Configure `vite-plugin-pwa` in `vite.config.ts` for precache generation and an update flow that cannot strand an installed user on a stale bundle (depends on T003, T004 — same config file)
-- [ ] T008 [P] Define colour tokens in `src/ui/tokens.css`, auditing every foreground/background pair against WCAG 2.1 AA and recording measured ratios in a comment
-- [ ] T009 [P] Define a visible focus style in `src/ui/focus.css`, meeting AA non-text contrast against every surface it appears on (Principle II — "a visible focus indicator at all times")
+- [X] T001 Scaffold a Vite + React + TypeScript project at the repository root per plan.md § Project Structure, creating `src/`, `public/`, `tests/`, and `vite.config.ts`
+- [X] T002 Add scripts to `package.json`: `dev`, `build`, `preview`, `test`, `test:run`
+- [X] T003 Configure Vitest in `vite.config.ts`: no environment for `tests/domain/**` and `tests/storage/**`, jsdom for `tests/ui/**`
+- [X] T004 Create `tests/setup.ts` for RTL cleanup, and point `setupFiles` at it from `vite.config.ts` (depends on T003 — same config file)
+- [X] T005 [P] Add `tests/ui/axe-helper.ts` wrapping `axe-core` for structural scans of a rendered container
+- [X] T006 [P] Generate the web manifest via `vite-plugin-pwa` (not a static `public/manifest.webmanifest` as originally worded — the plugin emits it to `dist/`) with name, `standalone` display, and `start_url`, plus `public/icons/` at the sizes iOS and Android require
+- [X] T007 Configure `vite-plugin-pwa` in `vite.config.ts` for precache generation and an update flow that cannot strand an installed user on a stale bundle (depends on T003, T004 — same config file)
+- [X] T008 [P] Define colour tokens in `src/ui/tokens.css`, auditing every foreground/background pair against WCAG 2.1 AA and recording measured ratios in a comment
+- [X] T009 [P] Define a visible focus style in `src/ui/focus.css`, meeting AA non-text contrast against every surface it appears on (Principle II — "a visible focus indicator at all times")
 
 **Checkpoint**: `npm run dev` serves an empty shell; `npm run test:run` runs and reports zero tests.
 
@@ -54,45 +54,45 @@ the same handful of files.
 
 ### Verification before implementation
 
-- [ ] T010 Verify Storage API behaviour on installed PWAs on current iOS and Android — whether `navigator.storage.persist()` exists, is auto-granted, or prompts, **and whether a grant actually protects `localStorage` against WebKit's script-writable-storage eviction policy**. Record in plan.md § Decisions R3, replacing the ⚠️. **Gates T031–T033.**
-- [ ] T011 Verify that an installed standalone PWA on **iOS** has no system back affordance, and decide the in-app back control this implies. Record in plan.md § Decisions R4, which currently argues only from Android. **Gates T041.**
+- [X] T010 Verify Storage API behaviour on installed PWAs on current iOS and Android — whether `navigator.storage.persist()` exists, is auto-granted, or prompts, **and whether a grant actually protects `localStorage` against WebKit's script-writable-storage eviction policy**. Record in plan.md § Decisions R3, replacing the ⚠️. **Gates T031–T033.**
+- [X] T011 Verify that an installed standalone PWA on **iOS** has no system back affordance, and decide the in-app back control this implies. Record in plan.md § Decisions R4, which currently argues only from Android. **Gates T041.**
 
 ### Domain layer — pure functions, no React, no browser APIs
 
-- [ ] T012 [P] Define `MaintenanceItem`, `Completion`, `Interval`, `ItemStatus` in `src/domain/types.ts` per plan.md § Data model
-- [ ] T013 [P] Failing tests in `tests/domain/interval.test.ts`: day/week/month/year addition; month-length clamping (31 Mar + 1 month → 30 Apr); 29 Feb + 1 year → 28 Feb; **day and week arithmetic across a DST boundary landing on the correct calendar day**
-- [ ] T014 Implement `addInterval` in `src/domain/interval.ts` to pass T013 (depends on T012)
-- [ ] T015 [P] Failing tests in `tests/domain/next-due.test.ts`: next due anchored to the completion date (FR-013); completing **as of today** never leaves an item immediately due (FR-013a); a **backdated** completion older than one interval legitimately leaves it overdue (FR-013a); completing **early** moves the due date earlier
-- [ ] T016 [P] Failing tests in `tests/domain/status.test.ts`: never-done, overdue, due, not-due (FR-004, FR-004a); a three-years-overdue annual item yields exactly one overdue status (FR-012); an item due today is overdue when evaluated against tomorrow (FR-005 classification half)
-- [ ] T017 [P] Failing tests in `tests/domain/ordering.test.ts`: attention items first; **where `due` sorts** (resolve spec.md FR-004 vs plan.md § Data model, which disagree on whether `due` is an attention item — decide, then update whichever document is wrong); overdue ordered by how long overdue; not-due soonest first; **never-done ordered by `createdAt`**
-- [ ] T018 [P] Failing tests in `tests/domain/undo.test.ts`: undo removes the highest `recordedAt`, not the latest `completedOn`; undoing an item's only completion returns it to never-done
-- [ ] T019 Implement `nextDueOn`, `classifyStatus`, `orderForDisplay`, `completeItem`, `undoCompletion` in `src/domain/schedule.ts` to pass T015–T018
-- [ ] T020 [P] Failing tests in `tests/domain/ids.test.ts`: generated ids are unique across a large batch and are never reused after a deletion
-- [ ] T021 Implement id generation in `src/domain/ids.ts` to pass T020, and set `createdAt` on item creation (plan.md § Data model requires both; neither had a task)
+- [X] T012 [P] Define `MaintenanceItem`, `Completion`, `Interval`, `ItemStatus` in `src/domain/types.ts` per plan.md § Data model
+- [X] T013 [P] Failing tests in `tests/domain/interval.test.ts`: day/week/month/year addition; month-length clamping (31 Mar + 1 month → 30 Apr); 29 Feb + 1 year → 28 Feb; **day and week arithmetic across a DST boundary landing on the correct calendar day**
+- [X] T014 Implement `addInterval` in `src/domain/interval.ts` to pass T013 (depends on T012)
+- [X] T015 [P] Failing tests in `tests/domain/next-due.test.ts`: next due anchored to the completion date (FR-013); completing **as of today** never leaves an item immediately due (FR-013a); a **backdated** completion older than one interval legitimately leaves it overdue (FR-013a); completing **early** moves the due date earlier
+- [X] T016 [P] Failing tests in `tests/domain/status.test.ts`: never-done, overdue, due, not-due (FR-004, FR-004a); a three-years-overdue annual item yields exactly one overdue status (FR-012); an item due today is overdue when evaluated against tomorrow (FR-005 classification half)
+- [X] T017 [P] Failing tests in `tests/domain/ordering.test.ts`: attention items first; **where `due` sorts** (resolve spec.md FR-004 vs plan.md § Data model, which disagree on whether `due` is an attention item — decide, then update whichever document is wrong); overdue ordered by how long overdue; not-due soonest first; **never-done ordered by `createdAt`**
+- [X] T018 [P] Failing tests in `tests/domain/undo.test.ts`: undo removes the highest `recordedAt`, not the latest `completedOn`; undoing an item's only completion returns it to never-done
+- [X] T019 Implement `nextDueOn`, `classifyStatus`, `orderForDisplay`, `completeItem`, `undoCompletion` in `src/domain/schedule.ts` to pass T015–T018
+- [X] T020 [P] Failing tests in `tests/domain/ids.test.ts`: generated ids are unique across a large batch and are never reused after a deletion
+- [X] T021 Implement id generation in `src/domain/ids.ts` to pass T020, and set `createdAt` on item creation (plan.md § Data model requires both; neither had a task)
 
 ### Storage layer — the only module that touches localStorage
 
-- [ ] T022 [P] Define the persisted shape, `SCHEMA_VERSION = 1`, and the `revision` field in `src/storage/schema.ts` per plan.md § Storage contract
-- [ ] T023 [P] Commit a v1 fixture at `tests/storage/fixtures/v1.json`
-- [ ] T024 [P] Failing tests in `tests/storage/repository.test.ts`: save/load round trip; absent key loads as an empty schedule, not an error; **every mutation path — create, update, delete, complete, undo — persists** (the previous revision wired persistence for creation only)
-- [ ] T025 [P] Failing tests in `tests/storage/concurrency.test.ts`: a write whose `revision` no longer matches the stored document **aborts and re-applies** rather than clobbering; `revision` increments on every successful write (plan.md § Storage contract)
-- [ ] T026 [P] Failing tests in `tests/storage/recovery.test.ts`: corrupted JSON preserves the original under a recovery key before starting empty; a **newer** `schemaVersion` refuses to load and puts the session in read-only mode so no downgraded write can occur
-- [ ] T027 Failing test in `tests/storage/migrate.test.ts`: the migration chain runs against the v1 fixture and is the identity at v1 (depends on T023, which creates that fixture — T023 previously existed with nothing consuming it)
-- [ ] T028 Implement `src/storage/repository.ts` with the full CRUD write path and compare-and-swap on `revision`, to pass T024–T025
-- [ ] T029 Implement `src/storage/migrate.ts` and the recovery/read-only behaviour to pass T026–T027
-- [ ] T030 Subscribe to the `storage` event in `src/storage/repository.ts` so a second same-origin context refreshes instead of holding stale state
+- [X] T022 [P] Define the persisted shape, `SCHEMA_VERSION = 1`, and the `revision` field in `src/storage/schema.ts` per plan.md § Storage contract
+- [X] T023 [P] Commit a v1 fixture at `tests/storage/fixtures/v1.json`
+- [X] T024 [P] Failing tests in `tests/storage/repository.test.ts`: save/load round trip; absent key loads as an empty schedule, not an error; **every mutation path — create, update, delete, complete, undo — persists** (the previous revision wired persistence for creation only)
+- [X] T025 [P] Failing tests in `tests/storage/concurrency.test.ts`: a write whose `revision` no longer matches the stored document **aborts and re-applies** rather than clobbering; `revision` increments on every successful write (plan.md § Storage contract)
+- [X] T026 [P] Failing tests in `tests/storage/recovery.test.ts`: corrupted JSON preserves the original under a recovery key before starting empty; a **newer** `schemaVersion` refuses to load and puts the session in read-only mode so no downgraded write can occur
+- [X] T027 Failing test in `tests/storage/migrate.test.ts`: the migration chain runs against the v1 fixture and is the identity at v1 (depends on T023, which creates that fixture — T023 previously existed with nothing consuming it)
+- [X] T028 Implement `src/storage/repository.ts` with the full CRUD write path and compare-and-swap on `revision`, to pass T024–T025
+- [X] T029 Implement `src/storage/migrate.ts` and the recovery/read-only behaviour to pass T026–T027
+- [X] T030 Subscribe to the `storage` event in `src/storage/repository.ts` so a second same-origin context refreshes instead of holding stale state
 
 ### Durability, date-change trigger, and shell
 
-- [ ] T031 [P] Failing tests in `tests/ui/persistence-notice.test.tsx`: when persistence is refused, a plain-language notice appears once; when granted, it does not (depends on T010)
-- [ ] T032 Implement the persistent-storage request in `src/storage/persistence.ts`, degrading gracefully where the API is absent (depends on T010)
-- [ ] T033 Implement the refusal notice to pass T031, using the shared notice surface (T037)
-- [ ] T034 [P] Failing tests in `tests/ui/date-change.test.tsx`: an item due today is re-classified as overdue **without any user interaction** when the date changes while the app is open — the case FR-005 and SC-003 actually require, which no previous task implemented
-- [ ] T035 Implement a date-change trigger in `src/ui/useCurrentDate.ts` — `visibilitychange` plus a timer to the next local midnight — to pass T034. **This is FR-005's implementing task; it did not previously exist**
-- [ ] T036 [P] Failing tests in `tests/ui/navigation.test.tsx`: from item detail, the back affordance returns to the list; from the list, it does not close the app. Asserted through rendered views, not by inspecting `history` calls
-- [ ] T037 Build the app shell in `src/ui/App.tsx`: layout, `env(safe-area-inset-*)`, navigation state, and a shared notice/error surface used by T033, the recovery notice, and the read-only banner
-- [ ] T038 Implement `src/ui/navigation.ts` using the History API to pass T036 (depends on T011's iOS finding)
-- [ ] T039 Register the service worker in `src/main.tsx` and wire the update prompt
+- [X] T031 [P] Failing tests in `tests/ui/persistence-notice.test.tsx`: when persistence is refused, a plain-language notice appears once; when granted, it does not (depends on T010)
+- [X] T032 Implement the persistent-storage request in `src/storage/persistence.ts`, degrading gracefully where the API is absent (depends on T010)
+- [X] T033 Implement the refusal notice to pass T031, using the shared notice surface (T037)
+- [X] T034 [P] Failing tests in `tests/ui/date-change.test.tsx`: an item due today is re-classified as overdue **without any user interaction** when the date changes while the app is open — the case FR-005 and SC-003 actually require, which no previous task implemented
+- [X] T035 Implement a date-change trigger in `src/ui/useCurrentDate.ts` — `visibilitychange` plus a timer to the next local midnight — to pass T034. **This is FR-005's implementing task; it did not previously exist**
+- [X] T036 [P] Failing tests in `tests/ui/navigation.test.tsx`: an **in-app back control** on every view below the schedule returns to the list; the Android back gesture (a `popstate`) does the same; from the list, neither closes the app. Asserted through rendered views, not by inspecting `history` calls
+- [X] T037 Build the app shell in `src/ui/App.tsx`: layout, `env(safe-area-inset-*)`, navigation state, and a shared notice/error surface used by T033, the recovery notice, and the read-only banner
+- [X] T038 Implement `src/ui/navigation.ts` using the History API to pass T036. **T011 settled the iOS question: there is no reliable system back gesture in a standalone iOS app, so an in-app back control is required, not optional.** History integration stays — it is what stops Android's back gesture closing the app — but it is no longer the only way back
+- [X] T039 Register the service worker in `src/main.tsx` and wire the update prompt
 
 **Checkpoint**: Domain and storage fully tested, every mutation persists, and status re-evaluates on date change. Stories can begin.
 
@@ -108,22 +108,22 @@ the same handful of files.
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T040 [P] [US1] Failing test in `tests/ui/empty-state.test.tsx`: with no items, an empty state explains the app's purpose and offers a way to add the first item (FR-011)
-- [ ] T041 [P] [US1] Failing tests in `tests/ui/item-form.test.tsx`: entering name, interval, and last-done saves the item and shows its next due date; **all four interval units are selectable and round-trip**; an item added with no last-done is never-done with no due date (FR-004a); validation blocks an empty name and a count below 1
-- [ ] T042 [P] [US1] Failing tests in `tests/ui/schedule-list.test.tsx`: attention items appear before not-due items (FR-004); the next due date is visible on the row **without opening the item** (US1 scenario 4); an overdue row is **visually distinguished** from a not-due row by more than colour (US1 scenario 3)
-- [ ] T043 [P] [US1] Failing test in `tests/ui/reload.test.tsx`: items and their status survive tearing down and remounting the app against the same storage — US1 scenario 5, which previously had only an assertion buried inside an implementation task
-- [ ] T044 [P] [US1] Failing test in `tests/ui/duplicate-names.test.tsx`: two items may share a name and remain independently addressable (spec Edge Case)
-- [ ] T045 [P] [US1] Failing test in `tests/ui/keyboard-us1.test.tsx`: the whole add-and-view flow is completable by keyboard alone (SC-005)
-- [ ] T046 [P] [US1] Failing test in `tests/ui/axe-us1.test.tsx`: axe structural scan of the schedule list and add form reports no violations
+- [X] T040 [P] [US1] Failing test in `tests/ui/empty-state.test.tsx`: with no items, an empty state explains the app's purpose and offers a way to add the first item (FR-011)
+- [X] T041 [P] [US1] Failing tests in `tests/ui/item-form.test.tsx`: entering name, interval, and last-done saves the item and shows its next due date; **all four interval units are selectable and round-trip**; an item added with no last-done is never-done with no due date (FR-004a); validation blocks an empty name and a count below 1
+- [X] T042 [P] [US1] Failing tests in `tests/ui/schedule-list.test.tsx`: attention items appear before not-due items (FR-004); the next due date is visible on the row **without opening the item** (US1 scenario 4); an overdue row is **visually distinguished** from a not-due row by more than colour (US1 scenario 3)
+- [X] T043 [P] [US1] Failing test in `tests/ui/reload.test.tsx`: items and their status survive tearing down and remounting the app against the same storage — US1 scenario 5, which previously had only an assertion buried inside an implementation task
+- [X] T044 [P] [US1] Failing test in `tests/ui/duplicate-names.test.tsx`: two items may share a name and remain independently addressable (spec Edge Case)
+- [X] T045 [P] [US1] Failing test in `tests/ui/keyboard-us1.test.tsx`: the whole add-and-view flow is completable by keyboard alone (SC-005)
+- [X] T046 [P] [US1] Failing test in `tests/ui/axe-us1.test.tsx`: axe structural scan of the schedule list and add form reports no violations
 
 ### Implementation for User Story 1
 
-- [ ] T047 [P] [US1] Build `src/ui/components/StatusBadge.tsx`, conveying status by text as well as colour
-- [ ] T048 [P] [US1] Build `src/ui/components/EmptyState.tsx`
-- [ ] T049 [US1] Build `src/ui/components/ItemRow.tsx` showing name, status, and next due date without a tap
-- [ ] T050 [US1] Build `src/ui/views/ScheduleView.tsx`, ordering via `orderForDisplay` and recomputing status from `useCurrentDate` (never a persisted status)
-- [ ] T051 [US1] Build `src/ui/views/ItemFormView.tsx` for creating an item, with 44x44px targets and inline validation
-- [ ] T052 [US1] Wire creation through the repository to pass T043
+- [X] T047 [P] [US1] Build `src/ui/components/StatusBadge.tsx`, conveying status by text as well as colour
+- [X] T048 [P] [US1] Build `src/ui/components/EmptyState.tsx`
+- [X] T049 [US1] Build `src/ui/components/ItemRow.tsx` showing name, status, and next due date without a tap
+- [X] T050 [US1] Build `src/ui/views/ScheduleView.tsx`, ordering via `orderForDisplay` and recomputing status from `useCurrentDate` (never a persisted status)
+- [X] T051 [US1] Build `src/ui/views/ItemFormView.tsx` for creating an item, with 44x44px targets, inline validation, and a visible back/cancel control (T011)
+- [X] T052 [US1] Wire creation through the repository to pass T043
 
 **Checkpoint**: **MVP — a usable app.**
 
@@ -146,7 +146,7 @@ the same handful of files.
 
 ### Implementation for User Story 2
 
-- [ ] T059 [US2] Build `src/ui/views/ItemDetailView.tsx` showing last-done and history
+- [ ] T059 [US2] Build `src/ui/views/ItemDetailView.tsx` showing last-done and history, with a visible back control to the schedule (T011)
 - [ ] T060 [US2] Add the mark-done action to `src/ui/components/ItemRow.tsx`, reachable in one tap
 - [ ] T061 [US2] Add the durable undo affordance to `src/ui/App.tsx`
 - [ ] T062 [US2] Wire completion and undo through the repository (write path already exists from T028)
@@ -180,19 +180,45 @@ the same handful of files.
 
 ## Phase 6: Polish, Verification & Governance
 
-- [ ] T070 [P] Run an axe structural scan across every view and fix violations
-- [ ] T071 [P] Verify no horizontal page scrolling at 375px and every touch target ≥ 44x44px
-- [ ] T072 [P] Verify status is distinguishable without colour
-- [ ] T073 **Verify visible focus on every interactive control in a real browser, measuring the focus indicator's contrast** — a bare Principle II MUST that no previous task covered anywhere
-- [ ] T074 Measure contrast **per view** in a real browser (DevTools/Lighthouse) against 4.5:1 body and 3:1 large/UI. A token-pair audit at setup does not establish per-view contrast, which is what the constitution's gate requires
+### Real-browser tier (Playwright)
+
+The third tier of the constitution's testing strategy, currently a manual checklist. Justified as
+a dependency in `plan.md` § Dependency budget. These run first, because T070–T074 below are
+their acceptance criteria — each one names the manual task it takes over.
+
+- [X] T085 Add `@playwright/test`, a `playwright.config.ts` pinned to Chromium and WebKit at a 375px iPhone viewport, an `e2e/` directory outside the Vitest projects, and an `npm run test:e2e` script. Vitest must not pick up `e2e/**` and Playwright must not pick up `tests/**`
+- [X] T086 [P] `e2e/accessibility.spec.ts` — run axe via `@axe-core/playwright` against every view in real rendering (**takes over T070**)
+- [X] T087 [P] `e2e/layout.spec.ts` — assert no horizontal document overflow at 375px and that every interactive control's bounding box is ≥ 44×44 CSS px (**takes over T071**). This needs real layout; jsdom returns zeros
+- [X] T088 [P] `e2e/focus-visibility.spec.ts` — tab through every control, assert a focus indicator is present and compute its contrast against the *resolved* background from `getComputedStyle` (**takes over T073**). This is the bare Principle II MUST that no tier has ever covered, and the check that would have caught the 2.69:1 ring
+- [X] T089 [P] `e2e/contrast.spec.ts` — walk the rendered text nodes per view and assert 4.5:1 body / 3:1 large and UI from resolved colours, and `e2e/colour-independence.spec.ts` asserting status is readable with colour suppressed (**takes over T072 and T074**)
+- [X] T090 Prove the new specs are non-vacuous by deliberate sabotage, as was done for the unit tests: break the focus ring, shrink a touch target, and confirm the relevant spec fails. A browser test that cannot fail is the exact defect the constitution names
+
+- [X] T091 **Fix the interval `<select>` being 25px tall in WebKit** — found by T087 on its first run. `app.css` set `min-height: var(--touch-target)`, but Safari's UA stylesheet wins on a natively-rendered dropdown and discards it, leaving the control at its 25px content height against Principle II's 44px floor. Chromium honours the rule and reports 44px, so no amount of Chromium testing could have surfaced this, and jsdom cannot express the question at all — it reports every box as zero-sized. Fixed with `appearance: none` plus a drawn chevron in `src/ui/app.css`. **This was a live defect on the target platform, shipped in US1 and invisible to all 142 unit tests.**
+- [X] T092 **Teach the focus-visibility background guard to discriminate** — T091's chevron made `resolveBackground` refuse to measure the dropdown, because any background image meant "the colour behind the text is unknown". Correct in general, wrong here: the chevron is pinned right and `padding-right` keeps text clear of it. The guard now computes where the image actually lands and compares it against the *frame* the focus ring paints rather than the rectangle enclosing it, so an image in the ring's hollow centre no longer blocks the measurement. Verified by independent sabotage: moving the chevron under the ring makes it refuse again
+
+- [X] T093 **Fix the interval row's layout and make the dropdown look like one** — found by Sherrylene looking at the running app, not by any check. The `Period` label was a fourth item in a three-column grid, so it wrapped and dragged the dropdown onto its own row, leaving it stranded from the label naming it and reading as a stray text field. The label is now visually hidden (still in the accessibility tree, so it is still announced), the count and unit share a row, and the chevron went from 12×8 to 16×10 so the control announces itself as a dropdown before you tap it. **Nothing automated could have caught this**: axe was satisfied because `htmlFor` correctly associated the label, and the layout checks were satisfied because nothing overflowed and every target met 44×44. It was only wrong to look at — the exact gap the constitution records when it says the real-browser tier cannot replace a person on a device
+
+**Not absorbed, and staying manual**: T075 (service-worker update path), T076/T077 (timings needing
+a named device), T078 (real-iPhone/Android gate, including home-screen install), T079 (durability
+across force-quit and restart). A green e2e suite must not be read as covering these.
+
+### Verification
+
+- [X] T070 [P] Run an axe structural scan across every view and fix violations — **now automated in `e2e/accessibility.spec.ts`**, run on Chromium and WebKit
+- [X] T071 [P] Verify no horizontal page scrolling at 375px and every touch target ≥ 44x44px — **now automated in `e2e/layout.spec.ts`**, run on Chromium and WebKit
+- [X] T072 [P] Verify status is distinguishable without colour — **now automated in `e2e/colour-independence.spec.ts`**, run on Chromium and WebKit
+- [X] T073 **Verify visible focus on every interactive control in a real browser, measuring the focus indicator's contrast** — a bare Principle II MUST that no previous task covered anywhere — **now automated in `e2e/focus-visibility.spec.ts`**, run on Chromium and WebKit
+- [X] T074 Measure contrast **per view** in a real browser (DevTools/Lighthouse) against 4.5:1 body and 3:1 large/UI. A token-pair audit at setup does not establish per-view contrast, which is what the constitution's gate requires — **now automated in `e2e/contrast.spec.ts`**, run on Chromium and WebKit
 - [ ] T075 Verify the service worker update path, including that the persisted document survives an update (FR-010's "across app updates", previously unverified end-to-end)
 - [ ] T076 Measure app-shell start-up against SC-002 on a named device or a stated CPU-throttle factor — "mid-range phone" is not reproducible
 - [ ] T077 Time a first-time user recording their first item against SC-001, which had no verification at all
 - [ ] T078 **Run the full manual device checklist in plan.md § Running and checking it on a real iPhone and a real Android phone** — SC-006 and Constitution gate 2b. Not automatable
+  - **Partly done, 2026-08-09**: the interval dropdown was checked on a real iPhone in Safari and opens the native wheel picker correctly. Still outstanding: everything else on the checklist, and home-screen install in particular, which cannot be checked over a LAN address because service workers require HTTPS or localhost. A proper HTTPS preview is needed to close this task.
+  - **Do not test dropdowns in Chrome's device emulation.** A `<select>`'s option list is drawn by the browser and the OS outside the document — it has no DOM node, no CSS reaches it, and it does not appear in screenshots, so neither Playwright nor a page capture can see it. Under device emulation the page is scaled to a fake phone while that popup is positioned and sized in real screen coordinates, so it renders small and lands top-right instead of under the field. This is an emulation artifact affecting every site with a `<select>`, and it cost an investigation before being recognised. Judge native pickers on a real device only.
 - [ ] T079 Verify the data durability checklist: persistence requested, refusal reported honestly, items survive force-quit and device restart (SC-007)
-- [ ] T080 **Correct `.claude/skills/speckit-tasks/SKILL.md`, which still instructs that tests are optional** — Governance requires correcting the conflicting artifact, not working around it in prose
-- [ ] T081 **Restore Principle I's three-call-site rule and Complexity-Tracking requirement to `.specify/templates/plan-template.md` gate 1**, and Principle II's text-alternatives and verified-before-complete clauses to gate 2. The template's gates are currently weaker than the principles they cite
-- [ ] T082 **Add 44x44 touch targets to `.specify/templates/spec-template.md`'s mandatory criteria** — a Principle II MUST that would otherwise be silently omitted from every future spec
+- [X] T080 **Correct `.claude/skills/speckit-tasks/SKILL.md`, which still instructs that tests are optional** — Governance requires correcting the conflicting artifact, not working around it in prose
+- [X] T081 **Restore Principle I's three-call-site rule and Complexity-Tracking requirement to `.specify/templates/plan-template.md` gate 1**, and Principle II's text-alternatives and verified-before-complete clauses to gate 2. The template's gates are currently weaker than the principles they cite
+- [X] T082 **Add 44x44 touch targets to `.specify/templates/spec-template.md`'s mandatory criteria** — a Principle II MUST that would otherwise be silently omitted from every future spec
 - [ ] T083 [P] Write `README.md` covering run, test, build, and stating plainly that data is device-bound with no export
 - [ ] T084 Re-run `/speckit-analyze` after remediation and confirm the findings are closed
 

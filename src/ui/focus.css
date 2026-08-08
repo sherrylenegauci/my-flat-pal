@@ -1,0 +1,58 @@
+/**
+ * Visible focus.
+ *
+ * Principle II requires "a visible focus indicator at all times". jsdom cannot
+ * see a focus ring and axe does not check focus visibility, so nothing in the
+ * automated suite guards this — T073 verifies it in a real browser.
+ *
+ * **Ratios below are computed, not estimated.** An earlier revision recorded
+ * `--focus-ring on --accent → 3.6:1 ✅`. The real figure is 2.69:1, which fails
+ * the 3:1 non-text minimum — a fabricated number that happened to hide a real
+ * defect. Recompute with the formula in WCAG 2.1 SC 1.4.11 before changing any
+ * colour here.
+ */
+
+:root {
+  --focus-ring: #14140f;
+  /* Sits between the element and the dark ring, so the indicator stays visible
+     on dark fills where the dark ring alone does not. */
+  --focus-ring-inner: #ffffff;
+  --focus-ring-offset: 2px;
+  --focus-ring-width: 3px;
+}
+
+/*
+ * Two-tone, because one colour cannot clear 3:1 against both a white page and a
+ * dark blue button:
+ *
+ *   --focus-ring  on --surface        18.47:1  ✅
+ *   --focus-ring  on --surface-sunken 16.78:1  ✅
+ *   --focus-ring  on --overdue-wash   16.62:1  ✅
+ *   --focus-ring  on --accent          2.69:1  ❌  ← why the inner ring exists
+ *   #ffffff       on --accent          6.88:1  ✅
+ *
+ * The white ring hugs the element and the dark ring sits outside it, so
+ * whichever surface the indicator lands on, one of the two contrasts.
+ */
+:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring);
+  outline-offset: var(--focus-ring-offset);
+  box-shadow: 0 0 0 var(--focus-ring-offset) var(--focus-ring-inner);
+  border-radius: 2px;
+}
+
+/* Keyboard focus only — pointer users get no ring, keyboard users always do,
+   which is what allows a ring bold enough to actually see. */
+:focus:not(:focus-visible) {
+  outline: none;
+  box-shadow: none;
+}
+
+/* Left explicit as a reminder: `outline: none` without a replacement is the
+   most common way this requirement gets broken later. */
+
+@media (prefers-reduced-motion: no-preference) {
+  :focus-visible {
+    transition: outline-offset 120ms ease-out;
+  }
+}

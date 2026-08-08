@@ -1,7 +1,17 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version change: 1.1.0 → 1.2.0
+Version change: 1.2.1 → 1.2.2
+Bump rationale: PATCH — records two TODOs discharged by feature 001's plan:
+INSTALLED_DATA_DURABILITY (localStorage; loss detection ruled out as impossible,
+mitigation substituted) and BUILD_TOOL_CONFIRMATION (Vite confirmed over Next.js).
+Decision records only; no principle or constraint changed.
+
+Prior: 1.2.0 → 1.2.1 — PATCH, recorded the resolution of half of
+TODO(INSTALLED_DATA_DURABILITY) (no export/backup; data is device-bound) following
+a scope decision in feature 001. No principle or constraint changed.
+
+Prior: 1.1.0 → 1.2.0
 Bump rationale: MINOR — the app is now specified as an installable PWA. Adds a
 "The app is an installable PWA" subsection to Technology Constraints and expands
 Principle II with touch-target sizing, standalone-window navigation, and safe-area
@@ -46,13 +56,19 @@ Deferred TODOs:
   on-device key (preserves it) — is deliberately deferred to the first plan that
   touches suggestions. Blocks implementation of suggestions, not the maintenance
   feature.
-  TODO(INSTALLED_DATA_DURABILITY): browsers can evict storage for installed web
-  apps that go unused, and a maintenance tracker losing its history is a product
-  failure. The persistence choice, and whether the app needs an export or backup
-  path, MUST be settled in the plan for the first feature that stores user data.
-  TODO(BUILD_TOOL_CONFIRMATION): "React SPA" was chosen; React + Vite is
-  recorded as the concrete stack. Confirm or amend to Next.js before the
-  first plan is written — a change here is a PATCH-level amendment.
+  RESOLVED 2026-08-08 — TODO(INSTALLED_DATA_DURABILITY). Three parts, all settled:
+  (1) No export/backup — feature 001 specced one and deliberately cut it, so user
+  data is device-bound with no recovery path. (2) Persistence mechanism: localStorage
+  holding a single versioned JSON document (001 research.md § R2). (3) Detecting data
+  loss: NOT POSSIBLE. Any marker proving data once existed lives in the same storage
+  eviction clears, so after eviction the app is indistinguishable from a fresh
+  install. The app must not claim otherwise. Mitigation instead of detection —
+  request persistent storage on first use and tell the user plainly if it is refused.
+  Recorded so no later plan treats loss detection as merely unimplemented.
+  RESOLVED 2026-08-08 — TODO(BUILD_TOOL_CONFIRMATION): Vite confirmed over Next.js
+  in feature 001's plan (research.md § R1). Next.js's principal advantages — SSR,
+  server components, API routes — are not merely unused here but forbidden by the
+  static-deployment constraint. The recorded stack stands; no amendment needed.
 -->
 
 # my-flat-pal Constitution
@@ -223,4 +239,4 @@ gates above. Complexity MUST be justified, never assumed. Agent-specific runtime
 lives in agent context files at the repository root and MUST NOT restate or contradict
 this constitution — it points here instead.
 
-**Version**: 1.2.0 | **Ratified**: 2026-08-07 | **Last Amended**: 2026-08-07
+**Version**: 1.2.2 | **Ratified**: 2026-08-07 | **Last Amended**: 2026-08-08

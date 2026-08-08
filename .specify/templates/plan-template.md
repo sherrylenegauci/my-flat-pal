@@ -40,7 +40,7 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-Gates derived from the project constitution (`.specify/memory/constitution.md`, v1.2.0).
+Gates derived from the project constitution (`.specify/memory/constitution.md`, v1.2.2).
 Mark each PASS or FAIL. Any FAIL must be justified in Complexity Tracking below.
 
 | # | Gate | Constitution | Status |

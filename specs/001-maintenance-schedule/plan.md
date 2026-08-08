@@ -1,0 +1,515 @@
+# Implementation Plan: Maintenance Schedule
+
+**Branch**: `feat/001-maintenance-schedule` | **Date**: 2026-08-08 | **Spec**: [spec.md](./spec.md)
+
+---
+
+## What this document is
+
+`spec.md` says **what the app does** — read that one first, it's written for you.
+
+This one says **how we're going to build it**, and holds every technical decision, the data shapes,
+the storage rules, and how to check the result. It used to be five separate files; they're all
+folded in here now.
+
+`tasks.md` is the **work list** — 84 numbered steps in the order they get done.
+
+Those three files are the whole project. The short version of this one:
+
+- **React and Vite, in TypeScript.** A website that installs to your home screen. No server anywhere.
+- **Your data sits in the browser's local storage** as one lump of JSON. Plenty for a few dozen jobs.
+- **Very few outside libraries.** No routing library, no state library, no date library — each
+  skipped on purpose, reasons in [Decisions](#decisions).
+- **The date logic is kept away from anything on screen**, so it can be tested properly. It's the
+  part most likely to be wrong.
+- **Two checks aren't passed yet and the scorecard says so.** They need a real phone. An earlier
+  version of this document claimed they'd passed, which wasn't true.
+
+---
+
+## Summary
+
+Build the first feature of my-flat-pal: a recurring maintenance schedule that records what the flat
+needs, shows what's overdue, and reschedules when you tick something off. It's also the app's
+foundation — it establishes the shell, the storage layer, the install plumbing, and the test setup
+that every later feature inherits.
+
+The approach is deliberately small. Scheduling is a handful of pure functions over dates with no
+framework involved, which makes the test-first rule cheap to honour and keeps the logic readable.
+Everything else sits on top of that.
+
+## Technical Context
+
+**Language**: TypeScript 5.x, targeting ES2022
+
+**Dependencies**: React 19, Vite 6, `vite-plugin-pwa`. Only React and React DOM reach the user's
+device; everything else is build- or test-time. Full list in [Decisions](#dependency-budget).
+
+**Storage**: `localStorage`, one versioned JSON document. See [Storage contract](#storage-contract).
+
+**Testing**: Vitest + React Testing Library + jsdom for automated tests; a manual phone checklist for
+the installed-app criteria nothing headless can verify.
+
+**Target**: Installed PWA. Mobile Safari on iOS and Chrome on Android, at 375px. Desktop scales up
+but isn't the design target.
+
+**Performance**: The targets are user-facing — first job recorded within 60 seconds (SC-001),
+overdue status legible within 5 seconds of opening (SC-002). The binding constraint is start-up
+time on a phone, since SC-002 is measured from tapping the icon.
+
+**Constraints**: No server. No secrets. Data device-bound with no export. Keyboard-operable at
+375px, 44x44px touch targets, WCAG 2.1 AA contrast. Must work launched from the home screen.
+
+**Scale**: One person, one device. Realistically tens of jobs and hundreds of tick-offs over years —
+kilobytes, not megabytes. That number is why several decisions below land on the simpler option.
+
+---
+
+## Constitution Check
+
+Gates derived from the project constitution (`.specify/memory/constitution.md`, v1.2.2).
+
+**Status vocabulary.** A gate whose test is "someone verified this" can't be marked PASS by a plan —
+no code exists yet. Those are **PLANNED**, naming the task that will settle them. An earlier version
+marked them PASS, including gate 2b, whose text literally reads "verified on a real device".
+
+| # | Gate | Principle | Status |
+|---|------|-----------|--------|
+| 1 | Dependencies justified; nothing used at fewer than three call sites; no abstraction without a second use case; **violations recorded** | I. Simplicity | **PASS WITH RECORDED VIOLATIONS** — 11 packages (not 8; the earlier count grouped them into rows and couldn't be audited per-package). Four violations recorded below, which is what the principle asks for. |
+| 2 | 375px first; 44x44px targets; semantic HTML; keyboard; visible focus; AA contrast | II. Accessibility | **PLANNED** — T070–T074. Contrast is now measured **per view** in a real browser, not inferred from a setup-time token audit. Visible focus is verified explicitly (T073); it was previously covered nowhere at all. |
+| 2b | Works installed; standalone navigation; safe areas; **verified on a real device** | II + PWA constraints | **PLANNED** — T078. The iOS back affordance is an open question (T011); the original research argued only from Android. |
+| 3 | Tests precede implementation; each story has a test covering its scenarios | III. Test-First | **PASS** — every implementation task is preceded by a failing-test task. The previous justification argued that pure functions are *testable*, which isn't the same as covered; six behaviours had no test at all and now do. |
+| 4 | Static-deployable React/Vite SPA; external services behind one interface | Technology Constraints | **PASS** — no external service here. Vite confirmed over Next.js (R1). |
+| 5 | No secrets in the bundle | Technology Constraints | **PASS** — this feature has no credentials. |
+| 6 | *(decor suggestions only)* | LLM constraints | **N/A** — doesn't touch suggestions. `TODO(LLM_KEY_CUSTODY)` stays open and unblocked. |
+
+### Recorded violations
+
+Four, recorded as violations. An earlier version listed three under "No violations… recorded for
+visibility rather than as violations". Principle I has no such category — a SHOULD you override is a
+violation with a justification, and the relabelling is what let gate 1 read PASS.
+
+| Violation | Why | Why not the simpler thing |
+|---|---|---|
+| `vite-plugin-pwa` — 1 call site | Generates the service-worker precache list over Vite's hashed filenames, and the update flow | A hand-written worker still needs that generated list, so "no dependency" means writing a build plugin instead |
+| `jsdom` — 1 call site | Test environment for DOM tests | A real browser for the whole suite is slower and heavier for the majority of tests, which are pure logic |
+| `@vitejs/plugin-react` — 1 call site, **and was missing from this table entirely** | JSX transform and fast refresh | No way to run React through Vite without it. Its earlier justification — "recorded in the constitution" — was false; the constitution records React and Vite, not this plugin |
+| `src/storage/migrate.ts` — **an abstraction with no second use case** | Retrofitting migrations later means writing the first one against documents already on people's phones, unrecoverable with no export | Nothing. A deliberate override, justified by the asymmetry of the risk — and exactly the future-facing reasoning Principle I exists to reject, so it belongs here rather than dressed up as compliance |
+
+`@testing-library/react`, `user-event` and `axe-core` pass the three-call-site test. `react`,
+`react-dom`, `typescript`, `vite`, `vitest` are the constitution's own mandated stack.
+
+**Also open, not resolved**: `repository.ts` is justified partly by a hypothetical second storage
+backend, and the application *state* model (as opposed to persistence) is specified nowhere, though
+Technology Constraints requires it before implementation.
+
+---
+
+## Decisions
+
+Six technical questions settled before building. If you ever wonder "why did we do it that way",
+it's here.
+
+| # | Question | Answer |
+|---|---|---|
+| R1 | Vite or Next.js? | **Vite** |
+| R2 | Where does the data go? | **localStorage**, one JSON document |
+| R3 | Can the app tell if data got wiped? | **No — and it says so** |
+| R4 | Routing library? | **No** |
+| R5 | Date library? | **No** |
+| R6 | How is accessibility checked? | Automated for structure; **contrast can't be, and needs a real browser** |
+
+### R1 — Vite, not Next.js
+
+Next.js's main draws are server rendering, server components and API routes. Here they aren't merely
+unused, they're **forbidden** by the no-server rule. Adopting a framework whose value proposition is
+unavailable, then configuring it off, is the opposite of Principle I. Vite also ships a smaller
+bundle, which matters directly for SC-002.
+
+*This closed `TODO(BUILD_TOOL_CONFIRMATION)`.*
+
+### R2 — localStorage, one document
+
+Scale settles it: tens of jobs and hundreds of tick-offs over years is kilobytes. IndexedDB's whole
+value is handling volumes and query patterns this feature doesn't have. One document also makes the
+round trip trivial to test and migrations a single function.
+
+localStorage being synchronous is a real drawback, but at this size the read is sub-millisecond and
+happens once at start-up.
+
+*Revisit if the app grows multiple properties, attachments, or history that won't sit in memory.*
+
+### R3 — The app cannot detect data loss
+
+Worth reading properly, because it's the most honest thing in this document.
+
+Anything that would prove your data once existed lives in the same storage that gets wiped. After a
+wipe the app is, by construction, indistinguishable from a fresh install. **There is no signal to
+read.** So the app doesn't claim to detect loss.
+
+What it does instead is prevention: ask the browser to protect the app's storage
+(`navigator.storage.persist()`), and **if the browser says no, tell you plainly** — once — that your
+history might not survive. Since export was cut, you're entitled to know the real guarantee.
+
+⚠️ **Unverified**: whether that request exists, prompts, or is auto-granted differs by browser and
+has changed across releases, and installed home-screen apps are the least well-documented case. Also
+unverified: whether a grant actually protects `localStorage` against WebKit's storage-eviction
+policy, which is the single largest threat to this app's data. **Task T010 must settle this before
+T031–T033 are built.**
+
+### R4 — No router
+
+Three screens don't justify a routing library, and nobody deep-links into a personal app. But *some*
+history integration is genuinely needed, and it's a platform fact rather than a preference:
+**Android's back gesture is live in an installed app.** With no history entries, that gesture closes
+the app — so opening a job's detail and swiping back would eject you. About thirty lines against
+React state handles it.
+
+⚠️ **The gap**: iOS standalone apps have **no equivalent back gesture**, and no in-app back control
+is specified anywhere. On half the target platforms there may currently be no way back at all.
+**Task T011 must settle this before T038 is built.**
+
+*Revisit the router when a second feature adds screens.*
+
+### R5 — No date library
+
+One non-trivial operation: add N days/weeks/months/years, handling months that are shorter than the
+source day. Roughly forty lines and a table of tests.
+
+**Rule adopted**: 31 March + 1 month is **30 April**, not 1 May. Clamping keeps a job near its
+intended day; overflowing drifts it forward every short month.
+
+⚠️ **A claim in the original research was wrong** and is corrected here: it said this design is
+"clear of timezone arithmetic entirely". It isn't. JavaScript's `Date` has no calendar-date type —
+`new Date("2026-08-08")` is UTC midnight, `new Date(2026, 7, 8)` is local midnight, and converting
+between them shifts the day for anyone west of UTC. Day and week arithmetic across daylight-saving
+boundaries is also unspecified. **This is the specific bug the rejected date library would have
+prevented, and it needs settling during implementation.**
+
+### R6 — Accessibility checking, and its limits
+
+- **Automatable**: roles, names, labelling, focus order, ARIA misuse. `axe-core` catches these and
+  they're the bulk of real defects.
+- **Not automatable in jsdom — contrast.** jsdom computes no layout and resolves no colour, so an
+  automated contrast assertion there is theatre. Contrast is guaranteed at source (a small set of
+  audited colour tokens) **and measured per view in a real browser** (T074). A token-pair audit
+  alone doesn't establish per-view contrast, because which pairs actually co-occur is a view-level
+  fact.
+- **Not automatable at all**: the installed-app criteria. Safe areas, standalone window, back
+  gesture — these need a phone (T078).
+
+### Dependency budget
+
+11 packages, of which 2 reach the user's device.
+
+| Package | Kind | Why |
+|---|---|---|
+| `react`, `react-dom` | Runtime | The constitution's stack. The only code on your phone. |
+| `typescript`, `vite`, `@vitejs/plugin-react` | Build | The constitution's stack (R1 confirms Vite). |
+| `vite-plugin-pwa` | Build | Manifest, precache, update flow. *Recorded violation.* |
+| `vitest` | Test | Shares Vite's config, so it's a runner rather than a second toolchain. |
+| `@testing-library/react`, `user-event` | Test | Principle III requires asserting behaviour through the interface a user actually uses. |
+| `jsdom` | Test | DOM environment. *Recorded violation.* |
+| `axe-core` | Test | Automated structural accessibility checks. |
+
+**Rejected**: a router (R4), a state library (React's own state suffices at three screens; Principle
+I forbids the abstraction before a second use case), a date library (R5), a component library (the
+UI is a list, a form and a dialog — and an imported library would need auditing against Principle II
+anyway, which is more work than writing three accessible components).
+
+---
+
+## Data model
+
+### What gets stored
+
+Two things: **jobs**, and **tick-offs**. A job owns its list of tick-offs.
+
+**Maintenance Item**
+
+| Field | Rules |
+|---|---|
+| `id` | Stable, unique, never reused |
+| `name` | Required, non-empty after trimming. **Not unique** — two "filter change" jobs is fine |
+| `interval` | Required. `count` (≥ 1) and `unit` (day/week/month/year) |
+| `completions` | Newest first. Empty means never done |
+| `createdAt` | For stable ordering; not shown |
+
+**Completion**: `id`, `completedOn` (a calendar date, no time), `recordedAt` (a real timestamp —
+when you typed it, as distinct from when the work happened). Immutable once saved, except by undo.
+
+### What is never stored
+
+**Due dates and statuses are worked out fresh every time, never saved.**
+
+This is the load-bearing decision. A saved status would quietly become wrong the moment the date
+changed while your phone sat in your pocket — and FR-005 requires status to re-evaluate without a
+reload. Deriving it on read makes that true by construction rather than by remembering to clear a
+cache.
+
+### Status
+
+| Status | When | Shown as |
+|---|---|---|
+| `never-done` | No tick-offs yet | Needs attention. No due date |
+| `overdue` | Due date has passed | Needs attention, longest overdue first |
+| `due` | Due today | Needs attention |
+| `not-due` | Due later | Soonest first |
+
+**One job has exactly one status.** An annual job untouched for three years is `overdue`, not three
+piled-up occurrences — that falls out of counting from the last tick-off rather than generating a
+series, so missed occurrences can't accumulate.
+
+> ⚠️ **Unresolved**: `spec.md` FR-004 puts "never done and overdue" in the attention group;
+> this table also marks `due` as needing attention. They disagree. **T017 must decide and correct
+> whichever document is wrong** — currently a `due` job could sort anywhere and every test passes.
+
+### Next due date
+
+`nextDueOn = addInterval(lastCompletedOn, interval)` — counted from **when you actually did it**,
+never from the date you missed.
+
+- Ticking something off **today** can never leave it immediately due again.
+- A **backdated** tick-off can, and should. Recording that the boiler was serviced two years ago on
+  an annual interval yields an overdue job. That's the truth, not a bug.
+- Original timing drifts later with each late tick-off. Accepted.
+
+Month and year arithmetic **clamps** to the last valid day when the target month is shorter.
+
+### Ticking off, and undo
+
+Ticking off appends a completion and recomputes. Backdating is allowed — recording a service you
+forgot is normal — but future dates are rejected.
+
+**Undo removes the most recently *recorded* tick-off** (highest `recordedAt`), not the latest
+`completedOn`. That's what makes it correct when you backdate something by mistake: the entry you
+just made is the one that disappears.
+
+**Undo survives closing the app.** It was originally session-scoped, and that was wrong: ticking off
+is a two-tap action with no confirmation (SC-004 caps it at two taps, so a dialog isn't available),
+so session-scoped undo made a single mis-tap permanent — one stray tap pushing an annual service a
+year out with no way back. Undo stays narrow though: most recent only, one step, no stack.
+
+Deleting a job needs confirmation, because it throws away the history too.
+
+### States
+
+```text
+   create without a date        ┌──────────────┐
+   ────────────────────────────▶│  never-done  │
+                                └──────┬───────┘
+                                       │ tick off
+                                       ▼
+   ┌──────────┐  date passes  ┌──────┐  date passes  ┌─────────┐
+   │ not-due  │──────────────▶│ due  │──────────────▶│ overdue │
+   └──────────┘               └──────┘               └─────────┘
+        ▲                         │                       │
+        └─────────────────────────┴───────────────────────┘
+                          tick off
+
+   Undo reverses the most recent move, restoring the exact prior state —
+   including back into never-done, if you undo a job's only tick-off.
+```
+
+### Validation
+
+| Rule | On failure |
+|---|---|
+| Name non-empty after trimming | Form blocks submission, message tied to the field |
+| `interval.count` ≥ 1 | Same |
+| `completedOn` not in the future | Blocked — you can't have already done something you haven't |
+| `completedOn` before the item was created | **Allowed.** A boiler serviced years before you installed the app is exactly the history worth having |
+
+**The domain layer is pure.** It takes dates as parameters and returns values — never reads the
+clock, never touches storage. That's what makes the scheduling rules testable by passing dates in,
+including the midnight case.
+
+---
+
+## Storage contract
+
+The app has no network API. Its one real contract is **the document it saves on your phone** — and
+it's a contract in the strict sense, because a future version has to read what today's version
+wrote. With no export, this is the only copy.
+
+**Location**: `localStorage`, key `my-flat-pal.schedule`
+**Owner**: `src/storage/` — nothing else may touch that key
+
+```json
+{
+  "schemaVersion": 1,
+  "revision": 7,
+  "items": [
+    {
+      "id": "itm_9f2c1a",
+      "name": "Boiler service",
+      "interval": { "count": 1, "unit": "year" },
+      "createdAt": "2026-08-08",
+      "completions": [
+        { "id": "cmp_3d7e04", "completedOn": "2026-06-14", "recordedAt": "2026-08-08T09:21:44.512Z" }
+      ]
+    }
+  ]
+}
+```
+
+Dates are `YYYY-MM-DD` with **no time component** — a job is due for a whole day. `recordedAt` is a
+real instant, and is the ordering key for undo.
+
+### Why `revision` exists — the concurrency guard
+
+`localStorage` is shared by **every same-origin context**. The installed app and an ordinary browser
+tab can both be open at once — routine, since you opened the site in a browser to install it. Each
+holds the whole document in memory, and each save replaces the whole document.
+
+Without a guard, a tick-off saved in one context is destroyed by the next save from the other, and
+**with no export the loss is total**. That's strictly worse than the split-across-keys hazard a
+store-per-entity layout was rejected for, and the trade wasn't acknowledged when the single-document
+shape was chosen.
+
+So: every writer re-reads immediately before writing, aborts if `revision` changed, and re-applies
+against fresh state. `revision` increments on every write. Readers also listen for the `storage`
+event so an open context refreshes rather than sitting on stale data.
+
+### Reading rules
+
+- An absent key means "no data yet", not an error. A first run and a wiped storage are
+  indistinguishable (R3), and both mean an empty schedule.
+- Older versions run through the migration chain first.
+- **A newer `schemaVersion` must refuse to load** and put the session in read-only mode. An old
+  build reading a new document — a stale service worker serving an old bundle, exactly what the
+  update-path rule is about — must fail closed rather than parse half of it and overwrite. This is
+  the single most destructive bug available in this design.
+- **Never discard data that fails validation.**
+
+### Corrupted data
+
+1. **Preserve the original** — copy the raw string to `my-flat-pal.schedule.recovered.<timestamp>`.
+2. Start empty so the app still works.
+3. **Tell the user plainly** that data couldn't be read and the original was kept.
+
+Silently starting fresh isn't acceptable. With no export, that corrupted string may be the only
+remaining copy — and unparseable isn't the same as unrecoverable.
+
+> **Known gap**: nothing ever *reads* a `.recovered.*` key. It's a recovery artefact with no
+> recovery path — you can't reach it from a phone. Recorded, not solved.
+
+### Migration
+
+`storage/migrate.ts` holds ordered upgrade functions, each taking version N to N+1. At v1 the chain
+is empty. It exists now, before there's any data to lose, because writing the first migration later
+means writing it against documents already on people's phones.
+
+- Migrations are pure functions of the document — no clock, no storage, no network.
+- Every version keeps a committed fixture in `tests/storage/fixtures/`, so migrations are tested
+  against a real historical document rather than one rebuilt from memory.
+- Never drop an unrecognised field. Renaming or removing is a version bump, never an in-place edit.
+
+---
+
+## Project structure
+
+```text
+public/
+├── manifest.webmanifest     # Name, icons, standalone display
+└── icons/                   # Home-screen icons, incl. iOS sizes
+
+src/
+├── domain/                  # Pure scheduling rules — no React, no browser APIs
+│   ├── types.ts  schedule.ts  interval.ts  ids.ts
+├── storage/                 # The only place localStorage is touched
+│   ├── repository.ts  schema.ts  migrate.ts  persistence.ts
+├── ui/
+│   ├── App.tsx              # Shell: layout, safe areas, navigation, notices
+│   ├── navigation.ts        # History API — back gesture without a router
+│   ├── useCurrentDate.ts    # Date-change trigger (FR-005)
+│   ├── tokens.css  focus.css
+│   ├── views/               # ScheduleView, ItemDetailView, ItemFormView
+│   └── components/          # ItemRow, StatusBadge, EmptyState, ConfirmDialog
+└── main.tsx                 # Entry point; service worker registration
+
+tests/
+├── domain/                  # The bulk of the suite — pure, fast, no DOM
+├── storage/                 # Round trip, concurrency, recovery, migration
+└── ui/                      # Behaviour through the interface a user actually uses
+```
+
+**Why three layers.** `domain/` is pure so the scheduling rules — the part most likely to be wrong
+and most expensive to get wrong — can be tested exhaustively without rendering anything. `storage/`
+is one boundary so the persistence choice can change without touching feature code. `ui/` is
+everything React. Three layers because the domain/UI split is what makes test-first affordable, not
+because layering is good in itself.
+
+---
+
+## Running and checking it
+
+### Setup
+
+```bash
+npm install
+npm run dev          # http://localhost:5173
+npm run test:run     # single pass — this is the merge gate
+```
+
+### What the automated tests cover
+
+- **Domain** (most of the suite): due-date derivation, all four statuses, one-status-for-long-overdue,
+  completion anchoring including backdated and early, month clamping, DST-safe day arithmetic,
+  ordering, undo, id uniqueness.
+- **Storage**: round trip, every mutation persisting, `revision` compare-and-swap, corrupted-data
+  recovery, newer-version refusal, migration against the fixture.
+- **UI**: empty state, adding, ordering, visible due dates, reload survival, duplicate names,
+  ticking off, durable undo, backdating, edit, delete-actually-deletes, keyboard-only flows, axe
+  scans.
+
+### What has to be done by hand
+
+The constitution requires installed behaviour verified on a real phone before this is done. Nothing
+headless can check it.
+
+```bash
+npm run build
+npm run preview -- --host    # note the network URL, open it on your phone, install it
+```
+
+- [ ] Installs to the home screen on **iOS**, correct icon and name
+- [ ] Installs to the home screen on **Android**
+- [ ] Opens in its own window — no address bar
+- [ ] Nothing hidden behind the notch, dynamic island, or home indicator
+- [ ] **Android back gesture** returns from detail to list, doesn't close the app
+- [ ] **iOS has a working way back** (see R4 — this may need an in-app control)
+- [ ] Every tap target comfortable one-handed
+- [ ] No sideways scrolling at 375px
+- [ ] **Focus is clearly visible** on every control
+- [ ] Opening with no network shows the app, not a browser error
+- [ ] Contrast measured per view, not eyeballed
+- [ ] Status readable without relying on colour
+- [ ] Persistent storage requested on first use; refusal reported plainly
+- [ ] Jobs survive force-quitting and a phone restart
+
+---
+
+## Review history
+
+**2026-08-08.** Three adversarial reviewers plus a `/speckit-analyze` pass examined the spec, plan
+and tasks — all written by one author who then certified them compliant. They returned around 60
+findings. The self-review found 10 and missed every one of the five most serious.
+
+Fixed:
+
+- **FR-013 contradicted itself** — it required due dates to count from the completion date *and*
+  forbade anything ever being immediately overdue. The spec's own acceptance test produced exactly
+  that case. Split into FR-013 and FR-013a.
+- **Ticking off would have been lost on reload** — the storage write path sat in a later phase.
+- **FR-005 had no implementing task** — nothing triggered a re-check when the date changed.
+- **Two open contexts could destroy the whole history** — now guarded by `revision`.
+- **Session-scoped undo made a mis-tap permanent** — undo is now durable.
+- Document integrity: a requirement number pointing at two different requirements, a wrong amendment
+  date, three documents citing three constitution versions, 21 falsely-parallel task markers.
+
+**Still open, recorded rather than dropped**: write failures (storage full, private browsing) have
+no requirement; the `.recovered.*` key has no path back to you; undo assumes the phone's clock only
+moves forward; the application state model is unspecified; and the timezone problem in R5.
+
+**T084 re-runs `/speckit-analyze` after implementation** to confirm these are closed.

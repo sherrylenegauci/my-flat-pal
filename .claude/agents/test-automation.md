@@ -50,6 +50,22 @@ the same handful of files. Split test files by behaviour, not by view.
 injected dates or `vi.useFakeTimers`. No inter-test ordering dependencies — every file
 clears `localStorage` in `beforeEach`. If a test can fail on a slow machine, it is wrong.
 
+**Anything that mutates state MUST be tested under `<StrictMode>`.** `main.tsx` renders
+the app inside it, so tests that do not are testing a different app from the one that
+runs. This is not hypothetical: a bug that duplicated every job the user added shipped
+past 136 passing tests, because none of them used StrictMode. React double-invokes state
+updaters there to prove they are pure, and the duplicate save fell into the stale-write
+recovery, which re-applied a change that had already landed.
+
+Two lessons worth carrying:
+
+- **Assert the stored data, not only the screen.** In that bug the screen showed one job
+  while storage held two — the user only saw it after reloading. With no export path,
+  what is stored is the part that matters.
+- **A passing test that renders the app differently from production proves less than it
+  appears to.** When you find a gap like this, close it for the whole suite rather than
+  only for the bug in front of you.
+
 ## Conventions in this codebase
 
 - Vitest 3, two projects (`domain` in node, `browser-ish` in jsdom) — see `vite.config.ts`

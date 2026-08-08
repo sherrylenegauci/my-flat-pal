@@ -58,22 +58,39 @@ export function useSchedule(): Schedule {
     return subscribeToExternalChanges(reload)
   }, [reload])
 
+  /**
+   * Apply a change and persist it.
+   *
+   * **The save happens here, not inside a `setDoc` updater.** That is not a
+   * style preference — it is the fix for a real bug. React requires state
+   * updaters to be pure, and StrictMode invokes them twice in development to
+   * prove it. With `save()` inside the updater, the second invocation ran
+   * against stale state, hit the compare-and-swap, fell into the stale-write
+   * recovery, and re-applied a change that had already landed — creating a
+   * duplicate job with a duplicate id. The screen showed one; storage held two.
+   *
+   * Reading from storage rather than from React state also closes the window
+   * where the two disagree: storage owns `revision`, so the compare-and-swap is
+   * checked against the thing that actually holds it.
+   */
   const mutate = useCallback(
     (change: (items: MaintenanceItem[]) => MaintenanceItem[]) => {
-      setDoc((current) => {
-        const attempt = { ...current, items: change(current.items) }
-        try {
-          return save(attempt)
-        } catch (error) {
-          if (error instanceof StaleWriteError) {
-            // Someone else wrote first. Re-apply on top of theirs rather than
-            // clobbering it or bothering the user about it.
-            const fresh = load().document
-            return save({ ...fresh, items: change(fresh.items) })
-          }
-          throw error
+      const current = load().document
+
+      try {
+        setDoc(save({ ...current, items: change(current.items) }))
+      } catch (error) {
+        if (error instanceof StaleWriteError) {
+          // A genuine race: another context wrote between our read and our
+          // write. Re-apply on top of theirs rather than clobbering it. Safe
+          // now, because `current` was read fresh — this path can only be
+          // reached when someone else really did write in between.
+          const fresh = load().document
+          setDoc(save({ ...fresh, items: change(fresh.items) }))
+          return
         }
-      })
+        throw error
+      }
     },
     [],
   )

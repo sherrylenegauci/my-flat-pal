@@ -142,7 +142,18 @@ The tasks.md should be immediately executable - each task must be specific enoug
 
 **CRITICAL**: Tasks MUST be organized by user story to enable independent implementation and testing.
 
-**Tests are OPTIONAL**: Only generate test tasks if explicitly requested in the feature specification or if user requests TDD approach.
+**Tests are MANDATORY in this project**: Constitution Principle III (Test-First) is marked
+NON-NEGOTIABLE, so every user story MUST get test tasks, they MUST be listed before the
+implementation they cover, and each MUST be observed failing before that implementation begins.
+
+Generate test tasks for all three tiers the constitution defines — domain, behaviour, and, where
+the check cannot be automated, an entry on the manual real-browser checklist. Never write a test
+task for something the environment cannot actually check (contrast in jsdom, for instance); record
+the gap instead.
+
+*(Upstream Spec Kit says test tasks are optional unless requested. That instruction conflicts with
+this project's constitution, which by its own Governance section wins over tool defaults — and it
+required correcting here rather than being worked around in each generated tasks.md.)*
 
 ### Checklist Format (REQUIRED)
 

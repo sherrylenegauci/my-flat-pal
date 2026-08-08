@@ -13,10 +13,10 @@ description: "Task list for maintenance schedule implementation"
 has test tasks, they are listed before the implementation they cover, and each MUST be observed
 failing before that implementation begins.
 
-> **Note on the Spec Kit default**: `.claude/skills/speckit-tasks/SKILL.md` still instructs that
-> test tasks are optional. That instruction conflicts with Principle III, and the constitution's
-> Governance section requires the conflicting artifact to be corrected rather than worked around.
-> Correcting it is tracked in Phase 6.
+> **Corrected 2026-08-08 (T080)**: `.claude/skills/speckit-tasks/SKILL.md` used to instruct that
+> test tasks were optional, and each generated `tasks.md` worked around it in prose. The
+> constitution's Governance section requires the conflicting artifact to be fixed instead, so the
+> skill now says tests are mandatory. Future task lists inherit that without needing this note.
 
 **Test file layout**: test files are split by behaviour rather than by view, so that tasks marked
 `[P]` genuinely touch different files. A previous revision marked 21 tasks parallel that all wrote
@@ -190,9 +190,9 @@ the same handful of files.
 - [ ] T077 Time a first-time user recording their first item against SC-001, which had no verification at all
 - [ ] T078 **Run the full manual device checklist in plan.md § Running and checking it on a real iPhone and a real Android phone** — SC-006 and Constitution gate 2b. Not automatable
 - [ ] T079 Verify the data durability checklist: persistence requested, refusal reported honestly, items survive force-quit and device restart (SC-007)
-- [ ] T080 **Correct `.claude/skills/speckit-tasks/SKILL.md`, which still instructs that tests are optional** — Governance requires correcting the conflicting artifact, not working around it in prose
-- [ ] T081 **Restore Principle I's three-call-site rule and Complexity-Tracking requirement to `.specify/templates/plan-template.md` gate 1**, and Principle II's text-alternatives and verified-before-complete clauses to gate 2. The template's gates are currently weaker than the principles they cite
-- [ ] T082 **Add 44x44 touch targets to `.specify/templates/spec-template.md`'s mandatory criteria** — a Principle II MUST that would otherwise be silently omitted from every future spec
+- [X] T080 **Correct `.claude/skills/speckit-tasks/SKILL.md`, which still instructs that tests are optional** — Governance requires correcting the conflicting artifact, not working around it in prose
+- [X] T081 **Restore Principle I's three-call-site rule and Complexity-Tracking requirement to `.specify/templates/plan-template.md` gate 1**, and Principle II's text-alternatives and verified-before-complete clauses to gate 2. The template's gates are currently weaker than the principles they cite
+- [X] T082 **Add 44x44 touch targets to `.specify/templates/spec-template.md`'s mandatory criteria** — a Principle II MUST that would otherwise be silently omitted from every future spec
 - [ ] T083 [P] Write `README.md` covering run, test, build, and stating plainly that data is device-bound with no export
 - [ ] T084 Re-run `/speckit-analyze` after remediation and confirm the findings are closed
 

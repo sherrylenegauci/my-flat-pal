@@ -116,11 +116,20 @@
 - **SC-002**: [Measurable metric, e.g., "System handles 1000 concurrent users without degradation"]
 - **SC-003**: [User satisfaction metric, e.g., "90% of users successfully complete primary task on first attempt"]
 - **SC-004**: [Business metric, e.g., "Reduce support tickets related to [X] by 50%"]
-- **SC-005**: [MANDATORY per Constitution II — accessibility outcome, e.g., "Every flow in this
-  feature is completable by keyboard alone at a 375px viewport, with AA contrast throughout"]
+- **SC-005**: [MANDATORY per Constitution II — accessibility outcome. Must cover all four
+  requirements, not a subset: keyboard-only operation, **a visible focus indicator**, **touch
+  targets of at least 44x44px**, and WCAG 2.1 AA contrast, at a 375px viewport. e.g., "Every flow
+  in this feature is completable by keyboard alone at 375px, with a visible focus indicator on
+  every control, 44x44px minimum touch targets, and AA contrast throughout"]
 - **SC-006**: [MANDATORY per Constitution II + PWA constraints — installed outcome, e.g., "Every
   flow in this feature works in the installed app on a real phone, with no content obscured by
   the notch or home indicator and no dependence on browser chrome"]
+
+> **On SC-005 and SC-006**: neither can be verified by an automated suite in this project. jsdom
+> computes no layout and resolves no cascaded colour, so contrast and focus visibility are not
+> checkable there, and no headless environment can install a home-screen app. Both are discharged
+> by the manual checklist. Write them as outcomes anyway — a criterion nobody wrote is a criterion
+> nobody checks.
 
 ## Assumptions
 

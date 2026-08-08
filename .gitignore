@@ -5,6 +5,11 @@ node_modules/
 dist/
 .vite/
 
+# Real-browser tier output: reports, traces, screenshots
+playwright-report/
+test-results/
+blob-report/
+
 # Environment / secrets — never commit an API key
 .env
 .env.*

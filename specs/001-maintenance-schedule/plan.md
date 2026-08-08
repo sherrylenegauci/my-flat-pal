@@ -263,6 +263,26 @@ involves no timezone at all.
 | `@testing-library/react`, `user-event` | Test | Principle III requires asserting behaviour through the interface a user actually uses. |
 | `jsdom` | Test | DOM environment. *Recorded violation.* |
 | `axe-core` | Test | Automated structural accessibility checks. |
+| `@playwright/test` | Test | Real-browser tier. Justified below. |
+
+**On adding Playwright.** The constitution permits automated browser tests but does not mandate
+them, and asks that the trigger be the manual checklist growing long enough that people skip it.
+That has happened: Phase 6 carries **nine** manual verification tasks (T070–T078), and a
+nine-item checklist run by hand before every release is one that gets run properly once.
+
+It earns its place by checking things no other tier *can*. jsdom computes no layout and resolves
+no cascaded colour, which is why the constitution forbids writing a contrast assertion there — it
+would pass regardless of the real colours. A real browser resolves both. Concretely, Playwright
+can take over T070 (axe per view, against real rendering), T071 (375px overflow and 44×44 hit
+targets, which need layout), T072 (colour independence), T073 (focus visibility, which needs
+computed style) and T074 (contrast per view). That is five of the nine, and they are the five
+most tedious to repeat.
+
+It does **not** absorb the rest, and the checklist does not go away. T075's service-worker
+update path is testable in principle but genuinely fiddly; T076 and T077 are timings that need a
+named device rather than a CI runner; T078 is the real-iPhone-and-Android gate, and no headless
+browser can verify a home-screen install. Those stay manual, and Phase 6 should say so plainly
+rather than let a green suite imply cover it does not give.
 
 **Rejected**: a router (R4), a state library (React's own state suffices at three screens; Principle
 I forbids the abstraction before a second use case), a date library (R5), a component library (the

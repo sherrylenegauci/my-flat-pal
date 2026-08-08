@@ -180,11 +180,33 @@ the same handful of files.
 
 ## Phase 6: Polish, Verification & Governance
 
-- [ ] T070 [P] Run an axe structural scan across every view and fix violations
-- [ ] T071 [P] Verify no horizontal page scrolling at 375px and every touch target ≥ 44x44px
-- [ ] T072 [P] Verify status is distinguishable without colour
-- [ ] T073 **Verify visible focus on every interactive control in a real browser, measuring the focus indicator's contrast** — a bare Principle II MUST that no previous task covered anywhere
-- [ ] T074 Measure contrast **per view** in a real browser (DevTools/Lighthouse) against 4.5:1 body and 3:1 large/UI. A token-pair audit at setup does not establish per-view contrast, which is what the constitution's gate requires
+### Real-browser tier (Playwright)
+
+The third tier of the constitution's testing strategy, currently a manual checklist. Justified as
+a dependency in `plan.md` § Dependency budget. These run first, because T070–T074 below are
+their acceptance criteria — each one names the manual task it takes over.
+
+- [X] T085 Add `@playwright/test`, a `playwright.config.ts` pinned to Chromium and WebKit at a 375px iPhone viewport, an `e2e/` directory outside the Vitest projects, and an `npm run test:e2e` script. Vitest must not pick up `e2e/**` and Playwright must not pick up `tests/**`
+- [X] T086 [P] `e2e/accessibility.spec.ts` — run axe via `@axe-core/playwright` against every view in real rendering (**takes over T070**)
+- [X] T087 [P] `e2e/layout.spec.ts` — assert no horizontal document overflow at 375px and that every interactive control's bounding box is ≥ 44×44 CSS px (**takes over T071**). This needs real layout; jsdom returns zeros
+- [X] T088 [P] `e2e/focus-visibility.spec.ts` — tab through every control, assert a focus indicator is present and compute its contrast against the *resolved* background from `getComputedStyle` (**takes over T073**). This is the bare Principle II MUST that no tier has ever covered, and the check that would have caught the 2.69:1 ring
+- [X] T089 [P] `e2e/contrast.spec.ts` — walk the rendered text nodes per view and assert 4.5:1 body / 3:1 large and UI from resolved colours, and `e2e/colour-independence.spec.ts` asserting status is readable with colour suppressed (**takes over T072 and T074**)
+- [X] T090 Prove the new specs are non-vacuous by deliberate sabotage, as was done for the unit tests: break the focus ring, shrink a touch target, and confirm the relevant spec fails. A browser test that cannot fail is the exact defect the constitution names
+
+- [X] T091 **Fix the interval `<select>` being 25px tall in WebKit** — found by T087 on its first run. `app.css` set `min-height: var(--touch-target)`, but Safari's UA stylesheet wins on a natively-rendered dropdown and discards it, leaving the control at its 25px content height against Principle II's 44px floor. Chromium honours the rule and reports 44px, so no amount of Chromium testing could have surfaced this, and jsdom cannot express the question at all — it reports every box as zero-sized. Fixed with `appearance: none` plus a drawn chevron in `src/ui/app.css`. **This was a live defect on the target platform, shipped in US1 and invisible to all 142 unit tests.**
+- [X] T092 **Teach the focus-visibility background guard to discriminate** — T091's chevron made `resolveBackground` refuse to measure the dropdown, because any background image meant "the colour behind the text is unknown". Correct in general, wrong here: the chevron is pinned right and `padding-right` keeps text clear of it. The guard now computes where the image actually lands and compares it against the *frame* the focus ring paints rather than the rectangle enclosing it, so an image in the ring's hollow centre no longer blocks the measurement. Verified by independent sabotage: moving the chevron under the ring makes it refuse again
+
+**Not absorbed, and staying manual**: T075 (service-worker update path), T076/T077 (timings needing
+a named device), T078 (real-iPhone/Android gate, including home-screen install), T079 (durability
+across force-quit and restart). A green e2e suite must not be read as covering these.
+
+### Verification
+
+- [X] T070 [P] Run an axe structural scan across every view and fix violations — **now automated in `e2e/accessibility.spec.ts`**, run on Chromium and WebKit
+- [X] T071 [P] Verify no horizontal page scrolling at 375px and every touch target ≥ 44x44px — **now automated in `e2e/layout.spec.ts`**, run on Chromium and WebKit
+- [X] T072 [P] Verify status is distinguishable without colour — **now automated in `e2e/colour-independence.spec.ts`**, run on Chromium and WebKit
+- [X] T073 **Verify visible focus on every interactive control in a real browser, measuring the focus indicator's contrast** — a bare Principle II MUST that no previous task covered anywhere — **now automated in `e2e/focus-visibility.spec.ts`**, run on Chromium and WebKit
+- [X] T074 Measure contrast **per view** in a real browser (DevTools/Lighthouse) against 4.5:1 body and 3:1 large/UI. A token-pair audit at setup does not establish per-view contrast, which is what the constitution's gate requires — **now automated in `e2e/contrast.spec.ts`**, run on Chromium and WebKit
 - [ ] T075 Verify the service worker update path, including that the persisted document survives an update (FR-010's "across app updates", previously unverified end-to-end)
 - [ ] T076 Measure app-shell start-up against SC-002 on a named device or a stated CPU-throttle factor — "mid-range phone" is not reproducible
 - [ ] T077 Time a first-time user recording their first item against SC-001, which had no verification at all

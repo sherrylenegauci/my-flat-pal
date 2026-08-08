@@ -252,6 +252,33 @@ select {
   width: 100%;
 }
 
+/* Safari refuses `min-height` on a natively-rendered dropdown — its own stylesheet wins,
+   so the rule above is discarded and the control collapses to its 25px content height.
+   That is under the 44px floor Principle II requires, on the platform this app targets,
+   and it went unseen until the real-browser tier measured it: Chromium honours the rule
+   and reports 44px, so nothing but WebKit could have revealed it.
+
+   Opting out of native rendering hands sizing back to the rule above. iOS still opens its
+   own wheel picker on tap — only the closed control's appearance changes here.
+
+   This rule must stay *after* the shared one: that uses the `background` shorthand, which
+   would reset the arrow below to none. */
+select {
+  appearance: none;
+  -webkit-appearance: none;
+
+  /* The arrow, drawn rather than inherited, since opting out of native rendering removes
+     the one Safari was drawing. #1a1a17 is --text; a data URI cannot read a custom
+     property, so these two must be kept in step by hand. It sits at 17.44:1 on --surface,
+     well past the 3:1 WCAG 1.4.11 asks of a graphic that carries meaning. */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%231a1a17' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--space-3) center;
+
+  /* Room for the arrow, so a long option label cannot run underneath it. */
+  padding-right: calc(var(--space-3) * 2 + 12px);
+}
+
 [aria-invalid='true'] { border-color: var(--danger); border-width: 2px; }
 
 .form__error { margin: 0; color: var(--overdue-text); font-size: 0.875rem; }

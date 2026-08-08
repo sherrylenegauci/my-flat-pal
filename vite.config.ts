@@ -44,12 +44,36 @@ export default defineConfig({
     }),
   ],
   test: {
-    globals: true,
-    // T003 — two environments. Domain and storage tests are pure and need no
-    // DOM; running them without jsdom keeps the bulk of the suite fast.
-    environment: 'node',
-    environmentMatchGlobs: [['tests/ui/**', 'jsdom']],
-    // T004 — RTL cleanup, only needed where there is a DOM.
-    setupFiles: ['./tests/setup.ts'],
+    // T003 — two projects rather than one config with per-glob environments.
+    // `environmentMatchGlobs` does the same job but is deprecated in Vitest 3.
+    //
+    // Domain tests are pure and need no DOM, so they run in node and stay fast.
+    // Storage tests use jsdom even though plan.md put them in node: the
+    // repository talks to localStorage, and jsdom ships a real implementation.
+    // Testing against a hand-rolled fake risks the fake diverging from the
+    // thing it stands in for — string coercion, quota behaviour — which is
+    // exactly the class of bug this layer must not have, since it holds the
+    // only copy of the user's data.
+    projects: [
+      {
+        test: {
+          name: 'domain',
+          globals: true,
+          environment: 'node',
+          include: ['tests/domain/**/*.test.ts'],
+          setupFiles: ['./tests/setup.ts'],
+        },
+      },
+      {
+        test: {
+          name: 'browser-ish',
+          globals: true,
+          environment: 'jsdom',
+          include: ['tests/{storage,ui}/**/*.test.{ts,tsx}'],
+          // T004 — RTL cleanup, only meaningful where there is a DOM.
+          setupFiles: ['./tests/setup.ts'],
+        },
+      },
+    ],
   },
 })

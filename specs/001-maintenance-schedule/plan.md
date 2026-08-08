@@ -227,8 +227,16 @@ intended day; overflowing drifts it forward every short month.
 "clear of timezone arithmetic entirely". It isn't. JavaScript's `Date` has no calendar-date type —
 `new Date("2026-08-08")` is UTC midnight, `new Date(2026, 7, 8)` is local midnight, and converting
 between them shifts the day for anyone west of UTC. Day and week arithmetic across daylight-saving
-boundaries is also unspecified. **This is the specific bug the rejected date library would have
-prevented, and it needs settling during implementation.**
+boundaries is also unspecified. This was the specific bug the rejected date library would have
+prevented.
+
+**✅ Settled in implementation 2026-08-08.** `src/domain/interval.ts` works on the date parts of a
+`YYYY-MM-DD` string and never converts through a local-midnight `Date`. Where it does use `Date` it
+uses the UTC constructors, which have no daylight saving. `CalendarDate` is a distinct type from
+`Timestamp` in `src/domain/types.ts`, so the calendar-date/instant distinction the original claim
+glossed over is now visible in the type system. `tests/domain/interval.test.ts` pins both UK
+changeover dates, and comparison is plain string comparison, which is correct for this format and
+involves no timezone at all.
 
 ### R6 — Accessibility checking, and its limits
 
@@ -304,9 +312,12 @@ cache.
 piled-up occurrences — that falls out of counting from the last tick-off rather than generating a
 series, so missed occurrences can't accumulate.
 
-> ⚠️ **Unresolved**: `spec.md` FR-004 puts "never done and overdue" in the attention group;
-> this table also marks `due` as needing attention. They disagree. **T017 must decide and correct
-> whichever document is wrong** — currently a `due` job could sort anywhere and every test passes.
+> **✅ Resolved 2026-08-08 (T017).** `spec.md` FR-004 said "items needing attention" without
+> enumerating which statuses those were, so a `due` job could sort anywhere and every test would
+> still pass. **Decision: attention is `overdue`, `due`, `never-done`** — a job due today is one to
+> do today. Recorded as `ATTENTION_STATUSES` in `src/domain/types.ts` and pinned by
+> `tests/domain/ordering.test.ts`, which also fixes the secondary order within the group: longest
+> overdue first, then due, then never-done by when it was added.
 
 ### Next due date
 

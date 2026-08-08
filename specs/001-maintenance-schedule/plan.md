@@ -151,11 +151,36 @@ What it does instead is prevention: ask the browser to protect the app's storage
 (`navigator.storage.persist()`), and **if the browser says no, tell you plainly** — once — that your
 history might not survive. Since export was cut, you're entitled to know the real guarantee.
 
-⚠️ **Unverified**: whether that request exists, prompts, or is auto-granted differs by browser and
-has changed across releases, and installed home-screen apps are the least well-documented case. Also
-unverified: whether a grant actually protects `localStorage` against WebKit's storage-eviction
-policy, which is the single largest threat to this app's data. **Task T010 must settle this before
-T031–T033 are built.**
+**✅ Verified 2026-08-08 (T010).** The answer is better than feared, and it changes the risk
+materially.
+
+| Question | Answer |
+|---|---|
+| Does `navigator.storage.persist()` exist? | Yes — Baseline widely available across browsers since December 2021. HTTPS only (localhost counts). |
+| Will Safari grant it to us? | Likely. WebKit "currently grants a request based on heuristics **like whether the website is opened as a Home Screen Web App**" — being installed is explicitly one of the things that earns a grant. |
+| Does WebKit's 7-day storage cap apply to us? | **No.** "The first-party domain of home screen web applications is exempt from ITP's 7-day cap on all script-writeable storage, i.e. ITP always skips that domain in its website data removal algorithm." |
+| Does a grant protect `localStorage` specifically? | Yes. Persistent mode covers script-writable storage, and "origins with active pages or persistent-mode storage are protected from eviction". |
+| Do we get a decent quota? | Yes. A home-screen app "has the same origin quota and overall quota as when it is opened in a browser app" — full browser-level allocation, not the reduced one other apps get. |
+
+**What this does not protect against**, and what the user still needs telling about:
+
+- **The user clearing website data.** That is an explicit user action and no API prevents it.
+- **Severe system storage pressure.** Persistent mode resists least-recently-used eviction, but the
+  overall-quota and storage-pressure paths still exist.
+- **Deleting the app.**
+
+So the honest position stands: the app requests persistence, and reports plainly if refused. What
+changes is the expected outcome — a grant is likely rather than doubtful, and the 7-day cap, which
+was the single largest worry, does not apply to an installed app at all.
+
+One claim seen in secondary sources — that the permission "has to be requested every time the app
+is opened" — is **not** in WebKit's or MDN's documentation and is treated as unverified. Calling
+`persisted()` on start-up and only requesting when it returns false costs nothing and is correct
+either way.
+
+Sources: [WebKit — Tracking Prevention](https://webkit.org/tracking-prevention/),
+[WebKit — Updates to Storage Policy](https://webkit.org/blog/14403/updates-to-storage-policy/),
+[MDN — StorageManager.persist()](https://developer.mozilla.org/en-US/docs/Web/API/StorageManager/persist)
 
 ### R4 — No router
 
@@ -165,9 +190,28 @@ history integration is genuinely needed, and it's a platform fact rather than a 
 the app — so opening a job's detail and swiping back would eject you. About thirty lines against
 React state handles it.
 
-⚠️ **The gap**: iOS standalone apps have **no equivalent back gesture**, and no in-app back control
-is specified anywhere. On half the target platforms there may currently be no way back at all.
-**Task T011 must settle this before T038 is built.**
+**✅ Verified 2026-08-08 (T011). The gap is real: the app needs its own back control.**
+
+iOS standalone is a genuinely different situation from Android:
+
+- **iOS has no system back button at all** — it is a gesture-based OS, and going back is either a
+  swipe or a control the app itself draws.
+- **Whether the edge-swipe works in a standalone web app is inconsistent.** Reports go both ways
+  across iOS versions and framework bug trackers, including cases where an app's own swipe handling
+  and the platform's fire together and navigate back twice. It is not a thing to build on.
+- The widely-recommended answer is the obvious one: **draw a back control in the app.** Without one,
+  a user who opens a job's detail can be stranded with no way out but to kill the app.
+
+**Decision**: every view below the schedule list gets a visible in-app back control. The History API
+integration from this section stays — it is what makes Android's back gesture do the right thing
+rather than closing the app — but it is no longer the *only* way back, and iOS is not left depending
+on a gesture that may not fire.
+
+This also satisfies Principle II more squarely than the original design did: "navigation MUST NOT
+depend on the browser's back button" is easier to honour when the app has its own.
+
+Sources: [Ionic — iOS PWA swipe back broken](https://github.com/ionic-team/ionic-framework/issues/29733),
+[Discourse Meta — Back button in iOS PWA](https://meta.discourse.org/t/back-button-in-ios-pwa/93909)
 
 *Revisit the router when a second feature adds screens.*
 

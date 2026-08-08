@@ -54,8 +54,8 @@ the same handful of files.
 
 ### Verification before implementation
 
-- [ ] T010 Verify Storage API behaviour on installed PWAs on current iOS and Android — whether `navigator.storage.persist()` exists, is auto-granted, or prompts, **and whether a grant actually protects `localStorage` against WebKit's script-writable-storage eviction policy**. Record in plan.md § Decisions R3, replacing the ⚠️. **Gates T031–T033.**
-- [ ] T011 Verify that an installed standalone PWA on **iOS** has no system back affordance, and decide the in-app back control this implies. Record in plan.md § Decisions R4, which currently argues only from Android. **Gates T041.**
+- [X] T010 Verify Storage API behaviour on installed PWAs on current iOS and Android — whether `navigator.storage.persist()` exists, is auto-granted, or prompts, **and whether a grant actually protects `localStorage` against WebKit's script-writable-storage eviction policy**. Record in plan.md § Decisions R3, replacing the ⚠️. **Gates T031–T033.**
+- [X] T011 Verify that an installed standalone PWA on **iOS** has no system back affordance, and decide the in-app back control this implies. Record in plan.md § Decisions R4, which currently argues only from Android. **Gates T041.**
 
 ### Domain layer — pure functions, no React, no browser APIs
 
@@ -89,9 +89,9 @@ the same handful of files.
 - [ ] T033 Implement the refusal notice to pass T031, using the shared notice surface (T037)
 - [ ] T034 [P] Failing tests in `tests/ui/date-change.test.tsx`: an item due today is re-classified as overdue **without any user interaction** when the date changes while the app is open — the case FR-005 and SC-003 actually require, which no previous task implemented
 - [ ] T035 Implement a date-change trigger in `src/ui/useCurrentDate.ts` — `visibilitychange` plus a timer to the next local midnight — to pass T034. **This is FR-005's implementing task; it did not previously exist**
-- [ ] T036 [P] Failing tests in `tests/ui/navigation.test.tsx`: from item detail, the back affordance returns to the list; from the list, it does not close the app. Asserted through rendered views, not by inspecting `history` calls
+- [ ] T036 [P] Failing tests in `tests/ui/navigation.test.tsx`: an **in-app back control** on every view below the schedule returns to the list; the Android back gesture (a `popstate`) does the same; from the list, neither closes the app. Asserted through rendered views, not by inspecting `history` calls
 - [ ] T037 Build the app shell in `src/ui/App.tsx`: layout, `env(safe-area-inset-*)`, navigation state, and a shared notice/error surface used by T033, the recovery notice, and the read-only banner
-- [ ] T038 Implement `src/ui/navigation.ts` using the History API to pass T036 (depends on T011's iOS finding)
+- [ ] T038 Implement `src/ui/navigation.ts` using the History API to pass T036. **T011 settled the iOS question: there is no reliable system back gesture in a standalone iOS app, so an in-app back control is required, not optional.** History integration stays — it is what stops Android's back gesture closing the app — but it is no longer the only way back
 - [ ] T039 Register the service worker in `src/main.tsx` and wire the update prompt
 
 **Checkpoint**: Domain and storage fully tested, every mutation persists, and status re-evaluates on date change. Stories can begin.
@@ -122,7 +122,7 @@ the same handful of files.
 - [ ] T048 [P] [US1] Build `src/ui/components/EmptyState.tsx`
 - [ ] T049 [US1] Build `src/ui/components/ItemRow.tsx` showing name, status, and next due date without a tap
 - [ ] T050 [US1] Build `src/ui/views/ScheduleView.tsx`, ordering via `orderForDisplay` and recomputing status from `useCurrentDate` (never a persisted status)
-- [ ] T051 [US1] Build `src/ui/views/ItemFormView.tsx` for creating an item, with 44x44px targets and inline validation
+- [ ] T051 [US1] Build `src/ui/views/ItemFormView.tsx` for creating an item, with 44x44px targets, inline validation, and a visible back/cancel control (T011)
 - [ ] T052 [US1] Wire creation through the repository to pass T043
 
 **Checkpoint**: **MVP — a usable app.**
@@ -146,7 +146,7 @@ the same handful of files.
 
 ### Implementation for User Story 2
 
-- [ ] T059 [US2] Build `src/ui/views/ItemDetailView.tsx` showing last-done and history
+- [ ] T059 [US2] Build `src/ui/views/ItemDetailView.tsx` showing last-done and history, with a visible back control to the schedule (T011)
 - [ ] T060 [US2] Add the mark-done action to `src/ui/components/ItemRow.tsx`, reachable in one tap
 - [ ] T061 [US2] Add the durable undo affordance to `src/ui/App.tsx`
 - [ ] T062 [US2] Wire completion and undo through the repository (write path already exists from T028)

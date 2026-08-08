@@ -109,7 +109,15 @@ export function ItemFormView({
           onChange={(e) => setCount(e.target.value)}
           {...field('count')}
         />
-        <label htmlFor={`${ids}-unit`}>Period</label>
+        {/* The label stays in the DOM but not on screen. "How often — every 1 years"
+            already reads as a sentence, so a visible "Period" adds nothing for a sighted
+            user — and as a fourth item in a three-column grid it wrapped the dropdown
+            onto its own row, stranding it from the label naming it. A screen reader
+            still announces it, because a bare dropdown of day/week/month/year out of
+            context does not say what it sets. */}
+        <label className="visually-hidden" htmlFor={`${ids}-unit`}>
+          Period
+        </label>
         <select
           id={`${ids}-unit`}
           value={unit}

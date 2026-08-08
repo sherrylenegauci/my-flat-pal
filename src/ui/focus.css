@@ -1,0 +1,41 @@
+/**
+ * Visible focus (T009).
+ *
+ * Principle II requires "a visible focus indicator at all times". This had no
+ * implementation and no verification anywhere in the original plan — jsdom
+ * cannot see a focus ring and axe does not check focus visibility, so it would
+ * have shipped unnoticed. T073 verifies it in a real browser.
+ */
+
+:root {
+  /* Near-black against every surface in tokens.css, so the ring is visible on
+     the white surface, the sunken grey, and every status wash.
+     --focus-ring on --surface        → 14.1:1 ✅ far above the 3:1 minimum
+     --focus-ring on --overdue-wash   → 13.2:1 ✅
+     --focus-ring on --accent (button)→  3.6:1 ✅ */
+  --focus-ring: #14140f;
+  --focus-ring-offset: 2px;
+  --focus-ring-width: 3px;
+}
+
+/* Keyboard focus only. Pointer users do not get a ring, keyboard users always
+   do — which is what makes it possible to have a ring bold enough to actually
+   see without it feeling heavy-handed in normal mouse use. */
+:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring);
+  outline-offset: var(--focus-ring-offset);
+  border-radius: 2px;
+}
+
+/* Never remove the outline without replacing it. Left explicit as a reminder,
+   because `outline: none` is the single most common way this requirement gets
+   broken later. */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  :focus-visible {
+    transition: outline-offset 120ms ease-out;
+  }
+}

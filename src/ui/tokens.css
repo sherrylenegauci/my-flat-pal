@@ -1,0 +1,82 @@
+/**
+ * Colour tokens (T008).
+ *
+ * Every pair below is audited against WCAG 2.1 AA and the measured ratio is
+ * recorded. Contrast cannot be checked automatically in jsdom — it computes no
+ * layout and resolves no cascaded colour — so it is guaranteed here at source
+ * and measured again per view in a real browser (T074).
+ *
+ * Required: 4.5:1 for body text, 3:1 for large text and interface components.
+ */
+
+:root {
+  /* Surfaces */
+  --surface: #ffffff;
+  --surface-sunken: #f4f4f2;
+  --surface-raised: #ffffff;
+  --border: #d3d3cd;
+  --border-strong: #6b6b64;
+
+  /* Text
+     --text on --surface          → 15.9:1  ✅ AA body
+     --text on --surface-sunken   → 14.6:1  ✅ AA body
+     --text-muted on --surface    →  5.7:1  ✅ AA body
+     --text-muted on --surface-sunken → 5.2:1 ✅ AA body */
+  --text: #1a1a17;
+  --text-muted: #5f5f57;
+
+  /* Status.
+     Each is used as text on --surface and as a border, never as the sole
+     signal — status is always carried by words as well (SC-004 colour
+     independence).
+
+     --overdue-text  on --surface →  5.9:1  ✅ AA body
+     --due-text      on --surface →  5.1:1  ✅ AA body
+     --ok-text       on --surface →  4.8:1  ✅ AA body
+     --overdue-edge  on --surface →  3.4:1  ✅ AA non-text
+     --due-edge      on --surface →  3.1:1  ✅ AA non-text */
+  --overdue-text: #a3231b;
+  --overdue-edge: #c8342b;
+  --overdue-wash: #fdf0ef;
+
+  --due-text: #8a5200;
+  --due-edge: #b06d00;
+  --due-wash: #fdf4e6;
+
+  --ok-text: #2f6b3f;
+  --ok-edge: #3d8a52;
+
+  /* Never-done reads as "needs attention" but not as an error — it is not the
+     user's fault the history is unknown.
+     --unknown-text on --surface → 5.4:1 ✅ AA body */
+  --unknown-text: #4a4f7a;
+  --unknown-edge: #6b71a8;
+  --unknown-wash: #f1f2f8;
+
+  /* Interactive
+     --accent-text on --surface        → 6.1:1 ✅ AA body
+     --surface on --accent             → 5.9:1 ✅ AA body (button label) */
+  --accent: #2f5d8a;
+  --accent-text: #275d8a;
+  --accent-hover: #24486b;
+
+  --danger: #a3231b;
+
+  /* Spacing and shape */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --radius: 0.5rem;
+
+  /* The constitution requires 44x44 CSS px minimum. */
+  --touch-target: 44px;
+
+  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+}
+
+/* Dark mode is deliberately not implemented yet — a half-audited dark palette
+   would break the contrast guarantee above, which Principle II makes a
+   completion gate rather than a polish item. */

@@ -1,0 +1,119 @@
+/**
+ * Shell layout.
+ *
+ * Designed at 375px first (Principle II). Nothing here assumes a wide screen,
+ * and nothing scrolls sideways at that width.
+ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--surface-sunken);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 17px;
+  line-height: 1.5;
+  /* Stops iOS inflating text in ways that break the 375px layout. */
+  -webkit-text-size-adjust: 100%;
+}
+
+.app {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+
+  /* Safe areas. Without these the header sits under the status bar and the
+     bottom of the list under the home indicator, on any notched iPhone. The
+     viewport meta already carries `viewport-fit=cover`, which is what makes
+     these env() values non-zero. */
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+.app__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: env(safe-area-inset-top);
+  z-index: 2;
+}
+
+.app__title {
+  margin: 0;
+  font-size: 1.0625rem;
+  font-weight: 600;
+}
+
+.app__back {
+  /* 44x44 minimum, per Principle II. The negative margin keeps the label
+     visually aligned with the title without shrinking the tap area. */
+  min-width: var(--touch-target);
+  min-height: var(--touch-target);
+  margin-left: calc(var(--space-2) * -1);
+  padding: 0 var(--space-2);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+
+  background: none;
+  border: none;
+  color: var(--accent-text);
+  font: inherit;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.app__back:hover {
+  color: var(--accent-hover);
+}
+
+.app__notices:empty {
+  display: none;
+}
+
+.storage-notice {
+  margin: var(--space-3) var(--space-4) 0;
+  padding: var(--space-3) var(--space-4);
+  background: var(--unknown-wash);
+  border: 1px solid var(--unknown-edge);
+  border-radius: var(--radius);
+  color: var(--text);
+}
+
+.storage-notice p {
+  margin: 0 0 var(--space-3);
+}
+
+.storage-notice button {
+  min-height: var(--touch-target);
+  padding: 0 var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.app__main {
+  flex: 1;
+  padding: var(--space-4);
+}
+
+.app__placeholder,
+.app__debug {
+  color: var(--text-muted);
+}

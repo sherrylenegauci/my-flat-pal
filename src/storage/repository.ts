@@ -144,3 +144,28 @@ export function save(document: StoredDocument): StoredDocument {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
   return next
 }
+
+/**
+ * Notifies when another same-origin context changes the schedule.
+ *
+ * The compare-and-swap in `save` prevents one context destroying another's
+ * work, but by itself it converts silent data loss into a visible error — the
+ * user is told their save failed for something they did nothing to cause. This
+ * closes that gap: the `storage` event fires in *other* contexts when one of
+ * them writes, so an open app can reload rather than sit on stale state and
+ * then fail its next save.
+ *
+ * Note the event does not fire in the context that did the writing, so this
+ * cannot loop on our own saves.
+ *
+ * Returns an unsubscribe function.
+ */
+export function subscribeToExternalChanges(onChange: () => void): () => void {
+  const handler = (event: StorageEvent) => {
+    // `key === null` means the whole store was cleared, which also concerns us.
+    if (event.key === STORAGE_KEY || event.key === null) onChange()
+  }
+
+  window.addEventListener('storage', handler)
+  return () => window.removeEventListener('storage', handler)
+}

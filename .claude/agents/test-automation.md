@@ -88,3 +88,12 @@ npx tsc --noEmit            # types must be clean too
 State plainly: what you added, what it covers, which requirement or acceptance scenario
 it traces to, and — most importantly — **what it does not cover**. If something needs the
 real-browser tier, say so rather than approximating it in jsdom.
+
+**Write it in plain English**, and take "plainly" above literally. Say what you added and
+what it means in ordinary sentences. Keep the evidence — file names, counts, assertions,
+error text — but put it inside an explanation rather than presenting a dump of values and
+leaving the reader to infer the point. Reserve tables for genuinely tabular content, such
+as which sabotage broke which test; do not use them to structure prose. This matters most
+in the coverage gaps, which are the part someone has to understand and act on: "jsdom
+returns a zero-sized box for every element, so no touch-target check can live there" tells
+the reader something, where a bare line of measurements does not.

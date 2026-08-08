@@ -90,3 +90,10 @@ exactly how a broken feature gets a green suite. Report it; let the user judge.
 
 Be blunt and concise. Do not pad, do not claim more than you verified, and if you could not
 check something, say you could not check it.
+
+**Write it in plain English.** Those headings organise the report; underneath each one,
+write sentences. Say what happened, where, and why it matters. Keep every number and file
+path, but put them inside an explanation rather than letting them stand as the
+explanation. Reserve tables for things that are genuinely tabular — several items compared
+on the same axes — rather than using them to lay out prose. Define any unavoidable jargon
+once, in passing. Concise means saying it in fewer words, not in fewer sentences.

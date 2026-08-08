@@ -74,3 +74,12 @@ and what would demonstrate it if fixed.
 Be specific and be blunt. Do not soften findings, do not pad with praise, and do not
 report a criterion as holding because it probably does. If you could not check something,
 say you could not check it.
+
+**Write it in plain English.** The verdict table is genuinely tabular and should stay a
+table, but everything after it is prose and should read like prose. Say what is wrong,
+where, and why it matters, in ordinary sentences. Keep the evidence — file, line, value,
+error text — but put it inside an explanation rather than presenting it as one. A raw
+dump like `computed min-height=18px rendered=25.0px` states a fact and leaves the reader
+to work out what it means; say that Safari refuses the height the stylesheet asks for and
+the control ends up 25 pixels tall instead of 44, then give the numbers. Blunt and
+readable are not in tension. A finding nobody can read is a finding nobody acts on.

@@ -1,7 +1,14 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version change: 1.2.1 → 1.2.2
+Version change: 1.2.2 → 1.3.0
+Bump rationale: MINOR — Principle III materially expanded with a Testing
+Strategy section (three tiers, what each covers, and what the environment
+genuinely cannot check) and an Agents section defining two standing agents.
+Also corrects Principle III's "end to end" wording, which read as a promise
+of browser-level tests that do not exist.
+
+Prior: 1.2.1 → 1.2.2
 Bump rationale: PATCH — records two TODOs discharged by feature 001's plan:
 INSTALLED_DATA_DURABILITY (localStorage; loss detection ruled out as impossible,
 mitigation substituted) and BUILD_TOOL_CONFIRMATION (Vite confirmed over Next.js).
@@ -130,9 +137,53 @@ Tests are written before the implementation they describe, and they MUST fail fi
   have failed before the change MUST NOT be merged.
 - Tests MUST assert observable behaviour through the interface a user or caller actually
   uses. Tests that assert internal implementation detail are a defect.
-- Every user story in a specification MUST have at least one test that demonstrates its
-  acceptance scenarios end to end.
+- Every user story in a specification MUST have at least one test that exercises its
+  acceptance scenarios through the interface a user actually uses. *(This previously
+  said "end to end", which was ambiguous: it reads as a promise of browser-level
+  tests that do not exist. See Testing Strategy below for what is actually required.)*
 - Bug fixes MUST begin with a failing test that reproduces the bug.
+
+### Testing Strategy
+
+Three tiers, each covering what the tier below cannot. A change is not done until every
+tier that applies to it is satisfied.
+
+| Tier | Covers | Environment | Status |
+|---|---|---|---|
+| **Domain** | Scheduling rules, calendar arithmetic, pure logic | No DOM | MANDATORY |
+| **Behaviour** | What a user can do and see — through roles, labels, and visible text | jsdom + Testing Library | MANDATORY |
+| **Real browser** | Contrast, focus visibility, installed behaviour, safe areas, platform gestures | A real browser and a real phone | MANDATORY, currently **manual** |
+
+- The domain tier MUST NOT touch React, storage, or the clock. Passing dates in as
+  parameters is what makes date-dependent rules testable without fake timers.
+- The behaviour tier MUST assert through what a user perceives. Reaching into component
+  internals is a defect (see above).
+- **The real-browser tier is currently a documented manual checklist, not automation.**
+  This is a deliberate, recorded limitation rather than an oversight: jsdom computes no
+  layout and resolves no cascaded colour, so contrast and focus visibility cannot be
+  checked there, and no headless environment can verify a home-screen install.
+- **Automated browser tests are permitted and encouraged, not mandated.** Introducing
+  one is a normal dependency decision under Principle I: justify it in the plan that
+  adds it. The trigger to expect is the manual checklist becoming long enough to be
+  skipped — a checklist nobody runs is worse than a test suite nobody wrote.
+- **An automated check that cannot actually check the thing MUST NOT be written.** A
+  contrast assertion in jsdom passes regardless of the real colours; that is worse than
+  no check, because it reads as coverage. Where a tier cannot cover something, say so
+  where the gap is, rather than papering it with a test that always passes.
+
+### Agents
+
+Two standing agents support this principle. Both live in `.claude/agents/` and are
+version-controlled with the code, so their instructions are reviewable and amendable
+like anything else.
+
+- **`test-automation`** — writes and maintains tests to these rules. Invoked when tests
+  are being added or reworked.
+- **`behaviour-verification`** — checks implemented behaviour against the spec's
+  acceptance scenarios and success criteria, independently of whoever wrote it.
+
+Neither replaces the author's own responsibility. Their value is that they read the spec
+and the constitution fresh, which the author of a change cannot do.
 
 **Rationale**: Test-first is what makes the other two principles enforceable. It is the
 only mechanism that keeps a refactor toward simplicity safe, and it is the gate at which
@@ -239,4 +290,4 @@ gates above. Complexity MUST be justified, never assumed. Agent-specific runtime
 lives in agent context files at the repository root and MUST NOT restate or contradict
 this constitution — it points here instead.
 
-**Version**: 1.2.2 | **Ratified**: 2026-08-07 | **Last Amended**: 2026-08-08
+**Version**: 1.3.0 | **Ratified**: 2026-08-07 | **Last Amended**: 2026-08-08

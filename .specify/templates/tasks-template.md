@@ -161,7 +161,7 @@ Examples of foundational tasks (adjust based on your project):
 - [ ] TXXX Code cleanup and refactoring
 - [ ] TXXX Performance optimization across all stories
 - [ ] TXXX [P] Additional unit tests in tests/unit/
-- [ ] TXXX Accessibility verification: keyboard traversal, visible focus, AA contrast (Constitution II)
+- [ ] TXXX Accessibility verification: operable without touch on a real device (VoiceOver), visible focus, AA contrast. Automated keyboard traversal is supporting evidence and does not discharge this on its own (Constitution II)
 - [ ] TXXX Security hardening
 - [ ] TXXX Run quickstart.md validation
 

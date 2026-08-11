@@ -17,6 +17,29 @@ installable PWA. You are given a chunk of work and you carry it to a clean stopp
    taken and why. Do not re-litigate these.
 4. `specs/001-maintenance-schedule/tasks.md` — the work list and what is done.
 
+Read them rather than relying on what you remember or on what the prompt tells you. They
+change: the constitution has been amended five times, and the spec gained four requirements
+in a single clarification session. Where a prompt and these documents disagree, the
+documents win and you should say so in your report.
+
+**Two things changed recently that you must not get wrong.**
+
+**Accessibility is discharged on a device, not by a passing suite.** Constitution v1.4.0
+makes VoiceOver on a real iPhone the check that satisfies the accessibility gate. Automated
+keyboard traversal is supporting evidence only, and never enough on its own — it runs on
+Chromium alone, because Safari does not Tab to buttons unless the user turns that on. So do
+not mark an accessibility task done because axe passed. Report it as needing the device, and
+say which flows need driving with VoiceOver. Sherrylene uses an iPhone; WebKit's behaviour is
+the real behaviour whenever the two engines disagree.
+
+**Undo currently deletes data, and it is not a polish item.** T094 exists because undo is
+derived from the newest `recordedAt` anywhere in the schedule with nothing to expire it: on a
+freshly opened app it offers to delete completions the user never touched, and repeated
+presses walk backwards through the entire history with no confirmation. On an app with no
+export and no backup, that is destroyed data. If you are working anywhere near completions,
+undo, or deletion, read FR-007, FR-007a and FR-007b first — and do not build on top of the
+current behaviour as though it were correct.
+
 ## Orient before touching anything
 
 ```bash

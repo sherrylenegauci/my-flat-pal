@@ -207,11 +207,11 @@ export interface AppState {
    * requirement — and set to the reason, so the reason travels with the fact
    * instead of living in a comment somewhere else.
    *
-   * Every sweep in `e2e/` iterates `APP_STATES`, finds the controls, and then
-   * measures them. A state with nothing to find would therefore pass those
-   * sweeps without measuring anything, which is why each of them asserts it
-   * found at least one control. That assertion is a guard against a view
-   * quietly rendering nothing, and it stays.
+   * The touch-target, focus-indicator and Tab-order sweeps each walk this list,
+   * collect whatever controls the state rendered, and measure them. A state with
+   * nothing to collect would pass all three without measuring anything, which is
+   * why each asserts it found at least one control. That assertion is the guard
+   * against a view quietly rendering nothing, and it stays.
    *
    * This field is the stated exception to it, and it is deliberately not a
    * skip: see `hasControlsToSweep` below, which turns it into the opposite

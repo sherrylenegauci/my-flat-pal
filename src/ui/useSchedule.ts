@@ -250,7 +250,23 @@ export function useSchedule(): Schedule {
    * something in between is not licence to delete it.
    */
   const undoLast = useCallback(() => {
-    if (offerId === null) return
+    if (offerId === null || offerRecordedAt === null) return
+
+    // The window is re-checked *here*, at the press, and not only when the app
+    // last rendered. Withdrawing the offer on screen depends on a timer firing,
+    // and a phone suspends a backgrounded page and throttles its timers — so the
+    // button can still be painted from before the suspend when the user comes
+    // back to it minutes later. Whether WebKit runs a pending timeout before the
+    // first paint after a resume is a real-device question nobody here can
+    // answer, and this deletes history irrecoverably, so it must not depend on
+    // the answer. Rendering is an optimisation; this is the enforcement.
+    if (!isWithinUndoWindow(offerRecordedAt, new Date())) {
+      // Not a silent no-op: re-render so the dead offer leaves the screen. A
+      // control that visibly does nothing when pressed reads as a fault, which
+      // is the same reasoning FR-006a gives for announcing an unmoved schedule.
+      setExpiryTick((tick) => tick + 1)
+      return
+    }
 
     mutate((items) => {
       const target = mostRecentlyRecorded(items)
@@ -262,7 +278,7 @@ export function useSchedule(): Schedule {
     // just did, so it must not slide into the offer that was occupied a moment
     // ago. Read back from storage, which `mutate` has already written.
     notUndoable.current = mostRecentlyRecorded(load().document.items)?.completion.id ?? null
-  }, [mutate, offerId])
+  }, [mutate, offerId, offerRecordedAt])
 
   return {
     views: orderForDisplay(doc.items, today),

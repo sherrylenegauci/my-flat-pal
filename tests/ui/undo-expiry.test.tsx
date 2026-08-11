@@ -70,6 +70,29 @@ async function timePasses(ms: number) {
   })
 }
 
+/**
+ * Move the clock forward **without letting any pending timer fire**.
+ *
+ * `vi.setSystemTime` changes what `Date.now()` and `new Date()` report and
+ * shifts every armed timer along with the clock, so the expiry `setTimeout` in
+ * `useSchedule` is left still pending rather than run. That is the entire point
+ * of this helper. It reproduces a phone that was backgrounded — iOS suspends the
+ * page and throttles its timers — and then brought back with the Undo button
+ * still painted from before the suspend, before the throttled timeout has had
+ * its chance to run.
+ *
+ * **Do not "tidy" this into `timePasses`.** That helper calls
+ * `vi.advanceTimersByTimeAsync`, which fires the expiry timer, re-renders, and
+ * makes the offer withdraw itself properly. That is the good path and it is
+ * already covered above. A test about what *pressing* Undo does once the window
+ * has passed cannot use it: with the timer fired there is no offer left to
+ * press, and the press is the thing under test. Swapping the two helpers here
+ * would leave a test that still passes and no longer checks anything.
+ */
+function clockJumpsForwardWithoutTimersFiring(ms: number) {
+  vi.setSystemTime(new Date(Date.now() + ms))
+}
+
 /** Tab until the predicate matches, or give up. Returns the focused element. */
 async function tabUntil(
   user: ReturnType<typeof userEvent.setup>,
@@ -194,6 +217,46 @@ describe('the undo offer expires', () => {
     await screen.findByText('Boiler service')
 
     expect(undoControl()).not.toBeNull()
+  })
+})
+
+describe('the window is enforced when Undo is pressed, not only when the app renders', () => {
+  it('deletes nothing when the button is pressed after the window has passed', async () => {
+    // Every test above lets the expiry timer fire, so the offer withdraws
+    // itself and there is nothing left to press. That makes the render path the
+    // only thing enforcing the ten seconds. This test presses the button while
+    // the window has passed but the timer has not run, which is what a
+    // backgrounded phone produces: `undoLast` re-checks that the entry is still
+    // the newest and still the one the offer named, but never re-checks the
+    // clock, so the press goes through a minute after the tick-off was
+    // recorded — contrary to FR-007, which says the offer MUST expire a short
+    // time after the completion was recorded.
+    seed([anItem({ name: 'Boiler service', interval: YEARLY, completions: [aCompletion('2026-06-01')] })])
+    const { user } = launch()
+    await screen.findByText('Boiler service')
+
+    await user.click(screen.getByRole('button', { name: /mark done/i }))
+    const historyBeforeThePress = { 'Boiler service': ['2026-06-01', '2026-08-08'] }
+    expect(storedHistoryByJob()).toEqual(historyBeforeThePress)
+
+    // Held onto now, before the clock moves, because once the window is
+    // enforced at the press a re-render may take the control away. What is
+    // being asserted is what the press does to the stored document, not whether
+    // the button is still there to be found afterwards.
+    const undo = undoControl()
+    expect(undo).not.toBeNull()
+
+    // A minute later — six times the window — with the expiry timeout still
+    // pending. See the helper for why it must not become `timePasses`.
+    clockJumpsForwardWithoutTimersFiring(60_000)
+    await user.click(undo!)
+
+    // Nothing was taken back: both tick-offs are still recorded, including the
+    // one the user made. Asserted against storage rather than the screen,
+    // because the row shows a due date and not a history — after the press the
+    // offer disappears either way, so the screen looks identical whether the
+    // completion survived or was deleted. The user would find out on reload.
+    expect(storedHistoryByJob()).toEqual(historyBeforeThePress)
   })
 })
 

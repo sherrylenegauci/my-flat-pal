@@ -232,9 +232,10 @@ asking for new behaviour, so it needs no task.
   to withhold an offer, so a stale value can only decline to undo something. The alternative that
   would keep the offer purely derived is a field in the stored document, which is a persistence
   choice and therefore needs a plan amendment first (Technology Constraints). Not taken here.
-  The cost of the choice made: relaunching the app within ten seconds of adding a job with a
-  last-done date would offer to strip that date, because the remembered id does not survive a
-  relaunch. Raised for Sherrylene rather than decided.
+
+  The cost of that choice is larger than first written, and is now T102: the remembered id does
+  not survive a relaunch, so both rules above fail across one. Confirmed by probe, twice
+  independently and then a third time by hand.
 - [X] T098 [P] Failing tests in `tests/ui/read-only.test.tsx` (FR-010a): with a stored document carrying a higher `schemaVersion`, no control that would change anything is present or enabled — not Add job, not Mark done, not Undo — and the notice explaining why is shown. Seed through the repository rather than the UI, since the UI cannot create this state
 
   **Written differently from the line above, deliberately.** "No Mark done, no Undo" cannot be
@@ -265,6 +266,17 @@ asking for new behaviour, so it needs no task.
   nothing from sweeping vacuously — so the exception is made explicit per state rather than the
   guard relaxed
 - [ ] T100 [P] **Design refresh: colour and personality** (issue #99). The app is near-monochrome — white cards on grey, one blue accent, status as small coloured text — and reads as a spreadsheet rather than something for a home. Constraints: Principle I forbids a component library, so this is CSS and tokens; status MUST NOT be carried by colour alone, which `e2e/colour-independence.spec.ts` enforces; 375px first; 44×44 targets hold. **Every ratio must be computed, not estimated** — `tokens.css` once carried twelve ratios recorded as measured that were all estimates, and `focus.css` claimed 3.6:1 for a ring that measured 2.69:1. `e2e/contrast.spec.ts` now checks this against real browser-resolved colours on both engines, so a careless palette turns the suite red rather than shipping
+- [ ] T102 **The undo offer's refusal does not survive a relaunch — needs a decision before it can be fixed** (FR-007a, FR-007b). Numbered after the design tasks because it was found after them, by verification of T097; it is not lower priority than them. The offer is derived from the stored document, but the one id the app refuses to offer lives in a React ref, so a relaunch resets the refusal without resetting the offer. Two sequences, both reproduced by probe three times independently:
+
+  1. Add a job with a last-done date. No offer, correctly. Reopen the app within ten seconds and the offer is there — "Undo recording Gutters as done". Pressing it leaves storage at `{"Gutters":[]}` and the row reads "Never done". That is the exact outcome FR-007b exists to prevent.
+  2. Tick off Boiler, tick off Alarms two seconds later, press undo once. Correctly no second offer. Reopen within the window and the offer returns naming Boiler; pressing it removes Boiler's tick-off too. Two presses, two completions, separated only by a relaunch — FR-007a's "repeated use MUST NOT walk backwards through history".
+
+  **Bounded, not unbounded.** The window still holds, so only completions recorded in the last ten seconds are reachable and the 2020/2022/2024 history that started all this is not. Both entries a user could lose this way are ones they made seconds earlier. This is a much smaller defect than the one T097 fixed, but it is the same defect.
+
+  **Three fixes, all with costs, and the choice is Sherrylene's because they differ in kind:**
+  - *Move the refused id into the stored document.* Satisfies every requirement including across a relaunch, and keeps the offer derived as `plan.md` describes. Costs a change to the persistence contract, which the constitution says must be specified in the plan before implementation — so this needs a plan amendment first, which is why it was not taken unilaterally.
+  - *Invert to a positive marker* — offer undo only for a completion this session recorded. Fails closed, needs no stored change, and closes both sequences. Costs undo across a relaunch entirely, and contradicts two tests that currently assert the offer survives one. Note those tests assert more than FR-007 requires: the spec demands undo "immediately after recording", and says the offer must not appear on a freshly opened app.
+  - *Accept it as documented.* Defensible given how narrow it is, but FR-007a and FR-007b are written without qualifiers, so this means amending the spec rather than leaving it be.
 - [ ] T101 [P] **Design refresh: typographic hierarchy** (issue #99). Everything sits at roughly the same size and weight, so a job's name, its status and its due date compete instead of reading in order of importance. Touches `tokens.css` and `app.css` only; do not change markup structure, because the heading and list semantics are what the axe and VoiceOver checks depend on
 
 **The design tasks need no new test tasks.** `e2e/contrast.spec.ts` and `e2e/colour-independence.spec.ts` already check exactly what could go wrong here, on both engines, against real rendered colours — that is the safety net that makes a palette change safe to attempt. Adding jsdom tests for colour would be writing a check that cannot check, which the constitution forbids.

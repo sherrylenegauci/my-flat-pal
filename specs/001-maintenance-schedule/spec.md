@@ -34,7 +34,10 @@ export it. If you get a new phone, you start again. We chose that deliberately �
 - Q: Adding a job with a last-done date records a completion — should that raise an undo offer? → A: No. Undo covers marking done and backdating only. A wrong date on a new job is fixed by editing the job.
 - Q: When the app finds data from a newer version and refuses to save, what should the write controls do? → A: Hide or disable them, so the screen matches the message. The app becomes a viewer of your data.
 - Q: Recording a job you did in the past is built but unspecified — keep it, and how much of it? → A: Keep it and specify it fully: past dates accepted, future dates refused, and an entry older than the newest one says the schedule has not moved.
-- Q: SC-005 promises keyboard-only operation, but that is a desktop idea and is only evidenced on Chromium — what should it promise instead? → A: Operating the app without touch on a phone, checked with VoiceOver on a real iPhone. This is mobile-first, and it replaces Tab-order traversal as the thing the criterion points at. **Leaves an unresolved conflict with the constitution, which still mandates keyboard traversal.**
+- Q: SC-005 promises keyboard-only operation, but that is a desktop idea and is only evidenced on Chromium — what should it promise instead? → A: Operating the app without touch on a phone, checked with VoiceOver on a real iPhone. This is mobile-first, and it replaces Tab-order traversal as the thing the criterion points at. *(Conflict closed by constitution v1.4.0.)*
+- Q: A ten-second window alone still lets a reload resurrect the offer (T102). Fix by storing which completion is undoable, or by scoping the offer to the session that recorded it? → A: Scope it to the session. Undo is offered only for a completion this session recorded, and never on a freshly opened app.
+
+  **Note, because this looks like a reversal and is not one.** Session-scoping was removed from the original design precisely because it made a mis-tap permanent once the phone backgrounded, and at that time nothing else could recover it. The detail view now shows full history, so an older mistake has a home. Session-scoping is safe *because* that view exists, and would not have been before it.
 
 ---
 
@@ -167,8 +170,9 @@ to be precise rather than friendly. Everything above is the readable version.
   recent completion already recorded, the entry MUST be added to the history and the schedule MUST
   NOT move — and the system MUST say so, because a tap that appears to do nothing reads as a fault.
 - **FR-007**: Users MUST be able to undo a completion immediately after recording it. The offer
-  MUST expire a short time after that completion was recorded — around ten seconds — and MUST NOT
-  be offered for completions recorded earlier, including on a freshly opened app.
+  MUST be limited to a completion recorded **in the current session**, and MUST expire a short time
+  after that — around ten seconds. It MUST NOT be offered on a freshly opened app, whatever the
+  clock says, and MUST NOT be offered for any completion this session did not record.
 - **FR-007a**: Undo MUST affect only the completion the user has just recorded. It MUST NOT
   remove any earlier completion, and repeated use MUST NOT walk backwards through history.
   Correcting an older mistake is done from the item's history, not from the undo offer.

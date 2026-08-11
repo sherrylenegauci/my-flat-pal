@@ -372,15 +372,37 @@ against a document the app had never written, deleted completions dated 2020, 20
 three presses, with no confirmation at any point. The offer was also the first focusable thing on
 the page, so Tab-then-Enter destroyed history.
 
-The fix keeps the derivation and adds a bound: the offer stands only while the newest completion is
-within roughly ten seconds of now, measured against `recordedAt` versus the current time — **not**
-against when the component mounted, or reopening the app would restart the clock and resurrect an
-expired offer. See FR-007, FR-007a and FR-007b, and T094–T097.
+The fix has two parts, and the second is not a refinement of the first — it is doing work the first
+cannot do at all.
 
-Two consequences of that bound, both deliberate. Correcting an older mistake happens in the item's
-history, which is why the detail view exists. And adding a job with a last-done date raises no offer
-at all: the user added a job rather than completing one, and undo there would strip the date while
-leaving the job, silently turning something just created into "never done".
+**The bound.** The offer stands only while the completion it names is within roughly ten seconds of
+now, measured against that completion's `recordedAt` versus the current time — **not** against when
+the component mounted, or reopening the app would restart the clock and resurrect an expired offer.
+The window is checked when Undo is *pressed* as well as when the app renders, because a phone
+suspends backgrounded pages and throttles timers, so a `setTimeout` that was going to hide the offer
+cannot be relied on to have fired.
+
+**The session scope.** Undo is offered only for a completion *this session recorded*, and never on a
+freshly opened app. This is not something the bound could deliver, and an earlier revision of this
+paragraph wrongly presented it as a consequence of the bound. Two cases prove otherwise, both
+confirmed by probe. Storage cannot distinguish adding a job with a last-done date from adding a job
+and then ticking it off — both leave an item created today holding one completion recorded seconds
+ago — so nothing reading the document can satisfy FR-007b. And ticking off two jobs inside ten
+seconds, then undoing one, leaves the other newest and still inside the window, so the offer returns
+and a second press walks backwards.
+
+**Why session-scoping is acceptable now, having been rejected before.** It was removed from the
+original design because it made a mis-tap permanent once the phone backgrounded, and at that time
+nothing else could recover it. The detail view now shows full history, so an older mistake has a
+home. The property that made session-scoping wrong no longer holds — it is safe *because* that view
+exists, and would not have been before it.
+
+Correcting an older mistake therefore happens in the item's history. And adding a job with a
+last-done date raises no offer at all: the user added a job rather than completing one, and undo
+there would strip the date while leaving the job, silently turning something just created into
+"never done".
+
+See FR-007, FR-007a and FR-007b, and T094–T099 plus T102.
 
 An earlier revision of this paragraph said undo was "most recent only, one step, no stack". That
 was true of each individual press and false of the sequence, and it is the sentence that let the

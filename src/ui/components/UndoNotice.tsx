@@ -5,17 +5,22 @@ import { formatDisplayDate } from '../format'
 /**
  * What the last tick-off did, and the way back from it (T061).
  *
- * **Why this is in the shell rather than a toast.** The notice is *derived*
- * rather than remembered: `mostRecentlyRecorded` reads the same stored document
- * the completions live in, so reopening the app reconstructs it exactly, with
- * nothing held in session state that a backgrounded phone could lose.
+ * **Why this is in the shell rather than a toast.** It sits above `<main>` so it
+ * is reachable straight after the schedule heading, by touch or by Tab, without
+ * hunting for a control that is about to disappear.
  *
- * That derivation used to be unbounded, which turned it into a data-loss defect
- * — a freshly opened app offered to delete history it had never written. The
- * 2026-08-11 clarification replaced FR-007's second sentence: the offer now
- * stands only while the completion is inside the undo window, and `useSchedule`
- * decides that. Whether this component renders at all is that decision's answer;
- * it does not make it, and it must not acquire a timer of its own.
+ * **This paragraph used to say the notice was derived rather than remembered**,
+ * and that reopening the app reconstructed it exactly with nothing held in
+ * session state. That was true and it was the defect. Unbounded, a freshly
+ * opened app offered to delete history it had never written; bounded to ten
+ * seconds, a relaunch inside those ten seconds still resurrected offers the app
+ * had refused on purpose. FR-007 as amended on 2026-08-11 limits the offer to a
+ * completion recorded in the current session, and says it must not appear on a
+ * freshly opened app whatever the clock says.
+ *
+ * `useSchedule` makes that decision in full — session, window and all. Whether
+ * this component renders at all is that decision's answer; it does not make it,
+ * and it must not acquire a timer or a memory of its own.
  *
  * **Why it names the resulting due date.** Marking done is one tap with no
  * confirmation. Saying "recorded" alone leaves the user to work out whether

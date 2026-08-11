@@ -46,8 +46,8 @@ export interface Schedule {
   /**
    * The tick-off undo would remove, or null when there is nothing to undo.
    *
-   * Derived from the stored document rather than remembered, and bounded to a
-   * short window measured from when that tick-off was recorded (FR-007).
+   * Scoped to what *this session* recorded, and bounded to a short window
+   * measured from when that tick-off was recorded (FR-007).
    */
   undoable: RecordedCompletion | null
   undoLast: () => void
@@ -60,25 +60,40 @@ export function useSchedule(): Schedule {
   const [readOnly, setReadOnly] = useState(false)
 
   /**
-   * One entry the app must not offer to undo, however recent it is.
+   * The one tick-off this session recorded and has not yet taken back — the
+   * only entry undo may ever be offered for (FR-007).
    *
-   * The window alone cannot express either of the two rules below, because the
-   * stored document does not distinguish the cases: an item created today
-   * holding one completion recorded a second ago is what you get *both* from
-   * adding a job with a last-done date and from adding a job and then ticking it
-   * off. Nothing in the document tells them apart, so one id is remembered here
-   * instead. It is only ever used to *withhold* an offer, so the worst it can do
-   * when it is out of date is decline to undo something.
+   * **This used to be the opposite marker, and inverting it is T102.** It held
+   * the single id the app would *refuse* to offer, set when a job was added with
+   * a last-done date and again after an undo. That was enough while the session
+   * lasted and wrong across a relaunch: the offer is computed from the stored
+   * document and survives one, while a ref does not, so reopening the app lost
+   * the refusal and kept the offer. Both rules below came back broken, and both
+   * were reproduced by probe — an offer to strip the date off a job created
+   * seconds earlier, and an offer naming a job whose tick-off the user had not
+   * touched.
    *
-   *   - **FR-007b.** Adding a job with a last-done date must raise no offer.
-   *     Taking one would strip the date and leave the job the user created a
-   *     second ago reading "Never done" — not a way back from anything they did.
-   *   - **FR-007a.** After an undo, the entry that becomes the newest is not
-   *     something the user just did, so it must not become the next offer.
-   *     Without this, ticking two jobs off within ten seconds and pressing undo
-   *     twice would walk backwards through history, which is the defect.
+   * As a positive marker it fails closed. Losing it means no offer, where losing
+   * a refusal meant a wrong one, and there is nothing to keep in step with the
+   * document: an id that no longer matches the newest completion simply withholds
+   * the offer. The cost is that undo does not survive the app going away, which
+   * FR-007 now states outright — the same cost already accepted when the window
+   * was set at ten seconds, since locking the phone after a tap loses the offer
+   * anyway.
+   *
+   *   - **FR-007b.** Adding a job with a last-done date raises no offer, because
+   *     nothing sets this. Taking one would strip the date and leave the job the
+   *     user created a second ago reading "Never done" — not a way back from
+   *     anything they did. No rule reading the document could deliver this: an
+   *     item created today holding one completion recorded a second ago is what
+   *     you get *both* from adding a job with a date and from adding a job and
+   *     then ticking it off.
+   *   - **FR-007a.** After an undo this is cleared, so whatever becomes the
+   *     newest entry is not offered next. Without that, ticking two jobs off
+   *     within ten seconds and pressing undo twice walks backwards through
+   *     history.
    */
-  const notUndoable = useRef<string | null>(null)
+  const recordedThisSession = useRef<string | null>(null)
 
   /**
    * A re-render trigger, and nothing else.
@@ -161,10 +176,18 @@ export function useSchedule(): Schedule {
         completions: completion ? [completion] : [],
       }
 
-      // FR-007b: the user added a job, they did not complete one. This entry is
-      // the date they typed into the form, so undo here would delete it and
-      // leave the job behind.
-      notUndoable.current = completion?.id ?? notUndoable.current
+      // FR-007b is satisfied here by *doing nothing*, which is the point of the
+      // inversion: the user added a job rather than completing one, so nothing
+      // marks this entry undoable and no offer can name it. Undo would otherwise
+      // delete the date they typed into the form and leave the job behind,
+      // reading "Never done" a second after they created it.
+      //
+      // The ref is deliberately not cleared either. Adding a job with a date
+      // makes that completion the newest, so an offer standing from a tick-off a
+      // moment ago is withheld by the check below without help; adding one
+      // *without* a date changes nothing about what is newest, and there is no
+      // reason a way back from the previous tap should disappear because the
+      // user added something unrelated.
       mutate((items) => [...items, item])
     },
     [mutate, today],
@@ -187,6 +210,12 @@ export function useSchedule(): Schedule {
         recordedAt: new Date().toISOString(),
       }
 
+      // The one place an entry becomes undoable (FR-007). This covers ticking a
+      // job off from the list and recording a past completion from the detail
+      // view — both are the user completing something, which is what undo is a
+      // way back from.
+      recordedThisSession.current = completion.id
+
       mutate((items) =>
         items.map((item) =>
           item.id === itemId ? recordCompletion(item, completion, today) : item,
@@ -199,21 +228,28 @@ export function useSchedule(): Schedule {
   /**
    * The tick-off the app is currently offering to take back (FR-007).
    *
-   * Still derived from the stored document — the newest entry by `recordedAt` —
-   * but now bounded. Two things have to hold: the entry is inside the undo
-   * window, measured from when it was recorded against the clock **now**; and it
-   * is not the one entry being withheld. Everything else is refused, so a
-   * freshly opened app offers nothing to delete.
+   * Three things have to hold, and each refuses on its own. The entry must be
+   * the newest in the schedule by `recordedAt`, so undo never reaches past
+   * something recorded since. It must be the entry *this session* recorded, so a
+   * freshly opened app offers nothing whatever the clock says. And it must be
+   * inside the undo window, measured from when it was recorded against the clock
+   * **now**.
    *
    * The clock is read here, at render, rather than captured when this component
-   * mounted. That distinction is the whole fix: mount-relative expiry passes a
-   * casual test and still resurrects an expired offer every time the app is
-   * reopened.
+   * mounted. That distinction was the whole of the first fix: mount-relative
+   * expiry passes a casual test and still resurrects an expired offer every time
+   * the app is reopened.
+   *
+   * The newest-entry check is what makes the identity check safe to write this
+   * way. `undoLast` removes the most recently recorded completion, so offering
+   * anything else would delete an entry other than the one named — which is why
+   * the offer withdraws itself when another tab records something, rather than
+   * standing there doing nothing when pressed.
    */
   const newest = mostRecentlyRecorded(doc.items)
   const undoable =
     newest !== null &&
-    newest.completion.id !== notUndoable.current &&
+    newest.completion.id === recordedThisSession.current &&
     isWithinUndoWindow(newest.completion.recordedAt, new Date())
       ? newest
       : null
@@ -274,10 +310,12 @@ export function useSchedule(): Schedule {
       return items.map((item) => (item.id === target.item.id ? undoCompletion(item) : item))
     })
 
-    // FR-007a. Whatever is newest now is earlier history, not something the user
-    // just did, so it must not slide into the offer that was occupied a moment
-    // ago. Read back from storage, which `mutate` has already written.
-    notUndoable.current = mostRecentlyRecorded(load().document.items)?.completion.id ?? null
+    // FR-007a. The entry this session recorded has just been taken back, so
+    // there is nothing left to offer. Whatever is newest now is earlier history
+    // rather than something the user just did, and clearing here is what stops
+    // it sliding into the offer that was occupied a moment ago — the
+    // walk-backwards through history the requirement forbids.
+    recordedThisSession.current = null
   }, [mutate, offerId, offerRecordedAt])
 
   return {

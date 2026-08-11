@@ -2,9 +2,15 @@ import { useCallback, useEffect, useState } from 'react'
 import { load, save, subscribeToExternalChanges, StaleWriteError } from '../storage/repository'
 import { emptyDocument } from '../storage/schema'
 import type { LoadOutcome, StoredDocument } from '../storage/schema'
-import { orderForDisplay } from '../domain/schedule'
+import {
+  completeItem as recordCompletion,
+  mostRecentlyRecorded,
+  orderForDisplay,
+  undoCompletion,
+} from '../domain/schedule'
+import type { RecordedCompletion } from '../domain/schedule'
 import { newItemId, newCompletionId } from '../domain/ids'
-import type { Interval, ItemView, MaintenanceItem } from '../domain/types'
+import type { CalendarDate, Interval, ItemView, MaintenanceItem } from '../domain/types'
 import { useCurrentDate } from './useCurrentDate'
 
 /**
@@ -35,6 +41,15 @@ export interface Schedule {
   /** How loading went, so the shell can be honest about corrupt data. */
   loadKind: LoadOutcome['kind']
   addItem: (input: NewItemInput) => void
+  markDone: (itemId: string, completedOn: CalendarDate) => void
+  /**
+   * The tick-off undo would remove, or null when there is nothing to undo.
+   *
+   * Derived from the stored document rather than remembered, which is what
+   * makes undo outlive the app being closed (FR-007).
+   */
+  undoable: RecordedCompletion | null
+  undoLast: () => void
 }
 
 export function useSchedule(): Schedule {
@@ -117,11 +132,55 @@ export function useSchedule(): Schedule {
     [mutate, today],
   )
 
+  /**
+   * Record that a job was done.
+   *
+   * The id and the timestamp are minted here, *outside* the change function.
+   * That function can legitimately run twice — the stale-write recovery
+   * re-applies it against freshly read state — and a completion that came out
+   * with a different id the second time would make the retry indistinguishable
+   * from a second tick-off. Same reasoning as `addItem`.
+   */
+  const markDone = useCallback(
+    (itemId: string, completedOn: CalendarDate) => {
+      const completion = {
+        id: newCompletionId(),
+        completedOn,
+        recordedAt: new Date().toISOString(),
+      }
+
+      mutate((items) =>
+        items.map((item) =>
+          item.id === itemId ? recordCompletion(item, completion, today) : item,
+        ),
+      )
+    },
+    [mutate, today],
+  )
+
+  /**
+   * Take back the most recent tick-off, wherever in the schedule it was made.
+   *
+   * The target is worked out inside the change function, from the items as they
+   * are at the moment of writing, so a retry after a concurrent write undoes
+   * what is actually there rather than what was on screen a moment ago.
+   */
+  const undoLast = useCallback(() => {
+    mutate((items) => {
+      const target = mostRecentlyRecorded(items)
+      if (target === null) return items
+      return items.map((item) => (item.id === target.item.id ? undoCompletion(item) : item))
+    })
+  }, [mutate])
+
   return {
     views: orderForDisplay(doc.items, today),
     today,
     readOnly,
     loadKind,
     addItem,
+    markDone,
+    undoable: mostRecentlyRecorded(doc.items),
+    undoLast,
   }
 }

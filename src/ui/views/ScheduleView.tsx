@@ -11,7 +11,17 @@ import { ItemRow } from '../components/ItemRow'
  * date on every render — never read back from storage, which is what stops it
  * going stale while the phone sits in a pocket.
  */
-export function ScheduleView({ views, onAdd }: { views: ItemView[]; onAdd: () => void }) {
+export function ScheduleView({
+  views,
+  onAdd,
+  onOpen,
+  onMarkDone,
+}: {
+  views: ItemView[]
+  onAdd: () => void
+  onOpen: (itemId: string) => void
+  onMarkDone: (itemId: string) => void
+}) {
   const heading = useRef<HTMLHeadingElement>(null)
 
   if (views.length === 0) return <EmptyState onAdd={onAdd} />
@@ -37,7 +47,12 @@ export function ScheduleView({ views, onAdd }: { views: ItemView[]; onAdd: () =>
           unrelated groups rather than one prioritised sequence. */}
       <ul className="schedule__list">
         {[...attention, ...rest].map((view) => (
-          <ItemRow key={view.item.id} view={view} />
+          <ItemRow
+            key={view.item.id}
+            view={view}
+            onOpen={() => onOpen(view.item.id)}
+            onMarkDone={() => onMarkDone(view.item.id)}
+          />
         ))}
       </ul>
     </div>

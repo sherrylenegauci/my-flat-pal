@@ -1,6 +1,8 @@
 import { useEffect, useRef } from 'react'
 import { StorageNotice } from './components/StorageNotice'
+import { UndoNotice } from './components/UndoNotice'
 import { ScheduleView } from './views/ScheduleView'
+import { ItemDetailView } from './views/ItemDetailView'
 import { ItemFormView } from './views/ItemFormView'
 import { useNavigation } from './navigation'
 import { useSchedule } from './useSchedule'
@@ -36,6 +38,23 @@ export function App() {
     nav.back()
   }
 
+  /**
+   * Undo removes its own control, so focus would fall to `<body>` — which
+   * silently returns a keyboard or screen-reader user to the top of the
+   * document with no indication that anything happened. Same treatment as a
+   * view change, for the same reason.
+   */
+  function handleUndo() {
+    schedule.undoLast()
+    headingRef.current?.focus()
+  }
+
+  // A detail view for a job that is no longer there is not a state to render;
+  // falling through to the list is what the user would do next anyway.
+  const detailId = nav.view.name === 'detail' ? nav.view.itemId : null
+  const detail =
+    detailId === null ? undefined : schedule.views.find((view) => view.item.id === detailId)
+
   return (
     <div className="app">
       <header className="app__header">
@@ -67,13 +86,27 @@ export function App() {
             </p>
           </div>
         )}
+        {schedule.undoable && (
+          <UndoNotice undoable={schedule.undoable} onUndo={handleUndo} />
+        )}
       </div>
 
       <main className="app__main">
         {nav.view.name === 'new' ? (
           <ItemFormView today={schedule.today} onSave={handleSave} onCancel={nav.back} />
+        ) : detail ? (
+          <ItemDetailView
+            view={detail}
+            today={schedule.today}
+            onRecord={(completedOn) => schedule.markDone(detail.item.id, completedOn)}
+          />
         ) : (
-          <ScheduleView views={schedule.views} onAdd={() => nav.go({ name: 'new' })} />
+          <ScheduleView
+            views={schedule.views}
+            onAdd={() => nav.go({ name: 'new' })}
+            onOpen={(itemId) => nav.go({ name: 'detail', itemId })}
+            onMarkDone={(itemId) => schedule.markDone(itemId, schedule.today)}
+          />
         )}
       </main>
     </div>

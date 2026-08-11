@@ -121,6 +121,39 @@ export function completeItem(
   return { ...item, completions: [...item.completions, completion] }
 }
 
+/** A tick-off together with the job it belongs to. */
+export interface RecordedCompletion {
+  item: MaintenanceItem
+  completion: Completion
+}
+
+/**
+ * The tick-off undo would remove: the highest `recordedAt` anywhere in the
+ * schedule, and the job holding it.
+ *
+ * Undo is one step across the whole schedule rather than per job, so the
+ * question "what would undo do" has to be answerable from the items alone —
+ * which is what makes it survive the app being closed (FR-007). There is no
+ * remembered session, nothing to expire, and nothing to restore on start-up:
+ * the answer is derived from the same document the completions live in.
+ *
+ * Ties on `recordedAt` resolve to the last one encountered, which is the most
+ * recently appended. They are only reachable when two entries share a
+ * millisecond, but leaving it to chance would make undo and the notice
+ * describing it disagree about which entry they mean.
+ */
+export function mostRecentlyRecorded(items: MaintenanceItem[]): RecordedCompletion | null {
+  let newest: RecordedCompletion | null = null
+  for (const item of items) {
+    for (const completion of item.completions) {
+      if (newest === null || completion.recordedAt >= newest.completion.recordedAt) {
+        newest = { item, completion }
+      }
+    }
+  }
+  return newest
+}
+
 /**
  * Undo the most recently *recorded* tick-off — the highest `recordedAt`, not
  * the latest `completedOn`.
@@ -128,21 +161,34 @@ export function completeItem(
  * Those differ exactly when someone backdates an entry, which is the case where
  * getting it wrong hurts: you mistype a date, hit undo, and the wrong tick-off
  * disappears. The entry you just made is the one you mean.
+ *
+ * Defined in terms of `mostRecentlyRecorded` so that the entry the app *names*
+ * in its undo notice and the entry undo actually removes cannot drift apart.
  */
 export function undoCompletion(item: MaintenanceItem): MaintenanceItem {
-  if (item.completions.length === 0) return item
+  const target = mostRecentlyRecorded([item])
+  if (target === null) return item
 
-  let newestIndex = 0
-  for (let i = 1; i < item.completions.length; i++) {
-    const candidate = item.completions[i]
-    const incumbent = item.completions[newestIndex]
-    if (candidate && incumbent && candidate.recordedAt > incumbent.recordedAt) {
-      newestIndex = i
-    }
-  }
+  // By identity rather than by id: two entries sharing an id would be a bug,
+  // but it must not become a bug that silently deletes both.
+  return { ...item, completions: item.completions.filter((c) => c !== target.completion) }
+}
 
-  return {
-    ...item,
-    completions: item.completions.filter((_, i) => i !== newestIndex),
-  }
+/**
+ * The job's history in the order a person reads it: most recent first (FR-008).
+ *
+ * Ordered by the day the work happened, since that is what the list shows.
+ * `recordedAt` breaks ties, so two jobs done on the same day appear with the
+ * one entered later at the top — the same "newest" the rest of the app means.
+ *
+ * Sorted rather than trusted: `completeItem` appends, so the stored array is in
+ * the order entries were made, which is only the same thing until somebody
+ * backdates one.
+ */
+export function completionsNewestFirst(item: MaintenanceItem): Completion[] {
+  return [...item.completions].sort((a, b) =>
+    a.completedOn === b.completedOn
+      ? b.recordedAt.localeCompare(a.recordedAt)
+      : b.completedOn.localeCompare(a.completedOn),
+  )
 }

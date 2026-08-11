@@ -47,7 +47,12 @@ describe('adding a job', () => {
 
     expect(await screen.findByText('Boiler service')).toBeTruthy()
     // Counted from when it was actually done: 14 June 2026 + 1 year.
-    expect(screen.getByText(/14 June 2027|2027-06-14/)).toBeTruthy()
+    //
+    // Scoped to the row, as the interval test below already is. Unscoped, this
+    // now matches twice: US2's undo notice also names the resulting due date, so
+    // the query became ambiguous while the behaviour it checks — the list shows
+    // when the job is next due — did not change.
+    expect(screen.getByRole('listitem').textContent).toMatch(/14 June 2027|2027-06-14/)
   })
 
   it('accepts every interval unit, and each one changes the due date', async () => {

@@ -108,6 +108,35 @@ body {
   cursor: pointer;
 }
 
+/* The undo notice sits with the other shell notices, above whichever view is
+   open, so it is reachable from the list and from a job's detail alike.
+
+   Same colours as .storage-notice deliberately: that pair is already walked by
+   e2e/contrast.spec.ts against real rendering, so reusing it inherits a
+   measured result rather than adding an unaudited one. */
+.undo-notice {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin: var(--space-3) var(--space-4) 0;
+  padding: var(--space-3) var(--space-4);
+  background: var(--unknown-wash);
+  border: 1px solid var(--unknown-edge);
+  border-radius: var(--radius);
+  color: var(--text);
+}
+
+.undo-notice__text {
+  flex: 1 1 12rem;
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+.undo-notice__action {
+  flex: 0 0 auto;
+}
+
 .app__main {
   flex: 1;
   padding: var(--space-4);
@@ -182,6 +211,37 @@ body {
   font-size: 0.875rem;
 }
 
+/* The job's name is the control that opens it. Styled to keep looking like the
+   heading it is, with an underline as the only hint that it does something —
+   colouring it like a link would compete with the status word beside it, which
+   is the thing the list exists to make obvious.
+
+   The 44px minimum is not decoration: Principle II's floor applies to every
+   touch target, and text-sized buttons are the usual way a layout falls under
+   it. Measured for real in e2e/layout.spec.ts, which is the only tier that can
+   — jsdom reports every rectangle as zero. */
+.row__open {
+  display: flex;
+  align-items: center;
+  min-height: var(--touch-target);
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  text-decoration: underline;
+  text-decoration-color: var(--border-strong);
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+
+.row__actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--space-2);
+}
+
 .badge {
   font-size: 0.8125rem;
   font-weight: 600;
@@ -192,6 +252,78 @@ body {
 .badge--due { color: var(--due-text); }
 .badge--never-done { color: var(--unknown-text); }
 .badge--not-due { color: var(--text-muted); }
+
+/* ---- Job detail -------------------------------------------------------- */
+
+.detail__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.detail__title {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.detail__meta {
+  margin: var(--space-1) 0 var(--space-4);
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+.detail__fact {
+  margin: 0 0 var(--space-2);
+}
+
+.detail__subtitle {
+  margin: var(--space-5) 0 var(--space-3);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.detail__record {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-items: flex-start;
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
+}
+
+/* The field is full width; its button is not, so it does not read as a second
+   page-wide action competing with the one in the header. */
+.detail__record .form__field {
+  width: 100%;
+}
+
+.detail__record .detail__subtitle {
+  margin: 0;
+}
+
+.detail__history {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.detail__history li {
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.detail__empty {
+  margin: 0;
+  color: var(--text-muted);
+}
 
 /* ---- Empty state ------------------------------------------------------- */
 

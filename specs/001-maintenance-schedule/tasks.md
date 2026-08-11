@@ -146,10 +146,10 @@ the same handful of files.
 
 ### Implementation for User Story 2
 
-- [ ] T059 [US2] Build `src/ui/views/ItemDetailView.tsx` showing last-done and history, with a visible back control to the schedule (T011)
-- [ ] T060 [US2] Add the mark-done action to `src/ui/components/ItemRow.tsx`, reachable in one tap
-- [ ] T061 [US2] Add the durable undo affordance to `src/ui/App.tsx`
-- [ ] T062 [US2] Wire completion and undo through the repository (write path already exists from T028)
+- [X] T059 [US2] Build `src/ui/views/ItemDetailView.tsx` showing last-done and history, with a visible back control to the schedule (T011)
+- [X] T060 [US2] Add the mark-done action to `src/ui/components/ItemRow.tsx`, reachable in one tap
+- [X] T061 [US2] Add the durable undo affordance to `src/ui/App.tsx`
+- [X] T062 [US2] Wire completion and undo through the repository (write path already exists from T028)
 
 **Checkpoint**: The schedule now stays true over time, and mis-taps are recoverable.
 

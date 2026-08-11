@@ -17,11 +17,20 @@ import { MONTHLY, YEARLY, aCompletion, anItem, seed } from './seed'
  * freshly opened app offered to delete history it had never written, one
  * completion per press. Older corrections happen in the job's history instead.
  *
- * What survives from the old premise, and is still tested here: undo is
- * **derived from the stored document rather than held in session state**, so
- * backgrounding the phone a second after a mis-tap does not make the mis-tap
- * permanent. What no longer survives — availability without limit — moved to
- * `undo-expiry.test.tsx`, which owns the window itself.
+ * **Amended again on 2026-08-11, later the same day (T102).** This header used
+ * to say that undo is "derived from the stored document rather than held in
+ * session state", so backgrounding the phone a second after a mis-tap does not
+ * make the mis-tap permanent. FR-007 now says the opposite: the offer is limited
+ * to a completion recorded **in the current session** and "MUST NOT be offered
+ * on a freshly opened app, whatever the clock says". Deriving it from storage
+ * alone could not express FR-007a or FR-007b across a relaunch, and the offers
+ * that came back after one deleted completions the user had never recorded.
+ * Losing the offer when the app goes away is the accepted cost; the job's
+ * detail view is where an older mistake is corrected now.
+ *
+ * The window itself is `undo-expiry.test.tsx`'s subject. Reopening is covered in
+ * both files, from the two sides it has: that the offer goes, and that the
+ * record does not.
  *
  * StrictMode and stored-document assertions throughout, for the reason given in
  * `complete.test.tsx`.
@@ -71,15 +80,24 @@ describe('undoing a tick-off', () => {
     expect(stored()?.completions.map((c) => c.id)).toEqual(['cmp_2026-06-01'])
   })
 
-  it('still works after the app has been closed and reopened inside the window', async () => {
-    // Was "still works after the app has been closed and reopened", full stop —
-    // FR-007's replaced second sentence. The part of it that is still true, and
-    // still worth a test, is *why* session-scoped undo was cut: a phone
-    // backgrounds constantly, so a mis-tap must survive the app going away and
-    // coming back. What changed is that it survives for the length of the
-    // window rather than for ever. Expiry across a reopen is
-    // `undo-expiry.test.tsx`'s job; this is the other side of the same rule,
-    // and it presses the control rather than merely finding it.
+  it('withdraws the offer once the app is closed and reopened, but keeps the tick-off', async () => {
+    // **This test previously asserted the opposite.** As "still works after the
+    // app has been closed and reopened inside the window" it pressed Undo on the
+    // reopened app and expected the tick-off to be taken back, on the grounds
+    // that a phone backgrounds constantly and a mis-tap must survive that.
+    // FR-007 was amended on 2026-08-11 to scope the offer to the session that
+    // recorded the completion: it "MUST NOT be offered on a freshly opened app,
+    // whatever the clock says", and "MUST NOT be offered for any completion this
+    // session did not record". Reopening is a new session, so an unspent window
+    // no longer keeps the offer alive, and this test now asserts the withdrawal.
+    //
+    // What it asserts *instead of* pressing the button is the part that must not
+    // change: session scope withdraws the way back, it does not un-record
+    // anything. The completion is still in storage, the schedule still reflects
+    // it, and it is still listed in the job's history. That last one is not
+    // decoration — "an older mistake has a home in the history view" is the
+    // recorded reason session-scoping is acceptable now, having been rejected in
+    // the original design, so it is checked rather than taken on trust.
     seed([anItem({ name: 'Boiler service', interval: YEARLY, completions: [aCompletion('2026-06-01')] })])
     const { user, app } = launch()
     await screen.findByText('Boiler service')
@@ -92,12 +110,22 @@ describe('undoing a tick-off', () => {
         <App />
       </StrictMode>,
     )
+    await screen.findByText('Boiler service')
 
-    const undo = await screen.findByRole('button', { name: /undo/i })
-    await user.click(undo)
+    expect(screen.queryByRole('button', { name: /undo/i })).toBeNull()
 
-    expect(await rowText()).toContain('1 June 2027')
-    expect(stored()?.completions.map((c) => c.id)).toEqual(['cmp_2026-06-01'])
+    // Nothing was lost with the offer. Both the stored record and the due date
+    // on screen still say the boiler was done today.
+    expect(stored()?.completions.map((c) => c.completedOn)).toEqual(['2026-06-01', '2026-08-08'])
+    expect(await rowText()).toContain('8 August 2027')
+
+    // And the entry is reachable where corrections happen now that undo cannot
+    // reach it: the job's own history, newest first.
+    await user.click(screen.getByRole('button', { name: 'Boiler service' }))
+    const history = within(await screen.findByRole('list', { name: /history/i }))
+      .getAllByRole('listitem')
+      .map((entry) => entry.textContent)
+    expect(history).toEqual(['8 August 2026', '1 June 2026'])
   })
 
   it('returns a job to never done when its only tick-off is undone', async () => {

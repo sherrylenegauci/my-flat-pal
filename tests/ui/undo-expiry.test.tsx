@@ -202,10 +202,22 @@ describe('the undo offer expires', () => {
     expect(storedCompletionIds()).toHaveLength(2)
   })
 
-  it('still offers undo when the app is reopened inside the window', async () => {
-    // The other half of the same rule, and the reason the offer stays derived
-    // from the stored document rather than held in session state: closing the
-    // app a second after a mis-tap must not make the mis-tap permanent.
+  it('offers nothing when the app is reopened inside the window, and loses nothing either', async () => {
+    // **This test previously asserted the opposite.** As "still offers undo when
+    // the app is reopened inside the window" it required the offer to come back
+    // after a relaunch, on the grounds that the offer was derived from storage
+    // rather than held in session state. FR-007 was amended on 2026-08-11 to
+    // limit it to a completion recorded **in the current session**, and to say it
+    // "MUST NOT be offered on a freshly opened app, whatever the clock says"
+    // (T102): storage cannot distinguish a tick-off the user made from a date
+    // typed into the add form, so a purely derived offer resurrected refusals the
+    // app had made on purpose. An unspent window is therefore no longer enough.
+    //
+    // The assertion that matters here is the second one. Withdrawing the offer
+    // must not withdraw the completion, and without that this would decay into
+    // "the button is absent" — which an app that had thrown the tick-off away on
+    // reopen would satisfy just as well. The positive control at the top of this
+    // file covers the other way of passing vacuously, an app with no undo at all.
     seed([anItem({ name: 'Boiler service', interval: YEARLY, completions: [aCompletion('2026-06-01')] })])
     const { user, app } = launch()
     await screen.findByText('Boiler service')
@@ -216,7 +228,8 @@ describe('the undo offer expires', () => {
     reopen()
     await screen.findByText('Boiler service')
 
-    expect(undoControl()).not.toBeNull()
+    expect(undoControl()).toBeNull()
+    expect(storedHistoryByJob()).toEqual({ 'Boiler service': ['2026-06-01', '2026-08-08'] })
   })
 })
 

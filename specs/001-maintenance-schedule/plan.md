@@ -76,7 +76,7 @@ marked them PASS, including gate 2b, whose text literally reads "verified on a r
 | # | Gate | Principle | Status |
 |---|------|-----------|--------|
 | 1 | Dependencies justified; nothing used at fewer than three call sites; no abstraction without a second use case; **violations recorded** | I. Simplicity | **PASS WITH RECORDED VIOLATIONS** — 11 packages (not 8; the earlier count grouped them into rows and couldn't be audited per-package). Four violations recorded below, which is what the principle asks for. |
-| 2 | 375px first; 44x44px targets; semantic HTML; keyboard; visible focus; AA contrast | II. Accessibility | **PLANNED** — T070–T074. Contrast is now measured **per view** in a real browser, not inferred from a setup-time token audit. Visible focus is verified explicitly (T073); it was previously covered nowhere at all. |
+| 2 | 375px first; 44x44px targets; semantic HTML; **operable without touch**; visible focus; AA contrast | II. Accessibility | **PLANNED — discharged by T078, not by the suite.** Constitution v1.4.0 makes VoiceOver on a real iPhone the check that satisfies this gate; automated keyboard traversal is supporting evidence and never sufficient alone, since it only ever runs on Chromium (Safari does not Tab to buttons unless the user enables it). T070–T074 are complete and automated in `e2e/` — axe, 375px overflow, 44x44, focus visibility, and per-view contrast from browser-resolved colours on both engines. **They do not close this gate.** Treating a green suite as accessibility sign-off is precisely what this row previously invited. |
 | 2b | Works installed; standalone navigation; safe areas; **verified on a real device** | II + PWA constraints | **PLANNED** — T078. The iOS back affordance is an open question (T011); the original research argued only from Android. |
 | 3 | Tests precede implementation; each story has a test covering its scenarios | III. Test-First | **PASS** — every implementation task is preceded by a failing-test task. The previous justification argued that pure functions are *testable*, which isn't the same as covered; six behaviours had no test at all and now do. |
 | 4 | Static-deployable React/Vite SPA; external services behind one interface | Technology Constraints | **PASS** — no external service here. Vite confirmed over Next.js (R1). |
@@ -304,7 +304,7 @@ Two things: **jobs**, and **tick-offs**. A job owns its list of tick-offs.
 | `id` | Stable, unique, never reused |
 | `name` | Required, non-empty after trimming. **Not unique** — two "filter change" jobs is fine |
 | `interval` | Required. `count` (≥ 1) and `unit` (day/week/month/year) |
-| `completions` | Newest first. Empty means never done |
+| `completions` | **Order not guaranteed** — `completeItem` appends, so storage is in the order entries were made. Empty means never done. Anything needing an order sorts explicitly: `completionsNewestFirst` sorts by `completedOn` (the day the work happened), with `recordedAt` as tie-break |
 | `createdAt` | For stable ordering; not shown |
 
 **Completion**: `id`, `completedOn` (a calendar date, no time), `recordedAt` (a real timestamp —
@@ -360,10 +360,31 @@ forgot is normal — but future dates are rejected.
 `completedOn`. That's what makes it correct when you backdate something by mistake: the entry you
 just made is the one that disappears.
 
-**Undo survives closing the app.** It was originally session-scoped, and that was wrong: ticking off
-is a two-tap action with no confirmation (SC-004 caps it at two taps, so a dialog isn't available),
-so session-scoped undo made a single mis-tap permanent — one stray tap pushing an annual service a
-year out with no way back. Undo stays narrow though: most recent only, one step, no stack.
+**Undo is a short window on the completion just recorded.** Ticking off costs a single tap with no
+confirmation — SC-004 caps it at two, and the built control uses one — so a stray tap can push an
+annual service a year out. Undo exists for that, and nothing else.
+
+The offer is *derived* rather than stored: it reads `recordedAt` off the newest completion instead
+of remembering that an offer was made. That is genuinely good — reopening the app reconstructs the
+state exactly, with no session, no timer, and no marker that can drift out of step with the data.
+But derived-with-nothing-to-expire-it was a data-loss defect. A probe on a freshly opened app,
+against a document the app had never written, deleted completions dated 2020, 2022 and 2024 in
+three presses, with no confirmation at any point. The offer was also the first focusable thing on
+the page, so Tab-then-Enter destroyed history.
+
+The fix keeps the derivation and adds a bound: the offer stands only while the newest completion is
+within roughly ten seconds of now, measured against `recordedAt` versus the current time — **not**
+against when the component mounted, or reopening the app would restart the clock and resurrect an
+expired offer. See FR-007, FR-007a and FR-007b, and T094–T097.
+
+Two consequences of that bound, both deliberate. Correcting an older mistake happens in the item's
+history, which is why the detail view exists. And adding a job with a last-done date raises no offer
+at all: the user added a job rather than completing one, and undo there would strip the date while
+leaving the job, silently turning something just created into "never done".
+
+An earlier revision of this paragraph said undo was "most recent only, one step, no stack". That
+was true of each individual press and false of the sequence, and it is the sentence that let the
+defect look like the design.
 
 Deleting a job needs confirmation, because it throws away the history too.
 

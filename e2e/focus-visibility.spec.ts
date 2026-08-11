@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { APP_STATES } from './support/app'
+import { APP_STATES, hasControlsToSweep } from './support/app'
 import {
   INTERACTIVE_SELECTOR,
   focusNthControl,
@@ -313,7 +313,10 @@ for (const state of APP_STATES) {
     await state.go(page)
 
     const controls = await page.evaluate(readControlBoxes, INTERACTIVE_SELECTOR)
-    expect(controls.length, `no interactive controls found in "${state.name}"`).toBeGreaterThan(0)
+    // Nothing to focus means nothing to measure, so the count is asserted
+    // rather than assumed; the state that legitimately has no controls says so
+    // and is asserted to have none instead. See `hasControlsToSweep`.
+    if (!hasControlsToSweep(state, controls.map((control) => control.element))) return
 
     // Establish keyboard modality. Both engines grant `:focus-visible` to a
     // programmatic focus that follows a key press; without this first press
@@ -467,7 +470,10 @@ test.describe('tab order', () => {
 
       const controls = await page.evaluate(readControlBoxes, INTERACTIVE_SELECTOR)
       const expected = new Set(controls.map((c) => c.element))
-      expect(expected.size, `no interactive controls in "${state.name}"`).toBeGreaterThan(0)
+      // A state with nothing to reach would report a traversal that never
+      // happened; the one state that has nothing declares it. See
+      // `hasControlsToSweep`.
+      if (!hasControlsToSweep(state, [...expected])) return
 
       const seen = new Set<string>()
       // Enough presses to wrap the document twice, plus slack for composite

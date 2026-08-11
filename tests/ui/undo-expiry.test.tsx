@@ -5,7 +5,7 @@ import userEvent from '@testing-library/user-event'
 import { App } from '../../src/ui/App'
 import { load } from '../../src/storage/repository'
 import { UNDO_WINDOW_MS } from '../../src/domain/undoWindow'
-import { YEARLY, aCompletion, anItem, seed } from './seed'
+import { MONTHLY, YEARLY, aCompletion, anItem, seed } from './seed'
 
 /**
  * T095 — the undo offer is a short window, and it is measured from the
@@ -85,6 +85,29 @@ async function tabUntil(
 
 const undoControl = () => screen.queryByRole('button', { name: /undo/i })
 const storedCompletionIds = () => (load().document.items[0]?.completions ?? []).map((c) => c.id)
+
+/**
+ * Every tick-off in storage, as job name → the dates it is recorded against.
+ *
+ * The single-item helper above cannot see a completion deleted from the *other*
+ * job, which is the whole risk in the two-job case below.
+ */
+const storedHistoryByJob = () =>
+  Object.fromEntries(
+    load().document.items.map((item) => [item.name, item.completions.map((c) => c.completedOn)]),
+  )
+
+const markDone = (jobName: string) =>
+  screen.getByRole('button', { name: new RegExp(`mark done.*${jobName}`, 'i') })
+
+/**
+ * The undo control, but only if it is offering to take back *that* job's
+ * tick-off. Which job the offer names is the difference between a way back from
+ * what the user just did and an offer to delete somebody's earlier history, and
+ * the accessible name is where a user meets that difference.
+ */
+const undoControlFor = (jobName: string) =>
+  screen.queryByRole('button', { name: new RegExp(`undo recording ${jobName} as done`, 'i') })
 
 /** Three tick-offs recorded years ago — history the app must not offer to delete. */
 const withOldHistory = () =>
@@ -199,6 +222,94 @@ describe('undo removes one entry and no more', () => {
     // 2022 and 2020 in turn.
     expect(undoControl()).toBeNull()
     expect(storedCompletionIds()).toHaveLength(3)
+  })
+
+  it('does not offer to undo another job ticked off seconds earlier', async () => {
+    // **Why this is a separate test from the one above, when the two read
+    // alike.** That one has a single job whose earlier completions are all years
+    // old, so the ten-second window on its own is enough to withhold the second
+    // offer — it passes against a build that has no rule beyond the window, and
+    // therefore says nothing about the rule. This is the shape where the window
+    // cannot help: two *different* jobs ticked off inside the same ten seconds.
+    // Undo the second, and the first is suddenly the newest entry in the
+    // schedule, recorded two seconds ago and comfortably inside the window.
+    // Without FR-007a's further rule the offer simply reappears naming the
+    // earlier job, and one more press deletes a tick-off the user did not just
+    // make. That is the walk-backwards defect surviving inside the window.
+    seed([
+      anItem({
+        id: 'itm_a',
+        name: 'Boiler service',
+        interval: YEARLY,
+        completions: [aCompletion('2026-06-01')],
+      }),
+      anItem({
+        id: 'itm_b',
+        name: 'Smoke alarms',
+        interval: MONTHLY,
+        completions: [aCompletion('2026-07-08')],
+      }),
+    ])
+    const { user } = launch()
+    await screen.findByText('Boiler service')
+
+    await user.click(markDone('Boiler service'))
+    // A gap, so which tick-off is newest is decided by the mocked clock rather
+    // than by how fast the machine running this happens to be. Both stay well
+    // inside the ten-second window.
+    await timePasses(2_000)
+    await user.click(markDone('Smoke alarms'))
+
+    // The offer names the job just ticked off, which is the one press below.
+    expect(undoControlFor('Smoke alarms')).not.toBeNull()
+    await user.click(undoControl()!)
+
+    // Smoke alarms is back to its single stored tick-off from July; Boiler
+    // service keeps both the June one and the one made moments ago.
+    expect(storedHistoryByJob()).toEqual({
+      'Boiler service': ['2026-06-01', '2026-08-08'],
+      'Smoke alarms': ['2026-07-08'],
+    })
+    // And nothing is standing that would let a second press take Boiler
+    // service's tick-off with it.
+    expect(undoControl()).toBeNull()
+  })
+
+  it('still offers undo for the next job the user ticks off', async () => {
+    // The companion to the test above, and the reason it cannot be read as
+    // "refuse every offer once undo has been pressed". That would satisfy
+    // FR-007a and quietly break FR-007 for the rest of the session: the very
+    // next mis-tap would have no way back. Undo is withheld for one specific
+    // entry, not switched off.
+    seed([
+      anItem({
+        id: 'itm_a',
+        name: 'Boiler service',
+        interval: YEARLY,
+        completions: [aCompletion('2026-06-01')],
+      }),
+      anItem({
+        id: 'itm_b',
+        name: 'Smoke alarms',
+        interval: MONTHLY,
+        completions: [aCompletion('2026-07-08')],
+      }),
+    ])
+    const { user } = launch()
+    await screen.findByText('Boiler service')
+    await user.click(markDone('Boiler service'))
+    await timePasses(2_000)
+    await user.click(markDone('Smoke alarms'))
+    await user.click(undoControl()!)
+    expect(undoControl()).toBeNull()
+
+    await user.click(markDone('Smoke alarms'))
+
+    expect(undoControlFor('Smoke alarms')).not.toBeNull()
+    expect(storedHistoryByJob()).toEqual({
+      'Boiler service': ['2026-06-01', '2026-08-08'],
+      'Smoke alarms': ['2026-07-08', '2026-08-08'],
+    })
   })
 })
 

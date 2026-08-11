@@ -209,12 +209,61 @@ unverifiable after the fact.
 implementation satisfy it. The clarification wrote down behaviour that existed rather than
 asking for new behaviour, so it needs no task.
 
-- [ ] T094 [P] Failing tests in `tests/domain/undo-window.test.ts`: a pure function deciding whether a completion is still undoable at a given moment, with the moment passed as a parameter and never read from a clock. True just after `recordedAt`, false well after it, and false for a completion recorded days ago. Belongs in the domain tier because it is arithmetic on two timestamps, and because time as a parameter is how every other date decision in this codebase is tested
-- [ ] T095 [P] Failing tests in `tests/ui/undo-expiry.test.tsx` using fake timers (FR-007, FR-007a): the offer appears on marking done and disappears once the window passes without the user acting; **an app opened on a document containing only old completions offers no undo at all**; and pressing undo once removes exactly one completion and leaves the rest of the history intact. That last assertion is the regression guard for the defect — the current behaviour removes one per press, forever, until nothing is left
-- [ ] T096 [P] Failing test in `tests/ui/undo-not-after-add.test.tsx` (FR-007b): adding a job with a last-done date raises no undo offer. The current behaviour offers one, and taking it strips the date and turns the job just created into "Never done" — so this test must assert the *absence* of the control, which means it must be observed failing against today's code or it proves nothing
-- [ ] T097 **Time-limit the undo offer, and stop it deleting history** (issue #98, spec FR-007/FR-007a/FR-007b). Undo is derived from the newest `recordedAt` anywhere in the schedule with nothing to expire it, so on a freshly opened app it offers to delete history the user never touched — verified by probe: three presses removed completions dated 2020, 2022 and 2024, with no confirmation, on a document the app had never written. It is also the first thing above `<main>`, so a keyboard user could Tab once and Enter into losing data. Needs no storage-contract change: `recordedAt` is already stored, so the offer stays derived and additionally checks the completion is within ~10 seconds. Must be measured against `recordedAt` versus now, **not** against when the component mounted, or reopening the app would resurrect an expired offer. Adding a job with a last-done date must raise no offer at all (FR-007b). **This is a data-loss defect, not a polish item — it should land before US3 builds on top of it.**
-- [ ] T098 [P] Failing tests in `tests/ui/read-only.test.tsx` (FR-010a): with a stored document carrying a higher `schemaVersion`, no control that would change anything is present or enabled — not Add job, not Mark done, not Undo — and the notice explaining why is shown. Seed through the repository rather than the UI, since the UI cannot create this state
-- [ ] T099 **Make read-only sessions honest** (spec FR-010a). When the stored document came from a newer build, `save` throws `ReadOnlyError`, but Add job, Mark done and Undo all still render. React does not catch errors thrown from event handlers, so the tap saves nothing and says nothing, while the banner claims "Nothing can be changed". Hide or disable every write control instead, so the screen matches the message. Unreachable today — the schema has never left v1 — but US2 moved it from inside a form to the opening screen
+- [X] T094 [P] Failing tests in `tests/domain/undo-window.test.ts`: a pure function deciding whether a completion is still undoable at a given moment, with the moment passed as a parameter and never read from a clock. True just after `recordedAt`, false well after it, and false for a completion recorded days ago. Belongs in the domain tier because it is arithmetic on two timestamps, and because time as a parameter is how every other date decision in this codebase is tested
+- [X] T095 [P] Failing tests in `tests/ui/undo-expiry.test.tsx` using fake timers (FR-007, FR-007a): the offer appears on marking done and disappears once the window passes without the user acting; **an app opened on a document containing only old completions offers no undo at all**; and pressing undo once removes exactly one completion and leaves the rest of the history intact. That last assertion is the regression guard for the defect — the current behaviour removes one per press, forever, until nothing is left
+- [X] T096 [P] Failing test in `tests/ui/undo-not-after-add.test.tsx` (FR-007b): adding a job with a last-done date raises no undo offer. The current behaviour offers one, and taking it strips the date and turns the job just created into "Never done" — so this test must assert the *absence* of the control, which means it must be observed failing against today's code or it proves nothing
+- [X] T097 **Time-limit the undo offer, and stop it deleting history** (issue #98, spec FR-007/FR-007a/FR-007b). Undo is derived from the newest `recordedAt` anywhere in the schedule with nothing to expire it, so on a freshly opened app it offers to delete history the user never touched — verified by probe: three presses removed completions dated 2020, 2022 and 2024, with no confirmation, on a document the app had never written. It is also the first thing above `<main>`, so a keyboard user could Tab once and Enter into losing data. Needs no storage-contract change: `recordedAt` is already stored, so the offer stays derived and additionally checks the completion is within ~10 seconds. Must be measured against `recordedAt` versus now, **not** against when the component mounted, or reopening the app would resurrect an expired offer. Adding a job with a last-done date must raise no offer at all (FR-007b). **This is a data-loss defect, not a polish item — it should land before US3 builds on top of it.**
+
+  **Correction, found while implementing.** The sentence above — "the offer stays derived and
+  additionally checks the completion is within ~10 seconds" — is not sufficient, and neither is
+  the matching claim in `plan.md` that FR-007b falls out of the bound. It does not. The window
+  delivers FR-007 and it stops a freshly opened app offering to delete old history, but two rules
+  in FR-007a and FR-007b cannot be derived from the stored document at all:
+
+  - **FR-007b.** An item created today holding one completion recorded a second ago is what you
+    get *both* from adding a job with a last-done date *and* from adding a job and then ticking
+    it off. The document does not distinguish them, so no rule reading it can.
+  - **FR-007a.** Tick two different jobs off within the same ten seconds and undo once: the
+    other job's tick-off is now the newest and still inside the window, so the offer returns and
+    a second press walks backwards. Verified by probe, both with and without the fix.
+
+  Both are handled by remembering one completion id in `useSchedule` — the entry that must *not*
+  be offered, set when a job is added with a date and again after an undo. It is only ever used
+  to withhold an offer, so a stale value can only decline to undo something. The alternative that
+  would keep the offer purely derived is a field in the stored document, which is a persistence
+  choice and therefore needs a plan amendment first (Technology Constraints). Not taken here.
+  The cost of the choice made: relaunching the app within ten seconds of adding a job with a
+  last-done date would offer to strip that date, because the remembered id does not survive a
+  relaunch. Raised for Sherrylene rather than decided.
+- [X] T098 [P] Failing tests in `tests/ui/read-only.test.tsx` (FR-010a): with a stored document carrying a higher `schemaVersion`, no control that would change anything is present or enabled — not Add job, not Mark done, not Undo — and the notice explaining why is shown. Seed through the repository rather than the UI, since the UI cannot create this state
+
+  **Written differently from the line above, deliberately.** "No Mark done, no Undo" cannot be
+  asserted honestly here: `load()` returns an empty document for a too-new file, so a read-only
+  screen has no rows for those controls to belong to and the assertion could never fail — which
+  the constitution's Testing Strategy forbids outright. The test enumerates every control the
+  read-only screen renders and requires that none of the live ones is a write control, so any
+  write control appearing fails it, including ones that do not exist yet. The row-level and
+  detail-level write controls remain genuinely uncovered in a read-only session, and that gap is
+  recorded in the test file rather than papered over.
+- [X] T099 **Make read-only sessions honest** (spec FR-010a). When the stored document came from a newer build, `save` throws `ReadOnlyError`, but Add job, Mark done and Undo all still render. React does not catch errors thrown from event handlers, so the tap saves nothing and says nothing, while the banner claims "Nothing can be changed". Hide or disable every write control instead, so the screen matches the message. Unreachable today — the schema has never left v1 — but US2 moved it from inside a form to the opening screen
+
+  **Done by replacing the view rather than gating controls one by one.** A read-only session now
+  renders `src/ui/views/ReadOnlyView.tsx` in place of the schedule: a heading, a paragraph, and
+  no controls at all. Gating each control instead would have meant threading a flag through
+  `ScheduleView`, `ItemRow` and `ItemDetailView` to reach code that can never run, since the
+  read-only document has no items — dead code that no test could honestly exercise.
+
+  **A second dishonesty fixed at the same time, not in the original task.** The read-only screen
+  used to render the ordinary empty state, headed "Nothing recorded yet". That is a claim this
+  build cannot support: the user may well have a full schedule, written by the newer build, that
+  this one declined to read. In an app with no export and no backup, being told your records are
+  gone is not a small thing to get wrong.
+
+  **Browser-tier consequence.** The read-only state now has zero interactive controls, which
+  trips the `controls.length > 0` guard that `e2e/layout.spec.ts` and `e2e/focus-visibility.spec.ts`
+  apply to every state in `APP_STATES`. The guard is right — it stops a state that renders
+  nothing from sweeping vacuously — so the exception is made explicit per state rather than the
+  guard relaxed
 - [ ] T100 [P] **Design refresh: colour and personality** (issue #99). The app is near-monochrome — white cards on grey, one blue accent, status as small coloured text — and reads as a spreadsheet rather than something for a home. Constraints: Principle I forbids a component library, so this is CSS and tokens; status MUST NOT be carried by colour alone, which `e2e/colour-independence.spec.ts` enforces; 375px first; 44×44 targets hold. **Every ratio must be computed, not estimated** — `tokens.css` once carried twelve ratios recorded as measured that were all estimates, and `focus.css` claimed 3.6:1 for a ring that measured 2.69:1. `e2e/contrast.spec.ts` now checks this against real browser-resolved colours on both engines, so a careless palette turns the suite red rather than shipping
 - [ ] T101 [P] **Design refresh: typographic hierarchy** (issue #99). Everything sits at roughly the same size and weight, so a job's name, its status and its due date compete instead of reading in order of importance. Touches `tokens.css` and `app.css` only; do not change markup structure, because the heading and list semantics are what the axe and VoiceOver checks depend on
 

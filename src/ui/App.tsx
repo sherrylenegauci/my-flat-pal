@@ -4,6 +4,7 @@ import { UndoNotice } from './components/UndoNotice'
 import { ScheduleView } from './views/ScheduleView'
 import { ItemDetailView } from './views/ItemDetailView'
 import { ItemFormView } from './views/ItemFormView'
+import { ReadOnlyView } from './views/ReadOnlyView'
 import { useNavigation } from './navigation'
 import { useSchedule } from './useSchedule'
 import type { NewItemInput } from './useSchedule'
@@ -49,6 +50,21 @@ export function App() {
     headingRef.current?.focus()
   }
 
+  /**
+   * The offer also withdraws itself when its window runs out, and it can do that
+   * while the Undo button holds focus — which drops focus to `<body>` exactly as
+   * pressing it once did, except that this time the user did nothing to cause
+   * it. Catching it here rather than inside the notice keeps it to one rule:
+   * if the offer has gone and focus went nowhere, put it back on the heading.
+   */
+  const undoId = schedule.undoable?.completion.id ?? null
+  useEffect(() => {
+    if (undoId !== null) return
+    if (document.activeElement === null || document.activeElement === document.body) {
+      headingRef.current?.focus()
+    }
+  }, [undoId])
+
   // A detail view for a job that is no longer there is not a state to render;
   // falling through to the list is what the user would do next anyway.
   const detailId = nav.view.name === 'detail' ? nav.view.itemId : null
@@ -92,7 +108,13 @@ export function App() {
       </div>
 
       <main className="app__main">
-        {nav.view.name === 'new' ? (
+        {/* Read-only comes first, and it replaces the view rather than
+            decorating it. Every other branch below draws a control that would
+            write, and FR-010a says a control that appears usable but silently
+            does nothing must not be shown. */}
+        {schedule.readOnly ? (
+          <ReadOnlyView />
+        ) : nav.view.name === 'new' ? (
           <ItemFormView today={schedule.today} onSave={handleSave} onCancel={nav.back} />
         ) : detail ? (
           <ItemDetailView

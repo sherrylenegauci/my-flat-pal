@@ -1,3 +1,4 @@
+import { expect } from '@playwright/test'
 import type { Page } from '@playwright/test'
 import { STORAGE_KEY } from '../../src/storage/schema'
 import type { StoredDocument } from '../../src/storage/schema'
@@ -183,11 +184,17 @@ async function open(page: Page): Promise<void> {
  * **User Stories 1 and 2 are built.** The schedule list, the add-a-job form, a
  * job's detail with its history, and the shell's empty / corrupt / read-only /
  * undo states. As US3 (edit, delete, the confirmation dialog) lands, add its
- * views here — every sweep in `e2e/` iterates this list, so a new entry extends
- * the axe scan, the layout check, the contrast walk and the focus sweep at
- * once. A view missing from this list is a view no browser-tier check covers.
+ * views here — four of the five sweeps in `e2e/` iterate this list, so a new
+ * entry extends the axe scan, the contrast walk, the layout check and the focus
+ * sweep at once. A view missing from this list is a view those four do not
+ * cover.
  *
- * US2 is why that matters more than it sounds. Marking a job done is a
+ * The fifth, `colour-independence.spec.ts`, deliberately does not iterate: it
+ * asks whether *status* survives colour being removed, and status only exists on
+ * the list, whose four seeded rows it compares against each other. Adding a
+ * state here does not extend it, and it is not a gap that it does not.
+ *
+ * US2 is why the list matters more than it sounds. Marking a job done is a
  * text-sized button inside a heading, and the interval dropdown measured 44px
  * in jsdom and 25px in WebKit — the tier below cannot tell you whether a
  * control is big enough to hit, because it lays nothing out.
@@ -195,6 +202,54 @@ async function open(page: Page): Promise<void> {
 export interface AppState {
   name: string
   go: (page: Page) => Promise<void>
+  /**
+   * Set only on a state where rendering **no** interactive control is the
+   * requirement — and set to the reason, so the reason travels with the fact
+   * instead of living in a comment somewhere else.
+   *
+   * Every sweep in `e2e/` iterates `APP_STATES`, finds the controls, and then
+   * measures them. A state with nothing to find would therefore pass those
+   * sweeps without measuring anything, which is why each of them asserts it
+   * found at least one control. That assertion is a guard against a view
+   * quietly rendering nothing, and it stays.
+   *
+   * This field is the stated exception to it, and it is deliberately not a
+   * skip: see `hasControlsToSweep` below, which turns it into the opposite
+   * assertion. "This state has no controls" then has to keep being true.
+   */
+  noControlsBecause?: string
+}
+
+/**
+ * Assert what a state claims about its controls, and say whether there is a
+ * sweep left to run.
+ *
+ * Two claims, never both:
+ *
+ *   - Ordinarily, that the state rendered at least one control. Without this a
+ *     view that stopped rendering its controls altogether would sail through
+ *     the touch-target, focus-indicator and Tab-order sweeps, all of which
+ *     iterate whatever they were handed.
+ *   - Where the state declares `noControlsBecause`, that it rendered exactly
+ *     none. This is the part that makes the exception safe to grant: it is an
+ *     assertion in its own right, so the read-only view growing a button — the
+ *     very thing FR-010a forbids — fails here rather than being tolerated. A
+ *     blanket `if (controls.length === 0) return` would give up both halves.
+ *
+ * Returns false when the caller should stop, which happens only on the second
+ * branch and only after that branch has asserted something.
+ */
+export function hasControlsToSweep(state: AppState, controls: string[]): boolean {
+  if (state.noControlsBecause !== undefined) {
+    expect(
+      controls,
+      `"${state.name}" must render no interactive control at all — ${state.noControlsBecause}`,
+    ).toEqual([])
+    return false
+  }
+
+  expect(controls.length, `no interactive controls found in "${state.name}"`).toBeGreaterThan(0)
+  return true
 }
 
 export const APP_STATES: AppState[] = [
@@ -212,6 +267,35 @@ export const APP_STATES: AppState[] = [
       await seed(page, JSON.stringify(toDocument(FOUR_STATUSES)))
       await open(page)
       await page.getByRole('heading', { name: '3 needing attention' }).waitFor()
+    },
+  },
+  {
+    name: 'the undo offer, after marking a job done',
+    /**
+     * The undo notice was swept by nothing until now, so its contrast, its
+     * 44x44 target and its focus ring were all unverified — on a control that
+     * deletes a completion irrecoverably.
+     *
+     * **Why the fixed clock does not fight this, verified rather than assumed.**
+     * `page.clock.setFixedTime` freezes what `Date.now()` and `new Date()`
+     * return but leaves timers running on real time. So the completion is
+     * recorded at FIXED_NOW, and `isWithinUndoWindow` compares it against
+     * FIXED_NOW on every render: elapsed is permanently zero, and the offer
+     * never expires however long the sweep takes. The ten-second `setTimeout`
+     * in `useSchedule` still fires after ten real seconds — it re-renders, the
+     * window is re-checked, the answer is the same, and because the effect's
+     * dependencies have not changed no further timer is armed. One harmless
+     * wake-up, not a loop.
+     *
+     * That is convenient here, but it is also the reason this state cannot say
+     * anything about *expiry*. The offer withdrawing itself after ten seconds is
+     * covered in `tests/ui/` with fake timers, where the clock can be moved.
+     */
+    go: async (page) => {
+      await seed(page, JSON.stringify(toDocument(FOUR_STATUSES)))
+      await open(page)
+      await page.getByRole('button', { name: 'Mark done — Test the smoke alarms' }).click()
+      await page.getByRole('button', { name: /^Undo\b/ }).waitFor()
     },
   },
   {
@@ -267,6 +351,26 @@ export const APP_STATES: AppState[] = [
   },
   {
     name: 'data written by a newer version',
+    /**
+     * The only state in this list with nothing to press, and that is the point
+     * of it rather than an oversight.
+     *
+     * `load()` refuses to parse a document a newer build wrote — half-parsing
+     * it and then saving would overwrite the user's records with a downgraded
+     * copy — so every write is refused for as long as that document is there.
+     * FR-010a: "every control that would change something MUST be hidden or
+     * disabled... A control that appears usable but silently does nothing MUST
+     * NOT be shown." This screen used to render the ordinary empty state, whose
+     * "Add your first job" button threw `ReadOnlyError` into a void, because
+     * React does not catch throws from event handlers. `ReadOnlyView` replaced
+     * it with a heading and a paragraph and no controls at all.
+     *
+     * So "this state has zero controls" is a requirement, and stating it here
+     * is what lets the sweeps assert it instead of merely tolerating it.
+     */
+    noControlsBecause:
+      'FR-010a — the stored document was written by a newer build, so every write is ' +
+      'refused and ReadOnlyView offers nothing to press',
     go: async (page) => {
       await seed(page, JSON.stringify({ schemaVersion: 99, revision: 4, items: [] }))
       await open(page)

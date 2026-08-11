@@ -5,13 +5,17 @@ import { formatDisplayDate } from '../format'
 /**
  * What the last tick-off did, and the way back from it (T061).
  *
- * **Why this is in the shell rather than a toast.** FR-007 requires undo to
- * survive the app being closed and reopened. A message that fades after a few
- * seconds cannot do that, and neither can anything held in session state — the
- * design that was cut from the data model precisely because a phone backgrounds
- * constantly and a mis-tap would become permanent. So the notice is *derived*:
- * `mostRecentlyRecorded` reads the same stored document the completions live
- * in, which means reopening the app reconstructs it exactly.
+ * **Why this is in the shell rather than a toast.** The notice is *derived*
+ * rather than remembered: `mostRecentlyRecorded` reads the same stored document
+ * the completions live in, so reopening the app reconstructs it exactly, with
+ * nothing held in session state that a backgrounded phone could lose.
+ *
+ * That derivation used to be unbounded, which turned it into a data-loss defect
+ * — a freshly opened app offered to delete history it had never written. The
+ * 2026-08-11 clarification replaced FR-007's second sentence: the offer now
+ * stands only while the completion is inside the undo window, and `useSchedule`
+ * decides that. Whether this component renders at all is that decision's answer;
+ * it does not make it, and it must not acquire a timer of its own.
  *
  * **Why it names the resulting due date.** Marking done is one tap with no
  * confirmation. Saying "recorded" alone leaves the user to work out whether

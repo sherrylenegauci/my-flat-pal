@@ -106,11 +106,16 @@ describe('keyboard only', () => {
     await user.keyboard('{Enter}')
     await screen.findByRole('heading', { name: 'Boiler service', level: 2 })
 
-    const dateField = await tabUntil(user, (el) => el === screen.getByLabelText(/date it was done/i))
+    const dateField = await tabUntil(
+      user,
+      (el) => el === screen.getByLabelText('Add a date you did it'),
+    )
     expect(dateField).not.toBeNull()
     await user.keyboard('2025-08-08')
 
-    expect(await tabUntil(user, named(/record it/i))).not.toBeNull()
+    // `/^Add$/` rather than `/add/i`: anchored, so it cannot be satisfied by
+    // tabbing onto some other button whose label merely begins with "Add".
+    expect(await tabUntil(user, named(/^Add$/))).not.toBeNull()
     await user.keyboard('{Enter}')
 
     expect(stored()?.completions[0]?.completedOn).toBe('2025-08-08')

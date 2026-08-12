@@ -49,7 +49,13 @@ describe('opening a job from the list', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Boiler service' }))
 
-    expect(await screen.findByText('Last done 1 June 2026')).toBeTruthy()
+    // The fact, not the phrasing. It used to be a sentence of its own ("Last
+    // done 1 June 2026") and is now the second half of the line that opens the
+    // view: "Every year · last done 1 June 2026". A substring match keeps this
+    // test about US2 scenario 2 — that the date is on the screen at all — and
+    // leaves the exact sentence, the dot and the dropped count to
+    // `detail-interval.test.tsx`, which is the file about the wording.
+    expect(await screen.findByText(/last done 1 June 2026/i)).toBeTruthy()
     expect(screen.getByText('Next due 1 June 2027')).toBeTruthy()
   })
 

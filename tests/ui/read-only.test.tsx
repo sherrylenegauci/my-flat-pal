@@ -38,7 +38,7 @@ import { YEARLY, aCompletion, anItem, seed } from './seed'
  * asserted against separately below.
  *
  * **What is still not covered here, and cannot be.** The row-level "Mark done"
- * and the detail view's "Record it" never render in a read-only session,
+ * and the detail view's "Add" never render in a read-only session,
  * because there is nothing to render them for. No test in this tier can
  * exercise them read-only, and no honest one can pretend to. If T099 makes the
  * read-only screen show the user's data — which is the only way to stop the app

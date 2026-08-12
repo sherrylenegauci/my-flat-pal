@@ -3,7 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#1f2933" />
+    <!-- Matches --surface, the colour of the app header this sits directly above
+         when the app is running installed. It had been #1f2933 since the first
+         palette and was missed by the warm pass, so for two design passes the
+         status bar was a dark slate belonging to neither. Keep it in step with
+         --surface in src/ui/tokens.css by hand; nothing checks it. -->
+    <meta name="theme-color" content="#ffffff" />
 
     <!-- iOS home-screen install: without these the app opens in Safari chrome. -->
     <meta name="apple-mobile-web-app-capable" content="yes" />

@@ -11,14 +11,15 @@
  * defect. Recompute with the formula in WCAG 2.1 SC 1.4.11 before changing any
  * colour here.
  *
- * Every figure below was recomputed for T100's palette, because all but one of
- * the surfaces named in them changed. The ring colours themselves did not need
- * to: a near-black ring is warm-neutral enough to sit on paper, and the reason
- * it needs a white companion is unchanged.
+ * Every figure below has now been recomputed twice, once per design pass, for
+ * the same reason each time: every surface named in them moved. The ring itself
+ * moved with the second one — a near-black with a warm cast is the wrong
+ * near-black on a cool page — but only in hue, and the reason it needs a white
+ * companion is unchanged.
  */
 
 :root {
-  --focus-ring: #14140f;
+  --focus-ring: #0b0f14;
   /* Sits between the element and the dark ring, so the indicator stays visible
      on dark fills where the dark ring alone does not. */
   --focus-ring-inner: #ffffff;
@@ -27,16 +28,21 @@
 }
 
 /*
- * Two-tone, because one colour cannot clear 3:1 against both a paper page and a
- * dark olive button:
+ * Two-tone, because one colour cannot clear 3:1 against both a white page and a
+ * deep teal button:
  *
- *   --focus-ring  on --surface        18.04:1  ✅
- *   --focus-ring  on --surface-sunken 14.92:1  ✅
- *   --focus-ring  on --notice-wash    15.36:1  ✅
- *   --focus-ring  on --accent          2.56:1  ❌  ← why the inner ring exists
- *   --focus-ring  on --danger          2.41:1  ❌  ← and here too
- *   #ffffff       on --accent          7.23:1  ✅
- *   #ffffff       on --danger          7.67:1  ✅
+ *   --focus-ring  on --surface        19.22:1  ✅
+ *   --focus-ring  on --surface-sunken 16.18:1  ✅
+ *   --focus-ring  on --notice-wash    16.40:1  ✅
+ *   --focus-ring  on --accent          2.61:1  ❌  ← why the inner ring exists
+ *   --focus-ring  on --danger          2.94:1  ❌  ← and here too, by a hair
+ *   #ffffff       on --accent          7.35:1  ✅
+ *   #ffffff       on --danger          6.54:1  ✅
+ *
+ * --danger at 2.94:1 is the one worth naming. It is a near miss rather than a
+ * clear fail, and a near miss is exactly the kind of number that gets rounded
+ * up by whoever is in a hurry. It was measured, it is under 3:1, and the white
+ * inner ring is what carries the indicator on that button.
  *
  * The white ring hugs the element and the dark ring sits outside it, so
  * whichever surface the indicator lands on, one of the two contrasts.

@@ -15,8 +15,13 @@ export default defineConfig({
         name: 'my-flat-pal',
         short_name: 'Flat Pal',
         description: 'Keep track of the upkeep your flat needs.',
-        theme_color: '#1f2933',
-        background_color: '#f7f7f5',
+        // --surface and --surface-sunken from src/ui/tokens.css: the header the
+        // status bar meets, and the page behind the launch splash. Both were
+        // still the first palette's values two palettes later — the manifest is
+        // the one place colour lives that no stylesheet reaches, so it has to be
+        // updated by hand whenever the tokens move.
+        theme_color: '#ffffff',
+        background_color: '#e7ecf2',
         display: 'standalone',
         start_url: '/',
         icons: [

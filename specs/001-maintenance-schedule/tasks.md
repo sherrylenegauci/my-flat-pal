@@ -322,37 +322,78 @@ asking for new behaviour, so it needs no task.
   guard relaxed
 - [X] T100 [P] **Design refresh: colour and personality** (issue #99). The app is near-monochrome — white cards on grey, one blue accent, status as small coloured text — and reads as a spreadsheet rather than something for a home. Constraints: Principle I forbids a component library, so this is CSS and tokens; status MUST NOT be carried by colour alone, which `e2e/colour-independence.spec.ts` enforces; 375px first; 44×44 targets hold. **Every ratio must be computed, not estimated** — `tokens.css` once carried twelve ratios recorded as measured that were all estimates, and `focus.css` claimed 3.6:1 for a ring that measured 2.69:1. `e2e/contrast.spec.ts` now checks this against real browser-resolved colours on both engines, so a careless palette turns the suite red rather than shipping
 
-  **Done, with T101, in one pass over `tokens.css`, `app.css` and `focus.css`.** Warm paper
-  (`--surface` #fffcf6) over warm sand (`--surface-sunken` #eee6d9) in place of white on cool
-  grey; the accent is a deep olive (#4a5d33) in place of the blue. Olive rather than the
-  terracotta that first suggests itself, because terracotta sits a few millimetres from overdue
-  red on the same list, and no status is drawn in green so the hue was free. Status keeps its
-  existing meanings — red, amber, violet, neutral — and only its temperature moved, since the
-  words already teach those and re-teaching them would cost the user something for nothing.
-  Status now also carries a pale wash pill behind its word, which is reinforcement only:
-  `e2e/colour-independence.spec.ts` still passes, and the pill is a background *colour*, never
-  an image, because that spec fails on any background image inside a row.
+  **Done, with T101, in one pass over `tokens.css`, `app.css` and `focus.css`. Then done a
+  second time**, because the first answer was shown to Sherrylene and turned down. Both are
+  recorded below: the rejected one because a rejection is a decision and reads as a mistake
+  once the reason for it is lost, and the current one because it is what is on screen.
+
+  **Attempt 1 — warm and domestic (2026-08-12, `177e01c`). Rejected on sight.** Warm paper
+  (`--surface` #fffcf6) over warm sand (`--surface-sunken` #eee6d9), a deep olive accent
+  (#4a5d33), and a pale wash pill behind each status word. It met every constraint in the task
+  line and passed both engines, which is precisely the point: the browser tier can tell you a
+  palette is legible and cannot tell you it is wanted. The objection was that the whole thing
+  was soft — tinted surfaces, tinted pills, low separation everywhere.
+
+  **Attempt 2 — clean and crisp (current).** Cool neutrals in place of warm ones: a white card
+  (`--surface` #ffffff) on a cool grey page (`--surface-sunken` #e7ecf2). One accent, a deep
+  teal (#0f5f68), used for every interactive thing including text — the separate `--accent-text`
+  is gone, because this teal clears 4.5:1 as a word on both surfaces. Teal is the one hue clear
+  of all three status hues: it is not adjacent to overdue red, due amber, or never-done violet,
+  and it is not warm enough to be mistaken for any of them at a glance down a list.
+
+  Crisper rather than merely different, in numbers: `--text` 15.86:1 → 18.51:1 on a card, the
+  control border 5.59:1 → 7.02:1, the card hairline 1.39:1 → 1.51:1. Status keeps its four
+  meanings — red, amber, violet, neutral — for the same reason as before: the words already
+  teach them.
+
+  **The status pills changed treatment, and this is the argument for it.** They were introduced
+  with the warm palette as a pale wash behind the word. A wash is a soft device, and softness is
+  what was rejected, so they are now outlined: a 1px edge in the status hue, a tight radius, and
+  no fill, so the word sits on the card itself. It says the same thing — this is a label, these
+  are its bounds — with definition instead of tint, and it removes a whole class of pair from
+  the contrast audit, since a status word no longer needs checking against a wash *and* against
+  whatever the wash sits on. Status is still never carried by colour:
+  `e2e/colour-independence.spec.ts` passes on both engines.
+
+  **Tracked capitals were the obvious crisp treatment and are not used**, for a mechanical
+  reason worth writing down: `innerText` returns text as rendered, `text-transform` included,
+  and `e2e/colour-independence.spec.ts` matches "Overdue", "Due today", "Never done" and
+  "Scheduled" case-sensitively against it. Uppercasing the badge would have turned that spec red
+  for a purely visual change — and the only ways out are editing the spec to suit the CSS, or
+  keeping the word as written. It is kept as written.
 
   **`focus.css` is in scope despite not being named**, and this is the reason: every ratio it
   records is against a surface that moved, so leaving it alone would have left five recorded
   numbers describing a palette that no longer exists — the exact failure this task was written
-  about. Recomputed: ring on `--surface` 18.04:1, on `--surface-sunken` 14.92:1, on
-  `--notice-wash` 15.36:1; on `--accent` 2.56:1 and on `--danger` 2.41:1, both failing, which is
-  why the white inner ring exists and is unchanged (7.23:1 and 7.67:1).
+  about. That has now happened twice, once per pass. Recomputed for the crisp palette: ring on
+  `--surface` 19.22:1, on `--surface-sunken` 16.18:1, on `--notice-wash` 16.40:1; on `--accent`
+  2.61:1 and on `--danger` 2.94:1, both failing, which is why the white inner ring exists and is
+  unchanged (7.35:1 and 6.54:1). The ring itself moved from #14140f to #0b0f14 — a warm
+  near-black is the wrong near-black on a cool page.
 
   **Every ratio computed, none estimated.** Computed by importing `e2e/support/colour.ts` into a
-  throwaway script rather than re-implementing the formula, and checked first against four
-  figures already in the tree (17.44, 2.69, 6.88, 7.46) — all four reproduced exactly, which is
-  what makes the new numbers worth reading. Three pairs are recorded as measured *and* below
-  3:1, deliberately and with the reason beside them: card fill on page (1.21:1), pill fill on
-  card (~1.1:1), and `--border` on `--surface` (1.39:1). None is an interface component under
-  WCAG 1.4.11 — nothing is identified by any of them, controls use `--border-strong` at 5.59:1,
-  and status is identified by its word. Recorded rather than omitted so nobody wonders later
-  whether they were checked.
+  throwaway script rather than re-implementing the formula, and validated before use against
+  four figures already in the tree (17.44, 6.88, 7.46, 2.69) — all four reproduced exactly —
+  plus three whose values are fixed by WCAG rather than by this repository (black on white
+  21.00, #767676 on white 4.54, #595959 on white 7.00), all three exact. Two pairs are recorded
+  as measured *and* below 3:1, deliberately and with the reason beside them: card fill on page
+  (1.19:1) and `--border` on `--surface` (1.51:1). Neither is an interface component under WCAG
+  1.4.11 — nothing is identified by either, controls use `--border-strong` at 7.02:1, and status
+  is identified by its word. Recorded rather than omitted so nobody wonders later whether they
+  were checked. The third such pair from attempt 1, pill fill on card at ~1.1:1, no longer
+  exists: the pills have no fill.
 
-  Two unused tokens removed while there: `--ok-text` and `--ok-edge` had no reference anywhere
-  in `src/`, and with an olive accent a second, meaningless green would have been an active
-  trap.
+  **Tokens removed across the two passes**, each because it had no reference left in `src/`:
+  `--ok-text` and `--ok-edge` (attempt 1); `--accent-text`, `--notice-edge`, `--radius-pill`,
+  the four status washes and `--neutral-wash` (attempt 2). `--surface-raised` went too — it was
+  never referenced by anything, in either palette. A token nothing uses is a trap, not a spare.
+
+  **The PWA manifest was two palettes out of date and nothing noticed.** `theme_color` #1f2933
+  and `background_color` #f7f7f5 in `vite.config.ts`, and the matching `theme-color` meta in
+  `index.html`, still held the *original* palette's values — attempt 1 changed every stylesheet
+  and missed these, because they are the one place colour lives that no stylesheet reaches and
+  no test tier reads. They now carry `--surface` and `--surface-sunken`, and they will need
+  updating by hand on any future palette change.
 - [ ] T103 **RELEASE BLOCKER — a mistaken completion cannot be removed, by any means** (FR-007a). Sequenced after US3 by decision on 2026-08-11: removing a completion needs a confirmation dialog and T067 builds one, so doing this first would build that dialog twice. **Waiting is safe only because nothing is released.** Today: tap Mark done by mistake, let ten seconds pass, and that entry is permanent — there is no control to remove it. **Corrected 2026-08-12, since US3 landed**: this line used to add "and no way to delete the job either, since US3 is unbuilt", which is no longer true and was never much of a remedy anyway. Deleting the job now works, and it destroys that job's entire history to remove one wrong row. The only alternative is clearing site storage, which destroys every job. Neither is a correction; both are amputations. The cost is not one wrong row: the completion is dated today, so the next due date moves a full interval and an annual service drops off the list for a year, and the history — kept because `spec.md` says it is "worth being able to prove" — now records work that never happened. **FR-007a's closing sentence, "correcting an older mistake is done from the item's history", is false until this exists**, and the same claim justifies session-scoped undo in `spec.md`, `plan.md` and T102. Add a control in the detail view's history list that removes one completion, reusing T067's dialog. Do not ship without it
 - [X] T104 [P] **Pin the undo window to the completion, not to mount** (FR-007). Nothing in the suite establishes this. Sabotage proved it: capture a timestamp when the hook first runs and measure the window from that instead of from `recordedAt`, and **209 of 209 tests still pass** — reproduced independently by the verification agent and by me. The regression it permits points the opposite way from the original defect and is worse in practice: with a mount-relative window, anyone who has had the app open more than ten seconds gets no undo offer at all when they tick something off, which is every real user. `tests/domain/undo-window.test.ts` pins the arithmetic; nothing pins what is passed into it. Add a behaviour test that opens the app, lets well over the window pass with nothing recorded, then marks a job done and asserts the offer appears and works
 

@@ -585,15 +585,19 @@ npm run test:run     # single pass — this is the merge gate
 - **Storage**: round trip, every mutation persisting, `revision` compare-and-swap, corrupted-data
   recovery, newer-version refusal, migration against the fixture.
 - **UI**: empty state, adding, ordering, visible due dates, reload survival, duplicate names,
-  ticking off, session-scoped undo and its window, backdating, keyboard-only flows, axe
-  scans.
+  ticking off, session-scoped undo and its window, backdating, editing a job, deleting one after
+  confirming, the confirmation dialog's focus behaviour, keyboard-only flows, axe scans.
 
-  **This list named "edit, delete-actually-deletes" until 2026-08-12, and both were fiction.** US3
-  is unbuilt: there is no `onEdit` or `onDelete` anywhere in `src/`, and no test file covers
-  either. It was written when the plan described what the tests *would* cover and never corrected
-  once the tasks were sequenced. It also flatly contradicted T103, which says in the same repo that
-  there is "no way to delete the job either, since US3 is unbuilt". T063–T069 are the tasks that
-  will make it true.
+  **This list named "edit, delete-actually-deletes" until 2026-08-12, and both were fiction at the
+  time.** US3 was unbuilt: there was no `onEdit` or `onDelete` anywhere in `src/`, and no test file
+  covered either. The claim was written when the plan described what the tests *would* cover and
+  was never corrected once the tasks were sequenced.
+
+  **It is true as of 2026-08-12, and the correction above was itself left stale for a few hours.**
+  T063–T069 landed — `tests/ui/edit.test.tsx`, `delete.test.tsx`, `confirm-dialog.test.tsx` and
+  `keyboard-us3.test.tsx`, 37 tests, written first and observed failing. Kept rather than deleted
+  because understating coverage and overstating it are the same defect pointing in opposite
+  directions, and this paragraph has now done both.
 
 ### What has to be done by hand
 

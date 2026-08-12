@@ -609,3 +609,19 @@ Task: "tests/ui/axe-us1.test.tsx"
 - **Verify tests fail before implementing** — a test that passes on first write is testing nothing
 - **Two unverified platform claims are gated**: Storage API behaviour (T010) and the iOS back affordance (T011). Neither may be implemented against an assumption
 - **Still open, deliberately out of this remediation pass**: write-failure handling (quota exceeded, Safari private browsing) has no requirement or task; the `.recovered.*` key has no path back to the user; `recordedAt` ordering assumes a monotonic device clock. Each is a real gap, recorded here rather than silently dropped
+
+---
+
+## Phase 7: Convergence
+
+Appended 2026-08-12 by `/speckit-converge`. These are gaps between what the spec, plan and
+constitution now require and what the code does. Two of them are new because the **constitution
+changed**, not because the code did: v1.5.0 added Principles IV and V an hour before this ran.
+
+- [ ] T110 **CRITICAL — colour is defined outside `tokens.css`** per Constitution V (contradicts). `src/ui/focus.css` defines `--focus-ring` and `--focus-ring-inner` itself; `src/ui/app.css` carries eight colour literals. All of it predates the amendment. Move what can move. **Two genuinely cannot and must be recorded as exceptions rather than quietly left**: the `select` chevron is a data URI, which cannot read a custom property, and the dialog scrim needs alpha, which a hex token cannot supply without restating the value. Where an exception stands, put the reason beside it — an unexplained literal is indistinguishable from an oversight
+- [ ] T111 **HIGH — FR-007b promises a correction FR-009 does not provide** (partial). FR-007b says a wrong last-done date on a new job "is corrected by editing it (FR-009)". FR-009 covers the name and the interval only, and a Completion is immutable once saved, so nothing in the app can do what FR-007b promises. Two ways out: widen FR-009 to allow correcting a completion date, or let T103 discharge it — remove the entry and record it again — and reword FR-007b to say so. **The second needs no new mechanism.** Either way the spec must stop promising what the app cannot do
+- [ ] T112 **MEDIUM — the manifest's colours sit where no stylesheet reaches and no tier reads** per Constitution V (partial). `theme_color` in `vite.config.ts` and the `theme-color` meta in `index.html` held the *original* palette through two complete design passes without anything noticing — an installed app opened with a status bar belonging to neither palette. They are correct now. Add a note at the token definitions saying these two must move with them, or a check that compares them; the failure mode is silent and will recur
+
+**Recorded here rather than made a task: Constitution IV is currently violated and 001 does not own the fix.** The app has no top-level structure — Principle IV requires one from which every feature is reachable, and `plan.md` R4 rejected a router on reasoning that has since been annotated as conditional. That is cross-cutting work belonging to its own feature specification, not to the maintenance schedule. Recorded so the violation is visible from this file rather than only from the constitution.
+
+**Also not a task: the wording on the job detail view.** It states one action three ways — a "Record it as done" heading, a "Date it was done" label, and a "Record it" button — alongside "Every 1 year" and single dates given full cards. That is copy, and copy is Sherrylene's to settle rather than something to specify unilaterally.

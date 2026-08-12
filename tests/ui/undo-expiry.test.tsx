@@ -233,6 +233,72 @@ describe('the undo offer expires', () => {
   })
 })
 
+describe('the window runs from the tick-off, not from when the app was opened', () => {
+  it('offers undo, and honours it, for a job ticked off long after the app was opened', async () => {
+    // **T104. Nothing in the suite established this until now.** The offer is
+    // computed as `isWithinUndoWindow(newest.completion.recordedAt, new Date())`
+    // — completion-relative, which is correct. Substitute a timestamp captured
+    // when the hook first ran and measure the window from *that* instead, at
+    // both the render-time offer and the press-time re-check in `undoLast`, and
+    // all 209 tests in this suite still passed. Reproduced independently twice.
+    //
+    // The header of this file claims two tests above discriminate the two
+    // implementations. They no longer do. "offers nothing on an app opened on
+    // old completions" asserts at the instant of mount, where mount-relative and
+    // completion-relative agree that a 2024 completion is long expired; "is there
+    // the moment a job is marked done" asserts at the instant of the tick-off,
+    // where a freshly captured mount timestamp is also freshly inside the window.
+    // Both agree with a mount-relative build, so neither can rule it out.
+    //
+    // **The regression a mount-relative window permits is worse in practice than
+    // the defect it descends from.** It points the other way: anyone who has had
+    // the app open for more than ten seconds — which is every real user, since
+    // you open the app, find the job, and then tick it off — gets no undo offer
+    // at all. A mis-tap becomes permanent, and there is no export to recover
+    // from.
+    //
+    // The shape that separates them is the only one that can: let well over the
+    // window pass with **nothing recorded**, and only then tick a job off. The
+    // completion is a second old, the mount is half a minute old, and the two
+    // implementations disagree. `timePasses` (which fires timers) is right here
+    // rather than the no-timers variant — no offer stands during the idle
+    // period, so there is no expiry timeout for it to disturb.
+    //
+    // Both halves are asserted deliberately. The appearance of the button fails
+    // against the mount-relative render path; pressing it and checking storage
+    // fails against the same substitution made only inside `undoLast`, which the
+    // appearance assertion alone would let through.
+    seed([anItem({ name: 'Boiler service', interval: YEARLY, completions: [aCompletion('2026-06-01')] })])
+    const { user } = launch()
+    await screen.findByText('Boiler service')
+
+    // Half a minute of the user reading their schedule and deciding what they
+    // did. Three times the window, and nothing recorded in it.
+    await timePasses(UNDO_WINDOW_MS * 3)
+
+    await user.click(markDone('Boiler service'))
+
+    // Recorded, as the control at the top of the file establishes happens.
+    expect(storedHistoryByJob()).toEqual({ 'Boiler service': ['2026-06-01', '2026-08-08'] })
+
+    const undo = undoControlFor('Boiler service')
+    expect(
+      undo,
+      'no undo offer for a job ticked off half a minute after the app was opened — ' +
+        'the window is being measured from something other than the completion',
+    ).not.toBeNull()
+
+    await user.click(undo!)
+
+    // And the press works, not merely the offer appears. Asserted against
+    // storage, because the row shows a due date rather than a history: on screen
+    // a press that did nothing and a press that took the tick-off back differ
+    // only in a due date the user has no reason to have memorised.
+    expect(storedHistoryByJob()).toEqual({ 'Boiler service': ['2026-06-01'] })
+    expect(undoControl()).toBeNull()
+  })
+})
+
 describe('the window is enforced when Undo is pressed, not only when the app renders', () => {
   it('deletes nothing when the button is pressed after the window has passed', async () => {
     // Every test above lets the expiry timer fire, so the offer withdraws

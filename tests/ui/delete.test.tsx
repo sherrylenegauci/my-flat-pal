@@ -130,17 +130,25 @@ describe('deleting a job', () => {
   })
 
   it('deletes only the job that was opened', async () => {
+    // **The job deleted here is deliberately not the first one seeded.** This
+    // test used to open the first, and an implementation of `deleteItem` that
+    // ignored the id entirely and returned `items.slice(1)` passed it — and
+    // passed all 257 tests in the suite, verified by sabotage. Deleting the
+    // *middle* of three, and asserting the survivors in order, is what makes
+    // "only the one you asked for" a thing this can actually check.
     seed([
       withThreeCompletions(),
       anItem({ id: 'itm_alarms', name: 'Smoke alarms', interval: MONTHLY }),
+      anItem({ id: 'itm_filter', name: 'Water filter', interval: MONTHLY }),
     ])
     const { user } = launch()
 
-    const dialog = await askToDelete(user)
+    const dialog = await askToDelete(user, 'Smoke alarms')
     await user.click(within(dialog).getByRole('button', { name: 'Delete permanently' }))
 
-    expect(await screen.findByText('Smoke alarms')).toBeTruthy()
-    expect(storedNames()).toEqual(['Smoke alarms'])
+    expect(await screen.findByText('Boiler service')).toBeTruthy()
+    expect(screen.queryByText('Smoke alarms')).toBeNull()
+    expect(storedNames()).toEqual(['Boiler service', 'Water filter'])
   })
 
   it('leaves focus somewhere usable once the job is gone', async () => {
@@ -184,16 +192,20 @@ describe('deleting a job under StrictMode', () => {
   })
 
   it('takes the one job with it and no others', async () => {
+    // Again not the first seeded job — see the note on the non-StrictMode
+    // version. An assertion that only ever removes items[0] cannot tell a
+    // correct delete from one that ignores which job was asked for.
     seed([
       withThreeCompletions(),
       anItem({ id: 'itm_alarms', name: 'Smoke alarms', interval: MONTHLY }),
+      anItem({ id: 'itm_filter', name: 'Water filter', interval: MONTHLY }),
     ])
     const { user } = launch(true)
 
-    const dialog = await askToDelete(user)
+    const dialog = await askToDelete(user, 'Smoke alarms')
     await user.click(within(dialog).getByRole('button', { name: 'Delete permanently' }))
-    await screen.findByText('Smoke alarms')
+    await screen.findByText('Water filter')
 
-    expect(storedNames()).toEqual(['Smoke alarms'])
+    expect(storedNames()).toEqual(['Boiler service', 'Water filter'])
   })
 })

@@ -43,6 +43,10 @@ export interface Schedule {
   loadKind: LoadOutcome['kind']
   addItem: (input: NewItemInput) => void
   markDone: (itemId: string, completedOn: CalendarDate) => void
+  /** Correct a job's name and how often it comes round (FR-009). */
+  editItem: (itemId: string, changes: { name: string; interval: Interval }) => void
+  /** Remove a job and everything recorded against it (FR-009). */
+  deleteItem: (itemId: string) => void
   /**
    * The tick-off undo would remove, or null when there is nothing to undo.
    *
@@ -292,6 +296,63 @@ export function useSchedule(): Schedule {
   )
 
   /**
+   * Correct a job's name and interval (FR-009).
+   *
+   * Completions are not touched, and that is the point rather than an omission:
+   * the history is what the spec says is "worth being able to prove", and
+   * changing how often a job comes round says nothing about when it was last
+   * done. The next due date moves anyway, because it is derived from the
+   * interval and the newest completion on every render and never stored — so
+   * "the due date updates straight away" (US3 scenario 1) needs no code here.
+   *
+   * Nothing marks the edited job undoable. Undo is a way back from *recording a
+   * completion* (FR-007), and the way back from a bad edit is another edit.
+   */
+  const editItem = useCallback(
+    (itemId: string, { name, interval }: { name: string; interval: Interval }) => {
+      setUndoRefusedFor(null)
+
+      mutate((items) => {
+        // Returning the array unchanged is how `mutate` is told not to write.
+        // A `map` that matched nothing would still hand back a fresh array and
+        // bump `revision` for no change, which sends any other open window into
+        // stale-write recovery over a write with nothing in it.
+        if (!items.some((item) => item.id === itemId)) return items
+        return items.map((item) =>
+          item.id === itemId ? { ...item, name: name.trim(), interval } : item,
+        )
+      })
+    },
+    [mutate],
+  )
+
+  /**
+   * Delete a job, and everything ever recorded against it (FR-009).
+   *
+   * There is no way back from this: export and backup were specified and then
+   * cut, so the document on this phone is the only copy. The confirmation in
+   * `ConfirmDialog` is the whole safeguard, which is why what it *says* is
+   * treated as behaviour and tested.
+   *
+   * `recordedThisSession` is deliberately left alone. If the deleted job held
+   * the entry an offer named, that entry no longer exists anywhere in the
+   * document, so the identity check on the offer can never match again and the
+   * offer withdraws itself. If it held some *other* job's entry, the user's way
+   * back from their last tick-off should not disappear because they deleted
+   * something unrelated.
+   */
+  const deleteItem = useCallback(
+    (itemId: string) => {
+      setUndoRefusedFor(null)
+      mutate((items) => {
+        if (!items.some((item) => item.id === itemId)) return items
+        return items.filter((item) => item.id !== itemId)
+      })
+    },
+    [mutate],
+  )
+
+  /**
    * The tick-off the app is currently offering to take back (FR-007).
    *
    * Three things have to hold, and each refuses on its own. The entry must be
@@ -415,6 +476,8 @@ export function useSchedule(): Schedule {
     loadKind,
     addItem,
     markDone,
+    editItem,
+    deleteItem,
     undoable,
     undoLast,
     undoRefusedFor,

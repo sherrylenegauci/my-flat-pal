@@ -516,7 +516,24 @@ export async function readFocusIndicator(): Promise<FocusReading | null> {
   }
 }
 
-/** The painted size of every interactive control. Real layout, not jsdom zeros. */
+/**
+ * The painted size of every interactive control. Real layout, not jsdom zeros.
+ *
+ * **Controls inside an `inert` subtree are excluded**, and that is a statement
+ * about what a control *is* rather than a convenience. `inert` removes an
+ * element from the focus order and from the accessibility tree, so while a
+ * modal dialog is open the page behind it is not reachable by Tab, by a
+ * VoiceOver swipe, or by a tap. Collecting those controls would break the two
+ * sweeps that use this list in opposite directions: the tab-order sweep would
+ * demand Tab reach something the engine will not focus, and the focus-indicator
+ * sweep would measure a ring on a control nobody can put focus on. They are
+ * measured in the states where they are live, which is where the measurement
+ * means something.
+ *
+ * Filtered here in JavaScript rather than added to `INTERACTIVE_SELECTOR`,
+ * because `:not([inert] *)` needs complex-selector support in `:not()` and this
+ * has to answer the same way on both engines.
+ */
 export function readControlBoxes(selector: string): ControlBox[] {
   const describe = (node: Element): string => {
     const classes = typeof node.className === 'string' && node.className ? `.${node.className.trim().split(/\s+/).join('.')}` : ''
@@ -526,6 +543,7 @@ export function readControlBoxes(selector: string): ControlBox[] {
 
   return Array.from(document.querySelectorAll(selector))
     .filter((el) => {
+      if (el.closest('[inert]') !== null) return false
       const s = getComputedStyle(el)
       if (s.visibility === 'hidden' || s.display === 'none') return false
       return (el as HTMLElement).getClientRects().length > 0
@@ -554,6 +572,10 @@ export function readControlBoxes(selector: string): ControlBox[] {
  */
 export function focusNthControl(payload: { selector: string; index: number }): boolean {
   const visible = Array.from(document.querySelectorAll(payload.selector)).filter((el) => {
+    // Must match `readControlBoxes` exactly, including the `inert` exclusion —
+    // the caller indexes into one list and focuses out of the other, so a
+    // difference between the two filters silently focuses the wrong control.
+    if (el.closest('[inert]') !== null) return false
     const s = getComputedStyle(el)
     if (s.visibility === 'hidden' || s.display === 'none') return false
     return (el as HTMLElement).getClientRects().length > 0

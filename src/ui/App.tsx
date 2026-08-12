@@ -39,6 +39,31 @@ export function App() {
     nav.back()
   }
 
+  function handleSaveEdit(itemId: string, input: NewItemInput) {
+    // `lastDone` is deliberately dropped: the edit form does not render that
+    // field, so it is always absent here. Saying so where the value is ignored
+    // is cheaper than the next reader wondering whether an edit can rewrite a
+    // completion. It cannot — see ItemFormView.
+    schedule.editItem(itemId, { name: input.name, interval: input.interval })
+    nav.back()
+  }
+
+  /**
+   * Delete, then put focus somewhere.
+   *
+   * The dialog's own rule is to give focus back to whatever opened it, and here
+   * that button goes away with the view it lived in — so focus is placed
+   * explicitly, before React unmounts anything, exactly as `handleUndo` does.
+   * The dialog then sees that focus has left it and declines to steal it back.
+   * Without this the user lands on `<body>`: the top of the document, with
+   * nothing to say the job was deleted or that anything happened at all.
+   */
+  function handleDelete(itemId: string) {
+    schedule.deleteItem(itemId)
+    headingRef.current?.focus()
+    nav.back()
+  }
+
   /**
    * Undo removes its own control, so focus would fall to `<body>` — which
    * silently returns a keyboard or screen-reader user to the top of the
@@ -66,10 +91,16 @@ export function App() {
   }, [undoId])
 
   // A detail view for a job that is no longer there is not a state to render;
-  // falling through to the list is what the user would do next anyway.
+  // falling through to the list is what the user would do next anyway. The same
+  // goes for an edit form: deleting a job in another window while this one has
+  // its edit form open is exactly how you get here.
   const detailId = nav.view.name === 'detail' ? nav.view.itemId : null
   const detail =
     detailId === null ? undefined : schedule.views.find((view) => view.item.id === detailId)
+
+  const editId = nav.view.name === 'edit' ? nav.view.itemId : null
+  const editing =
+    editId === null ? undefined : schedule.views.find((view) => view.item.id === editId)
 
   return (
     <div className="app">
@@ -137,12 +168,24 @@ export function App() {
         {schedule.readOnly ? (
           <ReadOnlyView />
         ) : nav.view.name === 'new' ? (
-          <ItemFormView today={schedule.today} onSave={handleSave} onCancel={nav.back} />
+          <ItemFormView key="new" today={schedule.today} onSave={handleSave} onCancel={nav.back} />
+        ) : editing ? (
+          // Keyed by the job, so opening a different one never inherits the
+          // previous job's half-typed name from the form's own state.
+          <ItemFormView
+            key={`edit-${editing.item.id}`}
+            today={schedule.today}
+            editing={{ name: editing.item.name, interval: editing.item.interval }}
+            onSave={(input) => handleSaveEdit(editing.item.id, input)}
+            onCancel={nav.back}
+          />
         ) : detail ? (
           <ItemDetailView
             view={detail}
             today={schedule.today}
             onRecord={(completedOn) => schedule.markDone(detail.item.id, completedOn)}
+            onEdit={() => nav.go({ name: 'edit', itemId: detail.item.id })}
+            onDelete={() => handleDelete(detail.item.id)}
           />
         ) : (
           <ScheduleView

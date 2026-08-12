@@ -325,6 +325,75 @@ body {
   color: var(--text-muted);
 }
 
+/* The corrections, kept at the bottom and away from the primary action.
+
+   "Record it" is what someone opens a job to do; editing and deleting are
+   repairs. Putting them last also puts the destructive one furthest from the
+   thumb's resting position on a one-handed 375px screen, and last in the Tab
+   order, so neither is the thing you hit by accident. */
+.detail__corrections {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
+}
+
+/* ---- Confirmation dialog ----------------------------------------------- */
+
+/* `background-color` with alpha rather than `opacity`, on purpose: `opacity`
+   blends the whole subtree, which would dim the dialog itself and — separately
+   — makes the resolved colour behind any text unknowable, so
+   e2e/focus-visibility.spec.ts refuses to measure through it. Alpha on the
+   colour composites correctly and stays measurable. */
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* The safe-area padding is doubled up here because a fixed overlay escapes
+     .app's own insets — otherwise the card can sit under the notch. */
+  padding: calc(var(--space-4) + env(safe-area-inset-top)) calc(var(--space-4) + env(safe-area-inset-right))
+    calc(var(--space-4) + env(safe-area-inset-bottom)) calc(var(--space-4) + env(safe-area-inset-left));
+  background: rgba(26, 26, 23, 0.6);
+}
+
+.dialog {
+  width: 100%;
+  max-width: 22rem;
+  max-height: 100%;
+  overflow-y: auto;
+  padding: var(--space-5) var(--space-4);
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgba(26, 26, 23, 0.3);
+}
+
+.dialog__question {
+  margin: 0 0 var(--space-3);
+  font-size: 1.125rem;
+}
+
+/* --text rather than --text-muted: this sentence says the history is about to
+   go, on an app with no backup. It is the most important text on the screen,
+   not a caption. */
+.dialog__consequence {
+  margin: 0 0 var(--space-5);
+}
+
+.dialog__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.dialog__actions .button {
+  flex: 1 1 auto;
+}
+
 /* ---- Empty state ------------------------------------------------------- */
 
 .empty {
@@ -356,6 +425,18 @@ body {
 }
 
 .button--primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+
+/* The destructive confirmation in ConfirmDialog, and nothing else yet.
+   #ffffff on --danger (#a3231b) → 7.46:1 ✅ AA body — computed with the same
+   arithmetic e2e/support/colour.ts uses, not estimated. `--danger` is an
+   existing token; no new colour was introduced, which is what keeps
+   e2e/contrast.spec.ts's per-view measurement from having to relitigate the
+   palette while T100's design refresh is still outstanding. */
+.button--danger {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
+}
 
 /* ---- Form -------------------------------------------------------------- */
 

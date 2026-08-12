@@ -52,11 +52,22 @@ export function App() {
    * Delete, then put focus somewhere.
    *
    * The dialog's own rule is to give focus back to whatever opened it, and here
-   * that button goes away with the view it lived in — so focus is placed
-   * explicitly, before React unmounts anything, exactly as `handleUndo` does.
-   * The dialog then sees that focus has left it and declines to steal it back.
-   * Without this the user lands on `<body>`: the top of the document, with
-   * nothing to say the job was deleted or that anything happened at all.
+   * that button goes away with the view it lived in, so focus is placed
+   * explicitly — the same treatment `handleUndo` gives a control that removes
+   * itself.
+   *
+   * **What this line is actually worth is not established, and the comment used
+   * to claim more.** It said "without this the user lands on `<body>`", which
+   * verification disproved: deleting the line leaves all 262 tests green,
+   * because `nav.back()` changes the view name and the effect above focuses the
+   * heading anyway. What the line covers is the gap *before* that — `back()`
+   * goes through `history.back()`, so the view name does not change until
+   * `popstate` arrives, and until then the detail view has already gone (its
+   * item is no longer in the schedule) with focus sitting on `<body>`. Whether
+   * that gap is observable through Testing Library's act-based waiting is not
+   * something anyone here has shown either way. Kept, because the failure it
+   * guards against is silent and the cost is one line; recorded as T109 rather
+   * than left reading as a proven necessity.
    */
   function handleDelete(itemId: string) {
     schedule.deleteItem(itemId)

@@ -37,6 +37,9 @@ const QUESTION = 'Delete “Boiler service”?'
 const HISTORY_GOES_TOO =
   'Its history goes too: 3 completions recorded. ' +
   'This app has no backup and no export, so nothing here can be got back.'
+const ONE_RECORDED =
+  'Its history goes too: 1 completion recorded. ' +
+  'This app has no backup and no export, so nothing here can be got back.'
 const NOTHING_RECORDED =
   'Nothing has been recorded against it yet. ' +
   'This app has no backup and no export, so the job cannot be got back.'
@@ -47,6 +50,14 @@ const withThreeCompletions = () =>
     name: 'Boiler service',
     interval: YEARLY,
     completions: [aCompletion('2024-05-06'), aCompletion('2025-05-11'), aCompletion('2026-06-01')],
+  })
+
+const doneOnce = () =>
+  anItem({
+    id: 'itm_boiler',
+    name: 'Boiler service',
+    interval: YEARLY,
+    completions: [aCompletion('2026-06-01')],
   })
 
 const neverDone = () =>
@@ -86,6 +97,22 @@ describe('deleting a job', () => {
     await askToDelete(user)
 
     expect(screen.getByRole('dialog', { name: QUESTION, description: HISTORY_GOES_TOO })).toBeTruthy()
+  })
+
+  it('counts one completion in the singular', async () => {
+    // Three and zero were already covered; one was not, so nothing in the suite
+    // could tell the plural rule from a bare "completions" — verified by
+    // sabotage, which produced "1 completions recorded" past all 257 tests.
+    // The count is in this sentence to make the loss concrete rather than
+    // abstract, and a sentence that cannot count is not doing that job: it
+    // reads as boilerplate, which is exactly what a confirmation guarding
+    // something irreversible must not read as.
+    seed([doneOnce()])
+    const { user } = launch()
+
+    await askToDelete(user)
+
+    expect(screen.getByRole('dialog', { name: QUESTION, description: ONE_RECORDED })).toBeTruthy()
   })
 
   it('says plainly that nothing was recorded, when nothing was', async () => {
@@ -149,6 +176,37 @@ describe('deleting a job', () => {
     expect(await screen.findByText('Boiler service')).toBeTruthy()
     expect(screen.queryByText('Smoke alarms')).toBeNull()
     expect(storedNames()).toEqual(['Boiler service', 'Water filter'])
+  })
+
+  it('puts focus back on “Delete job” when the deletion is cancelled', async () => {
+    // Unlike a confirmed deletion, a cancelled one leaves the opener on screen,
+    // so this view *can* say exactly where focus belongs — and it should, here
+    // rather than only in confirm-dialog.test.tsx. That file drives the dialog
+    // through its own harness, which wires it up correctly by construction; it
+    // cannot catch the app wiring it up any other way. Focus falling to <body>
+    // instead silently returns a keyboard or VoiceOver user to the top of the
+    // document with nothing to say the dialog closed or that the job survived.
+    seed([withThreeCompletions()])
+    const { user } = launch()
+
+    const dialog = await askToDelete(user)
+    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }))
+
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Delete job' }))
+  })
+
+  it('puts focus back on “Delete job” when the confirmation is dismissed with Escape', async () => {
+    // The same rule by the other way out. Escape is the route a keyboard user
+    // reaches for first, and it closes the dialog through a different path than
+    // the Cancel button does.
+    seed([withThreeCompletions()])
+    const { user } = launch()
+
+    await askToDelete(user)
+    await user.keyboard('{Escape}')
+
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Delete job' }))
   })
 
   it('leaves focus somewhere usable once the job is gone', async () => {

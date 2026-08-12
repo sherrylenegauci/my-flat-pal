@@ -57,6 +57,48 @@ const countField = () => screen.getByLabelText(/how often/i) as HTMLInputElement
 const unitField = () => screen.getByLabelText(/period/i) as HTMLSelectElement
 
 const storedJob = () => load().document.items[0]
+const storedJobs = () => load().document.items
+
+/**
+ * Three jobs, all last done 1 June 2026, each on its own interval so that every
+ * row in the list carries a date no other row could have produced:
+ *
+ *   - Smoke alarms, monthly — due 1 July, so overdue on 8 August
+ *   - Boiler service, monthly — the one that gets edited
+ *   - Water filter, every 3 months — due 1 September, not due yet
+ */
+const threeJobs = () => [
+  anItem({
+    id: 'itm_alarms',
+    name: 'Smoke alarms',
+    interval: MONTHLY,
+    completions: [aCompletion('2026-06-01')],
+  }),
+  anItem({
+    id: 'itm_boiler',
+    name: 'Boiler service',
+    interval: MONTHLY,
+    completions: [aCompletion('2026-06-01')],
+  }),
+  anItem({
+    id: 'itm_filter',
+    name: 'Water filter',
+    interval: { count: 3, unit: 'month' },
+    completions: [aCompletion('2026-06-01')],
+  }),
+]
+
+/** The list row for a job, found by the control that opens it. */
+function rowFor(name: string) {
+  const row = screen
+    .getAllByRole('listitem')
+    .find((candidate) => within(candidate).queryByRole('button', { name }) !== null)
+  if (row === undefined) throw new Error(`No row in the list for “${name}”`)
+  return row
+}
+
+/** What a row says about when the job is next due — "Next 1 December 2026". */
+const whenDue = (name: string) => within(rowFor(name)).getByText(/^(Was|Next) /).textContent
 
 describe('correcting a job', () => {
   it('opens filled in with what is already stored', async () => {
@@ -186,6 +228,66 @@ describe('correcting a job', () => {
     expect(await screen.findByRole('heading', { name: 'Boiler service', level: 2 })).toBeTruthy()
     expect(storedJob()?.name).toBe('Boiler service')
   })
+
+  it('changes only the job that was opened', async () => {
+    // **The job edited here is deliberately the middle one of three.** Every
+    // other test in this file seeds a single job and reads storage back as
+    // `items[0]`, which cannot tell a correct edit from one that ignores the id
+    // and rewrites the first item — an `editItem` that did exactly that passed
+    // all 257 tests in the suite, verified by sabotage.
+    //
+    // **The name and the interval are changed in the same edit, and both are
+    // asserted for all three jobs.** An implementation that resolved the right
+    // item for one field and the wrong item for the other would survive an
+    // assertion about either one alone. The period is moved as well as the
+    // count, because nothing else in the suite saves a *changed* unit — every
+    // other test types a number and leaves the dropdown where it started.
+    seed(threeJobs())
+    const { user } = launch()
+
+    await openTheEditForm(user)
+    await user.clear(nameField())
+    await user.type(nameField(), 'Boiler service and flue check')
+    await user.clear(countField())
+    await user.type(countField(), '2')
+    await user.selectOptions(unitField(), 'year')
+    await user.click(screen.getByRole('button', { name: 'Save changes' }))
+
+    // Wait for the form to close without presupposing which job was changed —
+    // "Edit job" is on the detail view whatever the save did, so a wrong edit
+    // reaches the assertions below rather than timing out short of them.
+    await screen.findByRole('button', { name: 'Edit job' })
+
+    // Storage first, in seeded order, and both fields together: this is the
+    // assertion that names the defect if the wrong job is edited, and the
+    // screen being right while storage holds something else is the shape of the
+    // duplicate-job bug — invisible until the next reload, unrecoverable in an
+    // app with no export.
+    expect(storedJobs().map((item) => item.name)).toEqual([
+      'Smoke alarms',
+      'Boiler service and flue check',
+      'Water filter',
+    ])
+    expect(storedJobs().map((item) => item.interval)).toEqual([
+      { count: 1, unit: 'month' },
+      { count: 2, unit: 'year' },
+      { count: 3, unit: 'month' },
+    ])
+
+    // And on screen: the job that was opened carries both changes...
+    expect(
+      screen.getByRole('heading', { name: 'Boiler service and flue check', level: 2 }),
+    ).toBeTruthy()
+    expect(screen.getByText('Next due 1 June 2028')).toBeTruthy()
+
+    // ...while back in the list the other two are untouched, each still on the
+    // schedule its own interval gives it.
+    await user.click(screen.getByRole('button', { name: 'Back' }))
+    expect(whenDue('Smoke alarms')).toBe('Was 1 July 2026')
+    expect(whenDue('Water filter')).toBe('Next 1 September 2026')
+    expect(whenDue('Boiler service and flue check')).toBe('Next 1 June 2028')
+    expect(screen.queryByRole('button', { name: 'Boiler service' })).toBeNull()
+  })
 })
 
 /**
@@ -232,5 +334,35 @@ describe('correcting a job under StrictMode', () => {
     await screen.findByText('Next due 1 December 2026')
 
     expect(load().document.revision).toBe(2)
+  })
+
+  it('still changes only the job that was opened', async () => {
+    // Again the middle of three — see the note on the non-StrictMode version.
+    // Worth repeating here because the stale-write recovery re-runs the change
+    // function against freshly read items, so an edit that resolved its target
+    // by position rather than by id would have a second chance to land on the
+    // wrong job.
+    seed(threeJobs())
+    const { user } = launch(true)
+
+    await openTheEditForm(user)
+    await user.clear(nameField())
+    await user.type(nameField(), 'Boiler service and flue check')
+    await user.clear(countField())
+    await user.type(countField(), '2')
+    await user.selectOptions(unitField(), 'year')
+    await user.click(screen.getByRole('button', { name: 'Save changes' }))
+    await screen.findByRole('button', { name: 'Edit job' })
+
+    expect(storedJobs().map((item) => item.name)).toEqual([
+      'Smoke alarms',
+      'Boiler service and flue check',
+      'Water filter',
+    ])
+    expect(storedJobs().map((item) => item.interval)).toEqual([
+      { count: 1, unit: 'month' },
+      { count: 2, unit: 'year' },
+      { count: 3, unit: 'month' },
+    ])
   })
 })

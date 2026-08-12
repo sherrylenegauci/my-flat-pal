@@ -131,11 +131,30 @@ export interface RecordedCompletion {
  * The tick-off undo would remove: the highest `recordedAt` anywhere in the
  * schedule, and the job holding it.
  *
- * Undo is one step across the whole schedule rather than per job, so the
- * question "what would undo do" has to be answerable from the items alone —
- * which is what makes it survive the app being closed (FR-007). There is no
- * remembered session, nothing to expire, and nothing to restore on start-up:
- * the answer is derived from the same document the completions live in.
+ * Undo is one step across the whole schedule rather than per job, so "which
+ * entry would undo remove" has to be answerable from the items alone. That is
+ * what this function is for, and it is all it is for.
+ *
+ * **It does not decide whether undo is offered, and must not be read as though
+ * it did.** This comment used to say the derived answer was "what makes it
+ * survive the app being closed", with "no remembered session, nothing to expire,
+ * and nothing to restore on start-up". All three clauses are now false, and the
+ * first was the defect: derived-with-nothing-to-expire-it meant a freshly opened
+ * app offered to delete history it had never written — three presses removed
+ * completions dated 2020, 2022 and 2024, with no confirmation at any point.
+ *
+ * FR-007 as amended on 2026-08-11 requires two further conditions that no
+ * function reading the document can supply, and `useSchedule` applies both on
+ * top of this one. The entry must have been recorded **in the current session**,
+ * so a relaunch offers nothing whatever the clock says — storage cannot tell a
+ * tick-off from a date typed into the add form, which is why this had to become
+ * a remembered session (T102). And it must be inside a ten-second window
+ * measured from its own `recordedAt` against the clock now, so there is very
+ * much something to expire (T097). Being newest is necessary here and nowhere
+ * near sufficient.
+ *
+ * What it still buys is that the entry the notice *names* and the entry
+ * `undoCompletion` *removes* are computed the same way and cannot drift apart.
  *
  * Ties on `recordedAt` resolve to the last one encountered, which is the most
  * recently appended. They are only reachable when two entries share a

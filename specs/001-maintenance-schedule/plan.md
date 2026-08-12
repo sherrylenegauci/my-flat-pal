@@ -364,10 +364,17 @@ just made is the one that disappears.
 confirmation — SC-004 caps it at two, and the built control uses one — so a stray tap can push an
 annual service a year out. Undo exists for that, and nothing else.
 
-The offer is *derived* rather than stored: it reads `recordedAt` off the newest completion instead
-of remembering that an offer was made. That is genuinely good — reopening the app reconstructs the
-state exactly, with no session, no timer, and no marker that can drift out of step with the data.
-But derived-with-nothing-to-expire-it was a data-loss defect. A probe on a freshly opened app,
+**The offer was originally *derived* rather than stored**, reading `recordedAt` off the newest
+completion instead of remembering that an offer had been made. This paragraph used to call that
+"genuinely good — reopening the app reconstructs the state exactly, with no session, no timer, and
+no marker that can drift out of step with the data", eighteen lines above the paragraph explaining
+why it was insufficient. The praise is kept here as the record of what was believed and struck
+through as what is no longer true: the design now has a session, a timer and a marker, all three
+added deliberately, and the property being praised — reconstructing the offer exactly on reopen —
+is the property that had to go. Deriving the offer from the document is what a *purely* derived
+design cannot stop being, and it is not something the two rules below can tolerate.
+
+Derived-with-nothing-to-expire-it was a data-loss defect. A probe on a freshly opened app,
 against a document the app had never written, deleted completions dated 2020, 2022 and 2024 in
 three presses, with no confirmation at any point. The offer was also the first focusable thing on
 the page, so Tab-then-Enter destroyed history.
@@ -578,7 +585,8 @@ npm run test:run     # single pass — this is the merge gate
 - **Storage**: round trip, every mutation persisting, `revision` compare-and-swap, corrupted-data
   recovery, newer-version refusal, migration against the fixture.
 - **UI**: empty state, adding, ordering, visible due dates, reload survival, duplicate names,
-  ticking off, durable undo, backdating, edit, delete-actually-deletes, keyboard-only flows, axe
+  ticking off, session-scoped undo and its window, backdating, edit, delete-actually-deletes,
+  keyboard-only flows, axe
   scans.
 
 ### What has to be done by hand
@@ -622,7 +630,14 @@ Fixed:
 - **Ticking off would have been lost on reload** — the storage write path sat in a later phase.
 - **FR-005 had no implementing task** — nothing triggered a re-check when the date changed.
 - **Two open contexts could destroy the whole history** — now guarded by `revision`.
-- **Session-scoped undo made a mis-tap permanent** — undo is now durable.
+- **Session-scoped undo made a mis-tap permanent** — undo was made durable, and that was later
+  **reversed**. The finding was correct when it was made: at the time nothing else could recover a
+  mis-tap, because the detail view showing full history did not exist yet. Making the offer durable
+  then produced two data-loss defects of its own (T097, T102), and once the detail view existed the
+  property that made session scope unacceptable no longer held. Undo is session-scoped again as of
+  2026-08-11, by decision, and an older mistake is corrected from the job's history instead. Left
+  here rather than deleted because it is the record of a real finding and of why the answer changed
+  twice; see the undo paragraphs above for what the design actually is now.
 - Document integrity: a requirement number pointing at two different requirements, a wrong amendment
   date, three documents citing three constitution versions, 21 falsely-parallel task markers.
 

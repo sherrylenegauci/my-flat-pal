@@ -19,14 +19,28 @@ import { MONTHLY, YEARLY, aCompletion, anItem, seed } from './seed'
  * order: Tab then Enter was enough. There is no export and no backup, so that is
  * data loss.
  *
- * **The wrong fix these tests are shaped to catch.** Expiring the offer a few
- * seconds after the *component mounted* passes a naive test and leaves the bug
- * in place: reopening the app restarts the clock and the expired offer comes
- * back. Two tests below fail against that implementation and would not fail
- * against it if they were written the obvious way —
- * "offers nothing on an app opened on old completions", which asserts at the
- * instant of mount, and "does not resurrect an expired offer when the app is
- * reopened", which remounts after the window has passed.
+ * **The wrong fix, and which test actually rules it out.** Expiring the offer a
+ * few seconds after the *component mounted* passes a naive test and leaves the
+ * bug in place: reopening the app restarts the clock and the expired offer comes
+ * back.
+ *
+ * This paragraph used to name "offers nothing on an app opened on old
+ * completions" and "does not resurrect an expired offer when the app is
+ * reopened" as the two tests that fail against a mount-relative build. **They no
+ * longer do, and the claim is corrected here rather than left standing** (T104,
+ * T106). Both were written before undo became session-scoped (T102). Session
+ * scope alone now withholds the offer in both — a freshly opened app has
+ * recorded nothing, so there is no offer to expire and the window is never
+ * consulted. Both still earn their place, because a build that lost session
+ * scope fails them; neither says anything about mount-relative expiry any more.
+ * A sabotage confirmed it: substituting a mount timestamp for the completion's
+ * `recordedAt` at both call sites left all 209 tests of the day passing.
+ *
+ * The test that does rule it out is "offers undo, and honours it, for a job
+ * ticked off long after the app was opened", below. It is the only shape that
+ * can: well over the window has to pass with **nothing recorded** before the
+ * tick-off, so that the mount is stale and the completion is fresh and the two
+ * implementations are finally forced to disagree.
  *
  * Everything that mutates state renders inside `<StrictMode>` and asserts the
  * **stored** document as well as the screen, for the reason recorded in

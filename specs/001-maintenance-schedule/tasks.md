@@ -294,9 +294,16 @@ asking for new behaviour, so it needs no task.
 
   *The guard* was already correct, so its test was accepted on sabotage: replacing
   `if (target === null || target.completion.id !== offerId)` with `if (target === null)` turned
-  "deletes nothing from either job when another window has saved since" red and nothing else
-  (3 failed / 211 passed, two of them the not-yet-implemented pair below). The failure is a diff
+  "deletes nothing from either job when another window has saved since" red. The failure is a diff
   showing Smoke alarms' entry deleted by a button naming Boiler service.
+
+  **The count that sabotage gives has since changed, and this note used to state it as a fact
+  anyone could reproduce.** At the test commit it was 3 failed / 211 passed and the guard test was
+  the only previously-green one among them. At HEAD it is 4 failed / 211 passed, because the fix
+  below added three tests that stand downstream of the same mechanism: with the guard gone the
+  press succeeds, so no refusal notice is raised, no `StaleWriteError` is provoked, and the axe
+  sweep has no refusal state to visit. That is the mechanism being well covered rather than the
+  test failing to isolate — but "and nothing else" is no longer true and is withdrawn.
 
   *The silent no-op* was a real fix and went test-first. Both tests were observed failing against
   the old code — one on the absent message (`Alerts on screen: []`), one on a `StaleWriteError` the

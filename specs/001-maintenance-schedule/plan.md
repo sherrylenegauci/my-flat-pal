@@ -585,9 +585,15 @@ npm run test:run     # single pass — this is the merge gate
 - **Storage**: round trip, every mutation persisting, `revision` compare-and-swap, corrupted-data
   recovery, newer-version refusal, migration against the fixture.
 - **UI**: empty state, adding, ordering, visible due dates, reload survival, duplicate names,
-  ticking off, session-scoped undo and its window, backdating, edit, delete-actually-deletes,
-  keyboard-only flows, axe
+  ticking off, session-scoped undo and its window, backdating, keyboard-only flows, axe
   scans.
+
+  **This list named "edit, delete-actually-deletes" until 2026-08-12, and both were fiction.** US3
+  is unbuilt: there is no `onEdit` or `onDelete` anywhere in `src/`, and no test file covers
+  either. It was written when the plan described what the tests *would* cover and never corrected
+  once the tasks were sequenced. It also flatly contradicted T103, which says in the same repo that
+  there is "no way to delete the job either, since US3 is unbuilt". T063–T069 are the tasks that
+  will make it true.
 
 ### What has to be done by hand
 

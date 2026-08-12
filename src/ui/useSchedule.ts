@@ -99,10 +99,14 @@ export function useSchedule(): Schedule {
    *     item created today holding one completion recorded a second ago is what
    *     you get *both* from adding a job with a date and from adding a job and
    *     then ticking it off.
-   *   - **FR-007a.** After an undo this is cleared, so whatever becomes the
-   *     newest entry is not offered next. Without that, ticking two jobs off
-   *     within ten seconds and pressing undo twice walks backwards through
-   *     history.
+   *   - **FR-007a.** Ticking two jobs off within ten seconds and pressing undo
+   *     twice must not walk backwards through history, and the positive marker
+   *     alone delivers that: a successful undo *deletes* the completion, so the
+   *     id held here no longer exists in the document and the identity check on
+   *     the offer can never match again. **This used to say the clearing after
+   *     an undo was what did it. That is false** — deleting the clearing leaves
+   *     the whole suite green, walk-backwards test included. The clearing is
+   *     for the refused press, where the entry survives; see `undoLast`.
    */
   const recordedThisSession = useRef<string | null>(null)
 
@@ -387,15 +391,18 @@ export function useSchedule(): Schedule {
       return items.map((item) => (item.id === target.item.id ? undoCompletion(item) : item))
     })
 
-    // FR-007a. The entry this session recorded has just been taken back, so
-    // there is nothing left to offer. Whatever is newest now is earlier history
-    // rather than something the user just did, and clearing here is what stops
-    // it sliding into the offer that was occupied a moment ago — the
-    // walk-backwards through history the requirement forbids.
+    // **This is not what prevents FR-007a's walk-backwards, and an earlier
+    // version of this comment said it was.** A *successful* undo deletes the
+    // completion, so the id held here stops existing anywhere in the document
+    // and the identity check on the offer can never match it again — clearing or
+    // not. Deleting this line leaves all 215 tests green, including the
+    // walk-backwards one, which is how the false claim was caught.
     //
-    // Cleared on a refusal too. The entry is no longer the newest, so the offer
-    // is withheld either way, and leaving the marker set would mean it returned
-    // the moment the other context's entry was itself undone.
+    // It earns its place in the other case: a press that was **refused**. There
+    // the entry survives, so the marker still matches something real, and
+    // leaving it set would let the offer return the moment the other context's
+    // newer entry was itself removed — an offer the user never asked for,
+    // naming a tick-off they have long moved on from.
     recordedThisSession.current = null
 
     setUndoRefusedFor(undone ? null : offerItemName)

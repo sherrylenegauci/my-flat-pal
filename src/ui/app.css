@@ -51,10 +51,13 @@ body {
   z-index: 2;
 }
 
+/* The app's own name. One step up from body text and slightly tightened, so it
+   reads as a masthead rather than as another line of interface. */
 .app__title {
   margin: 0;
-  font-size: 1.0625rem;
+  font-size: var(--text-lg);
   font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
 .app__back {
@@ -72,7 +75,7 @@ body {
   border: none;
   color: var(--accent-text);
   font: inherit;
-  font-size: 1rem;
+  font-size: var(--text-base);
   cursor: pointer;
 }
 
@@ -84,11 +87,15 @@ body {
   display: none;
 }
 
+/* Notices carry their own warm wash (--notice-wash / --notice-edge) rather than
+   the never-done violet they used to borrow. That violet said "this is about a
+   job nobody has ever done", which neither notice is about, and it was the one
+   cold surface in the shell. */
 .storage-notice {
   margin: var(--space-3) var(--space-4) 0;
   padding: var(--space-3) var(--space-4);
-  background: var(--unknown-wash);
-  border: 1px solid var(--unknown-edge);
+  background: var(--notice-wash);
+  border: 1px solid var(--notice-edge);
   border-radius: var(--radius);
   color: var(--text);
 }
@@ -102,9 +109,10 @@ body {
   padding: 0 var(--space-4);
   background: var(--surface);
   border: 1px solid var(--border-strong);
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
   color: var(--text);
   font: inherit;
+  font-weight: 500;
   cursor: pointer;
 }
 
@@ -121,8 +129,8 @@ body {
   flex-wrap: wrap;
   margin: var(--space-3) var(--space-4) 0;
   padding: var(--space-3) var(--space-4);
-  background: var(--unknown-wash);
-  border: 1px solid var(--unknown-edge);
+  background: var(--notice-wash);
+  border: 1px solid var(--notice-edge);
   border-radius: var(--radius);
   color: var(--text);
 }
@@ -130,7 +138,7 @@ body {
 .undo-notice__text {
   flex: 1 1 12rem;
   margin: 0;
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
 }
 
 .undo-notice__action {
@@ -163,10 +171,14 @@ body {
   margin-bottom: var(--space-4);
 }
 
+/* "3 needing attention" is a signpost over the list, not a headline. Kept
+   small, muted and slightly tracked so it labels the jobs below without
+   competing with any of their names. */
 .schedule__title {
   margin: 0;
-  font-size: 0.9375rem;
+  font-size: var(--text-sm);
   font-weight: 600;
+  letter-spacing: 0.01em;
   color: var(--text-muted);
 }
 
@@ -176,15 +188,23 @@ body {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-3);
 }
 
+/* A card, not a table cell. The extra padding and the gap above are most of
+   what stops the list reading as a spreadsheet; the shadow does the rest, by
+   lifting the card off the page instead of ruling a line around it.
+
+   No gradient, no image — `e2e/colour-independence.spec.ts` fails if a row
+   contains any background image, because a stylesheet that flattens colour
+   cannot claim to have flattened one. */
 .row {
   background: var(--surface);
   border: 1px solid var(--border);
   border-left-width: 4px;
   border-radius: var(--radius);
-  padding: var(--space-3) var(--space-4);
+  box-shadow: var(--shadow-card);
+  padding: var(--space-3) var(--space-4) var(--space-4);
 }
 
 .row--overdue { border-left-color: var(--overdue-edge); }
@@ -192,23 +212,30 @@ body {
 .row--never-done { border-left-color: var(--unknown-edge); }
 .row--not-due { border-left-color: var(--border); }
 
+/* Centred rather than baseline-aligned: the status is now a pill with its own
+   padding, and a baseline drops it to the bottom of a 44px tall name button. */
 .row__main {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
 }
 
+/* First stop for the eye. A full step above body text, and the only thing in
+   the row set in --text at 600 — the status is smaller, the date smaller and
+   lighter still. That ordering is the whole of T101. */
 .row__name {
   margin: 0;
-  font-size: 1rem;
+  font-size: var(--text-lg);
   font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
+/* Third stop: when, in the quietest thing the row says. */
 .row__meta {
   margin: var(--space-1) 0 0;
   color: var(--text-muted);
-  font-size: 0.875rem;
+  font-size: var(--text-xs);
 }
 
 /* The job's name is the control that opens it. Styled to keep looking like the
@@ -242,46 +269,70 @@ body {
   margin-top: var(--space-2);
 }
 
+/* Second stop for the eye: smaller than the name, but given a shape so it is
+   findable at a glance down a column of rows.
+
+   The wash is reinforcement and nothing more. The word is the signal — an
+   `inline-flex` pill with no text would say nothing to a user who cannot
+   separate these hues, which is what `e2e/colour-independence.spec.ts` exists
+   to keep true. It is a background *colour*, never an image, for the same
+   reason. */
 .badge {
-  font-size: 0.8125rem;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1875rem var(--space-2);
+  border-radius: var(--radius-pill);
+  font-size: var(--text-xs);
   font-weight: 600;
+  letter-spacing: 0.01em;
   white-space: nowrap;
 }
 
-.badge--overdue { color: var(--overdue-text); }
-.badge--due { color: var(--due-text); }
-.badge--never-done { color: var(--unknown-text); }
-.badge--not-due { color: var(--text-muted); }
+.badge--overdue { color: var(--overdue-text); background: var(--overdue-wash); }
+.badge--due { color: var(--due-text); background: var(--due-wash); }
+.badge--never-done { color: var(--unknown-text); background: var(--unknown-wash); }
+.badge--not-due { color: var(--text-muted); background: var(--neutral-wash); }
 
 /* ---- Job detail -------------------------------------------------------- */
 
 .detail__head {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
 }
 
+/* The same ladder as a row, one rung higher: this page is about one job, so its
+   name is the largest thing on it. */
 .detail__title {
   margin: 0;
-  font-size: 1.25rem;
+  font-size: var(--text-xl);
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
 .detail__meta {
   margin: var(--space-1) 0 var(--space-4);
   color: var(--text-muted);
-  font-size: 0.875rem;
+  font-size: var(--text-xs);
 }
 
 .detail__fact {
   margin: 0 0 var(--space-2);
+  font-size: var(--text-base);
 }
 
+/* "Record it as done" and "History" are real h3s, and they were losing to the
+   field labels underneath them — smaller, lighter and muted, above a label set
+   in full --text. A heading that reads as less important than the label it
+   introduces is precisely the competing-for-attention problem T101 exists to
+   fix, so these are now a weight above their section's body and no longer
+   muted. The field labels moved down a step to meet them; see .form__field. */
 .detail__subtitle {
   margin: var(--space-5) 0 var(--space-3);
-  font-size: 0.9375rem;
+  font-size: var(--text-base);
   font-weight: 600;
-  color: var(--text-muted);
+  color: var(--text);
 }
 
 .detail__record {
@@ -318,6 +369,7 @@ body {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
 }
 
 .detail__empty {
@@ -358,7 +410,10 @@ body {
      .app's own insets — otherwise the card can sit under the notch. */
   padding: calc(var(--space-4) + env(safe-area-inset-top)) calc(var(--space-4) + env(safe-area-inset-right))
     calc(var(--space-4) + env(safe-area-inset-bottom)) calc(var(--space-4) + env(safe-area-inset-left));
-  background: rgba(26, 26, 23, 0.6);
+  /* --text's own hue at 60%, so the dimmed page goes warm rather than grey.
+     Written out because --text is a hex token and cannot be given an alpha
+     without restating it; keep this and --text (#23201a) in step by hand. */
+  background: rgba(35, 32, 26, 0.6);
 }
 
 .dialog {
@@ -369,12 +424,14 @@ body {
   padding: var(--space-5) var(--space-4);
   background: var(--surface);
   border-radius: var(--radius);
-  box-shadow: 0 8px 24px rgba(26, 26, 23, 0.3);
+  box-shadow: 0 8px 24px rgba(35, 32, 26, 0.3);
 }
 
 .dialog__question {
   margin: 0 0 var(--space-3);
-  font-size: 1.125rem;
+  font-size: var(--text-lg);
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
 /* --text rather than --text-muted: this sentence says the history is about to
@@ -401,7 +458,12 @@ body {
   padding: var(--space-5) 0;
 }
 
-.empty__title { margin: 0 0 var(--space-3); font-size: 1.25rem; }
+.empty__title {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-xl);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
 .empty__body { margin: 0 0 var(--space-5); color: var(--text-muted); }
 
 /* ---- Buttons ----------------------------------------------------------- */
@@ -410,10 +472,11 @@ body {
   min-height: var(--touch-target);
   padding: 0 var(--space-4);
   border: 1px solid var(--border-strong);
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
   background: var(--surface);
   color: var(--text);
   font: inherit;
+  font-size: var(--text-base);
   font-weight: 500;
   cursor: pointer;
 }
@@ -422,30 +485,40 @@ body {
   background: var(--accent);
   border-color: var(--accent);
   color: #fff;
+  font-weight: 600;
 }
 
 .button--primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
 
 /* The destructive confirmation in ConfirmDialog, and nothing else yet.
-   #ffffff on --danger (#a3231b) → 7.46:1 ✅ AA body — computed with the same
-   arithmetic e2e/support/colour.ts uses, not estimated. `--danger` is an
-   existing token; no new colour was introduced, which is what keeps
-   e2e/contrast.spec.ts's per-view measurement from having to relitigate the
-   palette while T100's design refresh is still outstanding. */
+   #ffffff on --danger (#9b2a18) → 7.67:1 ✅ AA body — computed with the same
+   arithmetic e2e/support/colour.ts uses, not estimated. (It read 7.46:1 against
+   the pre-refresh --danger of #a3231b; the token moved with the palette, and
+   the recorded number moved with it.) */
 .button--danger {
   background: var(--danger);
   border-color: var(--danger);
   color: #fff;
+  font-weight: 600;
 }
 
 /* ---- Form -------------------------------------------------------------- */
 
 .form { display: flex; flex-direction: column; gap: var(--space-4); }
-.form__title { margin: 0; font-size: 1.25rem; }
+.form__title {
+  margin: 0;
+  font-size: var(--text-xl);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
 
 .form__field { display: flex; flex-direction: column; gap: var(--space-2); border: none; padding: 0; margin: 0; }
-.form__field legend { padding: 0; font-weight: 500; }
-.form__field label { font-weight: 500; }
+/* A step below body text and a weight above it: a label names the control under
+   it, and at the same size and weight as the value it labels the two compete.
+   The inputs themselves stay at 17px — shrinking what the user types would be
+   solving the wrong problem. */
+.form__field legend { padding: 0; font-size: var(--text-sm); font-weight: 600; }
+.form__field label { font-size: var(--text-sm); font-weight: 600; }
 
 /* Available to any label that must be announced but not shown. The clip-path pair is
    the standard technique: it keeps the element in the accessibility tree, where
@@ -479,7 +552,7 @@ select {
   min-height: var(--touch-target);
   padding: 0 var(--space-3);
   border: 1px solid var(--border-strong);
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
   background: var(--surface);
   color: var(--text);
   font: inherit;
@@ -502,10 +575,11 @@ select {
   -webkit-appearance: none;
 
   /* The arrow, drawn rather than inherited, since opting out of native rendering removes
-     the one Safari was drawing. #1a1a17 is --text; a data URI cannot read a custom
-     property, so these two must be kept in step by hand. It sits at 17.44:1 on --surface,
-     well past the 3:1 WCAG 1.4.11 asks of a graphic that carries meaning. */
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='10' viewBox='0 0 16 10'%3E%3Cpath d='M1.5 1.5L8 8l6.5-6.5' fill='none' stroke='%231a1a17' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+     the one Safari was drawing. #23201a is --text; a data URI cannot read a custom
+     property, so these two must be kept in step by hand — the design refresh moved
+     --text and this had to move with it. It sits at 15.86:1 on --surface, well past the
+     3:1 WCAG 1.4.11 asks of a graphic that carries meaning. */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='10' viewBox='0 0 16 10'%3E%3Cpath d='M1.5 1.5L8 8l6.5-6.5' fill='none' stroke='%2323201a' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right var(--space-3) center;
 
@@ -515,5 +589,9 @@ select {
 
 [aria-invalid='true'] { border-color: var(--danger); border-width: 2px; }
 
-.form__error { margin: 0; color: var(--overdue-text); font-size: 0.875rem; }
+/* --text-sm rather than the smallest step: this is the sentence that tells
+   someone why their job did not save, and it is not a caption.
+   --overdue-text on --surface-sunken → 6.19:1 ✅ AA body (the form sits on the
+   page, not on a card). */
+.form__error { margin: 0; color: var(--overdue-text); font-size: var(--text-sm); }
 .form__actions { display: flex; gap: var(--space-3); }

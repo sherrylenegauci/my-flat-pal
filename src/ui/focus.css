@@ -6,10 +6,15 @@
  * automated suite guards this — T073 verifies it in a real browser.
  *
  * **Ratios below are computed, not estimated.** An earlier revision recorded
- * `--focus-ring on --accent → 3.6:1 ✅`. The real figure is 2.69:1, which fails
+ * `--focus-ring on --accent → 3.6:1 ✅`. The real figure was 2.69:1, which fails
  * the 3:1 non-text minimum — a fabricated number that happened to hide a real
  * defect. Recompute with the formula in WCAG 2.1 SC 1.4.11 before changing any
  * colour here.
+ *
+ * Every figure below was recomputed for T100's palette, because all but one of
+ * the surfaces named in them changed. The ring colours themselves did not need
+ * to: a near-black ring is warm-neutral enough to sit on paper, and the reason
+ * it needs a white companion is unchanged.
  */
 
 :root {
@@ -22,14 +27,16 @@
 }
 
 /*
- * Two-tone, because one colour cannot clear 3:1 against both a white page and a
- * dark blue button:
+ * Two-tone, because one colour cannot clear 3:1 against both a paper page and a
+ * dark olive button:
  *
- *   --focus-ring  on --surface        18.47:1  ✅
- *   --focus-ring  on --surface-sunken 16.78:1  ✅
- *   --focus-ring  on --overdue-wash   16.62:1  ✅
- *   --focus-ring  on --accent          2.69:1  ❌  ← why the inner ring exists
- *   #ffffff       on --accent          6.88:1  ✅
+ *   --focus-ring  on --surface        18.04:1  ✅
+ *   --focus-ring  on --surface-sunken 14.92:1  ✅
+ *   --focus-ring  on --notice-wash    15.36:1  ✅
+ *   --focus-ring  on --accent          2.56:1  ❌  ← why the inner ring exists
+ *   --focus-ring  on --danger          2.41:1  ❌  ← and here too
+ *   #ffffff       on --accent          7.23:1  ✅
+ *   #ffffff       on --danger          7.67:1  ✅
  *
  * The white ring hugs the element and the dark ring sits outside it, so
  * whichever surface the indicator lands on, one of the two contrasts.

@@ -1,82 +1,175 @@
 /**
- * Colour tokens.
+ * Design tokens: colour, type and shape.
  *
- * Every pair below is audited against WCAG 2.1 AA and its computed ratio is
- * recorded. Contrast cannot be checked automatically in jsdom — it computes no
- * layout and resolves no cascaded colour — so it is guaranteed here at source
- * and measured again per view in a real browser (T074).
+ * ## The palette this replaced, and why (T100)
+ *
+ * White cards on a cool grey page, one blue accent, status as small coloured
+ * text. It read as a spreadsheet. This is an app about someone's flat, so the
+ * neutrals are warm paper and sand rather than white-on-grey, and the accent is
+ * a deep olive rather than a corporate blue. It is deliberately quiet: a list
+ * someone opens for years should age well, and strong design ages faster.
+ *
+ * The hue assignments are unchanged in meaning — red for overdue, amber for due,
+ * violet for never-done, neutral for scheduled — because those are what the
+ * words already say, and re-teaching them would cost the user something for
+ * nothing. Only their temperature moved.
+ *
+ * ## Every ratio below is computed
+ *
+ * Computed with the arithmetic in `e2e/support/colour.ts`, imported rather than
+ * re-implemented. An earlier revision of this file recorded twelve estimates and
+ * labelled them "measured"; all twelve were wrong, and one error in the unsafe
+ * direction hid a genuine AA failure on the focus ring. If you change a colour,
+ * recompute — do not eyeball it.
+ *
+ * These records are a source-level guarantee, not the check. The check is
+ * `e2e/contrast.spec.ts`, which walks every rendered text node per view on both
+ * Chromium and WebKit and computes contrast from browser-resolved colours
+ * composited through the real ancestor chain. A pair audited here that never
+ * reaches the screen in that combination proves nothing; that spec is what
+ * closes the gap between a token pair and a painted pixel.
  *
  * Required: 4.5:1 for body text, 3:1 for large text and interface components.
- *
- * **Every ratio below is computed.** An earlier revision recorded estimates and
- * labelled them "measured"; all twelve were wrong, and the one error in the
- * unsafe direction hid a genuine AA failure on the focus ring. If you change a
- * colour, recompute — do not eyeball it.
  */
 
 :root {
-  /* Surfaces */
-  --surface: #ffffff;
-  --surface-sunken: #f4f4f2;
-  --surface-raised: #ffffff;
-  --border: #d3d3cd;
-  --border-strong: #6b6b64;
+  /* ---- Surfaces --------------------------------------------------------
+     Warm paper over warm sand. The page is deeper than the card, which is what
+     lets a card read as a card.
 
-  /* Text — computed, not estimated (see the note at the top of focus.css)
-     --text on --surface              → 17.44:1  ✅ AA body
-     --text on --surface-sunken       → 15.84:1  ✅ AA body
-     --text-muted on --surface        →  6.44:1  ✅ AA body
-     --text-muted on --surface-sunken →  5.85:1  ✅ AA body */
-  --text: #1a1a17;
-  --text-muted: #5f5f57;
+     --text        on --surface         → 15.86:1  ✅ AA body
+     --text        on --surface-sunken  → 13.11:1  ✅ AA body
+     --text-muted  on --surface         →  7.06:1  ✅ AA body
+     --text-muted  on --surface-sunken  →  5.83:1  ✅ AA body
+     --border-strong on --surface       →  5.59:1  ✅ AA non-text
+     --border-strong on --surface-sunken →  4.62:1  ✅ AA non-text
 
-  /* Status.
-     Each is used as text on --surface and as a border, never as the sole
-     signal — status is always carried by words as well (SC-004 colour
-     independence).
+     --surface on --surface-sunken measures 1.21:1, and that is deliberate
+     rather than a miss. A card's fill is not an interface component under WCAG
+     1.4.11 — nothing is identified by it, and the card's edge is drawn by
+     --border and a shadow. Recorded because the number is real and someone will
+     otherwise wonder whether it was checked. (The palette it replaced was
+     1.10:1, so the separation went up a little, not down.) */
+  --surface: #fffcf6;
+  --surface-sunken: #eee6d9;
+  --surface-raised: #fffcf6;
+  --border: #e0d7c8;
+  --border-strong: #6e6559;
 
-     --overdue-text  on --surface →  7.46:1  ✅ AA body
-     --due-text      on --surface →  6.39:1  ✅ AA body
-     --ok-text       on --surface →  6.37:1  ✅ AA body
-     --overdue-edge  on --surface →  5.27:1  ✅ AA non-text
-     --due-edge      on --surface →  4.17:1  ✅ AA non-text */
-  --overdue-text: #a3231b;
-  --overdue-edge: #c8342b;
-  --overdue-wash: #fdf0ef;
+  --text: #23201a;
+  --text-muted: #5e564a;
 
-  --due-text: #8a5200;
-  --due-edge: #b06d00;
-  --due-wash: #fdf4e6;
+  /* ---- Status ----------------------------------------------------------
+     Each status has three parts: the text colour of its word, the edge that
+     stripes its row, and a pale wash behind the word.
 
-  --ok-text: #2f6b3f;
-  --ok-edge: #3d8a52;
+     None of them is ever the only signal. The word is the signal —
+     `e2e/colour-independence.spec.ts` flattens every colour in the list to one
+     pair and asserts all four jobs still state their own status. A wash makes
+     the word easier to find; it does not carry it.
+
+     --overdue-text on --surface       →  7.49:1  ✅ AA body
+     --overdue-text on --overdue-wash  →  6.75:1  ✅ AA body
+     --overdue-edge on --surface       →  5.01:1  ✅ AA non-text
+
+     --due-text     on --surface       →  6.61:1  ✅ AA body
+     --due-text     on --due-wash      →  5.99:1  ✅ AA body
+     --due-edge     on --surface       →  3.83:1  ✅ AA non-text */
+  --overdue-text: #9b2a18;
+  --overdue-edge: #bf4526;
+  --overdue-wash: #fbeee7;
+
+  --due-text: #825009;
+  --due-edge: #b0741c;
+  --due-wash: #faf0dd;
 
   /* Never-done reads as "needs attention" but not as an error — it is not the
-     user's fault the history is unknown.
-     --unknown-text on --surface → 7.80:1 ✅ AA body
-     --unknown-edge on --surface → 4.61:1 ✅ AA non-text */
-  --unknown-text: #4a4f7a;
-  --unknown-edge: #6b71a8;
-  --unknown-wash: #f1f2f8;
+     user's fault the history is unknown. The one cool note in a warm palette,
+     kept that way on purpose: it has to be told apart from overdue red and due
+     amber at a glance, and a fourth warm hue would not be.
 
-  /* Interactive
-     --accent-text on --surface → 6.96:1 ✅ AA body
-     #ffffff on --accent        → 6.88:1 ✅ AA body (button label)
-     --border-strong on --surface → 5.37:1 ✅ AA non-text */
-  --accent: #2f5d8a;
-  --accent-text: #275d8a;
-  --accent-hover: #24486b;
+     --unknown-text on --surface        →  7.72:1  ✅ AA body
+     --unknown-text on --unknown-wash   →  6.94:1  ✅ AA body
+     --unknown-edge on --surface        →  4.16:1  ✅ AA non-text
+     --unknown-edge on --surface-sunken →  3.44:1  ✅ AA non-text */
+  --unknown-text: #574a78;
+  --unknown-edge: #7f74a3;
+  --unknown-wash: #f1eff7;
 
-  --danger: #a3231b;
+  /* Scheduled — nothing to do. Its wash is a shade of the page rather than a
+     hue, so the four badges share one shape without the quiet one shouting.
+     --text-muted on --neutral-wash → 5.77:1 ✅ AA body */
+  --neutral-wash: #ece5d8;
 
-  /* Spacing and shape */
+  /* ---- Notices ---------------------------------------------------------
+     The storage warning and the undo offer. Previously they borrowed the
+     never-done violet, which said "this is about a job that has never been
+     done" when it is about neither — and it was the coldest thing on screen.
+
+     --text        on --notice-wash        → 13.50:1  ✅ AA body
+     --text-muted  on --notice-wash        →  6.01:1  ✅ AA body
+     --notice-edge on --surface-sunken     →  3.85:1  ✅ AA non-text
+     --notice-edge on --notice-wash        →  3.97:1  ✅ AA non-text
+     --border-strong on --notice-wash      →  4.76:1  ✅ AA non-text (the
+                                              button inside the notice) */
+  --notice-wash: #f6e9cd;
+  --notice-edge: #8d6d43;
+
+  /* ---- Interactive -----------------------------------------------------
+     A deep olive. Warm, domestic, and — the reason it is not the terracotta
+     that first suggests itself — nowhere near overdue red, which sits a few
+     millimetres away on the same list. Green is free here because no status is
+     drawn in green: "Scheduled" is neutral, not a tick.
+
+     --accent-text  on --surface        →  7.96:1  ✅ AA body
+     --accent-text  on --surface-sunken →  6.58:1  ✅ AA body
+     #ffffff        on --accent         →  7.23:1  ✅ AA body (button label)
+     --accent-hover on --surface        →  9.36:1  ✅ AA body
+     #ffffff        on --accent-hover   →  9.59:1  ✅ AA body */
+  --accent: #4a5d33;
+  --accent-text: #43552e;
+  --accent-hover: #3a4a28;
+
+  /* Destructive confirmation. Same value as --overdue-text: one red in the app,
+     because two nearly-identical reds meaning different things is how a palette
+     starts to rot.
+     #ffffff on --danger → 7.67:1 ✅ AA body */
+  --danger: #9b2a18;
+
+  /* ---- Type ------------------------------------------------------------
+     A job's name, its status and its due date used to sit at roughly the same
+     size and weight, so they competed (T101). The ladder below is what makes
+     them read in order: name, then status, then date. Size does the coarse
+     work; weight and --text-muted do the rest.
+
+     Root is 17px, so: xs 13.8px · sm 15.9px · base 17px · lg 19.1px · xl
+     23.4px. All well under WCAG's 24px "large text" threshold except xl, which
+     is 23.4px and therefore still held to the full 4.5:1 — deliberately, so no
+     heading gets a relaxed floor by accident. */
+  --text-xs: 0.8125rem;
+  --text-sm: 0.9375rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+
+  /* ---- Spacing and shape ----------------------------------------------- */
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 0.75rem;
   --space-4: 1rem;
   --space-5: 1.5rem;
   --space-6: 2rem;
-  --radius: 0.5rem;
+
+  /* Softer corners than the 0.5rem this replaced. --radius-sm keeps controls
+     from looking like lozenges next to the cards they sit in. */
+  --radius: 0.75rem;
+  --radius-sm: 0.5rem;
+  --radius-pill: 999px;
+
+  /* Barely there, and that is the point: it separates a card from the page
+     without drawing a second line around it. Tuned in --text's own hue so it
+     warms the edge rather than greying it. */
+  --shadow-card: 0 1px 2px rgba(35, 32, 26, 0.06);
 
   /* The constitution requires 44x44 CSS px minimum. */
   --touch-target: 44px;

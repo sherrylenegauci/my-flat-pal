@@ -320,7 +320,39 @@ asking for new behaviour, so it needs no task.
   apply to every state in `APP_STATES`. The guard is right — it stops a state that renders
   nothing from sweeping vacuously — so the exception is made explicit per state rather than the
   guard relaxed
-- [ ] T100 [P] **Design refresh: colour and personality** (issue #99). The app is near-monochrome — white cards on grey, one blue accent, status as small coloured text — and reads as a spreadsheet rather than something for a home. Constraints: Principle I forbids a component library, so this is CSS and tokens; status MUST NOT be carried by colour alone, which `e2e/colour-independence.spec.ts` enforces; 375px first; 44×44 targets hold. **Every ratio must be computed, not estimated** — `tokens.css` once carried twelve ratios recorded as measured that were all estimates, and `focus.css` claimed 3.6:1 for a ring that measured 2.69:1. `e2e/contrast.spec.ts` now checks this against real browser-resolved colours on both engines, so a careless palette turns the suite red rather than shipping
+- [X] T100 [P] **Design refresh: colour and personality** (issue #99). The app is near-monochrome — white cards on grey, one blue accent, status as small coloured text — and reads as a spreadsheet rather than something for a home. Constraints: Principle I forbids a component library, so this is CSS and tokens; status MUST NOT be carried by colour alone, which `e2e/colour-independence.spec.ts` enforces; 375px first; 44×44 targets hold. **Every ratio must be computed, not estimated** — `tokens.css` once carried twelve ratios recorded as measured that were all estimates, and `focus.css` claimed 3.6:1 for a ring that measured 2.69:1. `e2e/contrast.spec.ts` now checks this against real browser-resolved colours on both engines, so a careless palette turns the suite red rather than shipping
+
+  **Done, with T101, in one pass over `tokens.css`, `app.css` and `focus.css`.** Warm paper
+  (`--surface` #fffcf6) over warm sand (`--surface-sunken` #eee6d9) in place of white on cool
+  grey; the accent is a deep olive (#4a5d33) in place of the blue. Olive rather than the
+  terracotta that first suggests itself, because terracotta sits a few millimetres from overdue
+  red on the same list, and no status is drawn in green so the hue was free. Status keeps its
+  existing meanings — red, amber, violet, neutral — and only its temperature moved, since the
+  words already teach those and re-teaching them would cost the user something for nothing.
+  Status now also carries a pale wash pill behind its word, which is reinforcement only:
+  `e2e/colour-independence.spec.ts` still passes, and the pill is a background *colour*, never
+  an image, because that spec fails on any background image inside a row.
+
+  **`focus.css` is in scope despite not being named**, and this is the reason: every ratio it
+  records is against a surface that moved, so leaving it alone would have left five recorded
+  numbers describing a palette that no longer exists — the exact failure this task was written
+  about. Recomputed: ring on `--surface` 18.04:1, on `--surface-sunken` 14.92:1, on
+  `--notice-wash` 15.36:1; on `--accent` 2.56:1 and on `--danger` 2.41:1, both failing, which is
+  why the white inner ring exists and is unchanged (7.23:1 and 7.67:1).
+
+  **Every ratio computed, none estimated.** Computed by importing `e2e/support/colour.ts` into a
+  throwaway script rather than re-implementing the formula, and checked first against four
+  figures already in the tree (17.44, 2.69, 6.88, 7.46) — all four reproduced exactly, which is
+  what makes the new numbers worth reading. Three pairs are recorded as measured *and* below
+  3:1, deliberately and with the reason beside them: card fill on page (1.21:1), pill fill on
+  card (~1.1:1), and `--border` on `--surface` (1.39:1). None is an interface component under
+  WCAG 1.4.11 — nothing is identified by any of them, controls use `--border-strong` at 5.59:1,
+  and status is identified by its word. Recorded rather than omitted so nobody wonders later
+  whether they were checked.
+
+  Two unused tokens removed while there: `--ok-text` and `--ok-edge` had no reference anywhere
+  in `src/`, and with an olive accent a second, meaningless green would have been an active
+  trap.
 - [ ] T103 **RELEASE BLOCKER — a mistaken completion cannot be removed, by any means** (FR-007a). Sequenced after US3 by decision on 2026-08-11: removing a completion needs a confirmation dialog and T067 builds one, so doing this first would build that dialog twice. **Waiting is safe only because nothing is released.** Today: tap Mark done by mistake, let ten seconds pass, and that entry is permanent — there is no control to remove it. **Corrected 2026-08-12, since US3 landed**: this line used to add "and no way to delete the job either, since US3 is unbuilt", which is no longer true and was never much of a remedy anyway. Deleting the job now works, and it destroys that job's entire history to remove one wrong row. The only alternative is clearing site storage, which destroys every job. Neither is a correction; both are amputations. The cost is not one wrong row: the completion is dated today, so the next due date moves a full interval and an annual service drops off the list for a year, and the history — kept because `spec.md` says it is "worth being able to prove" — now records work that never happened. **FR-007a's closing sentence, "correcting an older mistake is done from the item's history", is false until this exists**, and the same claim justifies session-scoped undo in `spec.md`, `plan.md` and T102. Add a control in the detail view's history list that removes one completion, reusing T067's dialog. Do not ship without it
 - [X] T104 [P] **Pin the undo window to the completion, not to mount** (FR-007). Nothing in the suite establishes this. Sabotage proved it: capture a timestamp when the hook first runs and measure the window from that instead of from `recordedAt`, and **209 of 209 tests still pass** — reproduced independently by the verification agent and by me. The regression it permits points the opposite way from the original defect and is worse in practice: with a mount-relative window, anyone who has had the app open more than ten seconds gets no undo offer at all when they tick something off, which is every real user. `tests/domain/undo-window.test.ts` pins the arithmetic; nothing pins what is passed into it. Add a behaviour test that opens the app, lets well over the window pass with nothing recorded, then marks a job done and asserts the offer appears and works
 
@@ -416,7 +448,26 @@ asking for new behaviour, so it needs no task.
   **The task line above is wrong on one detail.** The two tests asserting survival across a reopen are one per file — `tests/ui/undo.test.tsx` ("still works after the app has been closed and reopened inside the window") and `tests/ui/undo-expiry.test.tsx` ("still offers undo when the app is reopened inside the window"). Both were changed to require the offer's absence *and* that the completion is still stored, so neither can pass against an implementation that withholds the offer by discarding the tick-off; `undo.test.tsx` also asserts the entry is listed in the job's detail-view history. Both sequences above are now tests in `tests/ui/undo-across-relaunch.test.tsx`, observed failing against the old code with the button rendered and named ("Undo recording Gutters as done", "Undo recording Boiler service as done").
 
   **Two comments left standing that are now weaker than they read.** `undo-expiry.test.tsx`'s "does not resurrect an expired offer when the app is reopened" and "offers nothing on an app opened on old completions" still pass, but session scope alone now satisfies them, so they no longer discriminate mount-relative expiry from completion-relative expiry. The window is still genuinely exercised by "withdraws itself once the window passes" and by the press-time enforcement test, both within one session.
-- [ ] T101 [P] **Design refresh: typographic hierarchy** (issue #99). Everything sits at roughly the same size and weight, so a job's name, its status and its due date compete instead of reading in order of importance. Touches `tokens.css` and `app.css` only; do not change markup structure, because the heading and list semantics are what the axe and VoiceOver checks depend on
+- [X] T101 [P] **Design refresh: typographic hierarchy** (issue #99). Everything sits at roughly the same size and weight, so a job's name, its status and its due date compete instead of reading in order of importance. Touches `tokens.css` and `app.css` only; do not change markup structure, because the heading and list semantics are what the axe and VoiceOver checks depend on
+
+  **Done, with T100. No markup changed** — not one `.tsx` file was touched, so the heading levels,
+  the list semantics and the accessible names US3's dialog rests on are byte-for-byte what axe and
+  the VoiceOver pass will see.
+
+  A five-step scale in `tokens.css` (`--text-xs` through `--text-xl`, 13.8px to 23.4px on a 17px
+  root) replaces the literals that were scattered through `app.css`. In a row the ladder is now:
+  name at 19.1px/600 in `--text`, status at 13.8px/600 in its own hue, date at 13.8px/400 in
+  `--text-muted` — three separations (size, weight, colour) where there was previously about half
+  of one. Rows also gained padding, a wider gap and a very light shadow, which is what stops the
+  list reading as a spreadsheet; the type alone would not have.
+
+  **One inversion found by looking at it rather than by a test, and fixed.** On the job detail
+  view `.detail__subtitle` ("Record it as done", "History") was smaller, lighter and muted above
+  field labels set in full `--text` — an h3 reading as less important than the label it
+  introduces, which is the same competing-for-attention defect this task exists to remove, one
+  level down. Subtitles are now 17px/600 in `--text`; labels moved down to 15.9px/600. No test
+  in any tier can see this: contrast and layout both pass either way. It was caught by rendering
+  each state at 375px and reading the screenshots.
 
 ### Found by verifying US3 (2026-08-12)
 

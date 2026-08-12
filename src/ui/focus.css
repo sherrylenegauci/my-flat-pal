@@ -63,3 +63,19 @@
     transition: outline-offset 120ms ease-out;
   }
 }
+
+/* The shell moves focus to the page heading on mount and after navigating, so a
+   screen-reader user lands at the top of the new view rather than wherever the
+   old one left them. Chromium counts that programmatic focus as `:focus-visible`
+   and draws the full ring — a heavy slab around the title on first load, which
+   nobody asked for and no user action caused.
+   
+   Safe to suppress because `tabindex="-1"` is exactly the marker for "focusable
+   by script, never by Tab": no keyboard user can reach these, so no keyboard user
+   loses an indicator. The screen-reader announcement, which is the actual point
+   of moving focus there, is unaffected. */
+[tabindex='-1']:focus,
+[tabindex='-1']:focus-visible {
+  outline: none;
+  box-shadow: none;
+}

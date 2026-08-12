@@ -257,9 +257,17 @@ body {
   color: var(--text);
   font: inherit;
   text-align: left;
+  /* Underlined because it is the only thing saying this name opens the job — the
+     row has no chevron and no other affordance. Kept thin and offset rather than
+     removed: three names stacked down the page read as link soup at the default
+     weight, but with no underline at all the control is invisible until tapped,
+     which is the same mistake the interval dropdown made. --border-strong is
+     5.59:1 on the card, so it clears WCAG 1.4.11's 3:1 for a control's only
+     visual indicator. */
   text-decoration: underline;
   text-decoration-color: var(--border-strong);
-  text-underline-offset: 4px;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 5px;
   cursor: pointer;
 }
 

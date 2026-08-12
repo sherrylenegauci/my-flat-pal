@@ -619,6 +619,14 @@ npm run preview -- --host    # note the network URL, open it on your phone, inst
 - [ ] Status readable without relying on colour
 - [ ] Persistent storage requested on first use; refusal reported plainly
 - [ ] Jobs survive force-quitting and a phone restart
+- [ ] **The `storage` event actually crosses contexts on iOS** — open the installed app and the
+  same site in Safari, tick a job off in one, and check the other notices. This is not a nicety:
+  the compare-and-swap, the reload-on-external-change, and the whole refused-undo path built for
+  T105 all assume the news arrives. Every automated test of it constructs the event by hand,
+  because jsdom has one document and fires nothing, so nothing anywhere establishes that WebKit
+  delivers it between a standalone PWA and a browser tab. If it does not, an open app sits on
+  stale state until something else makes it reload, and the refusal notice is a sentence no user
+  will ever see
 
 ---
 

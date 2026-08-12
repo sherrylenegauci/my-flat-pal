@@ -4,7 +4,9 @@ import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { App } from '../../src/ui/App'
 import { load, save } from '../../src/storage/repository'
+import { STORAGE_KEY } from '../../src/storage/schema'
 import type { StoredDocument } from '../../src/storage/schema'
+import { UNDO_WINDOW_MS } from '../../src/domain/undoWindow'
 import { MONTHLY, YEARLY, aCompletion, anItem, seed } from './seed'
 
 /**
@@ -59,11 +61,23 @@ import { MONTHLY, YEARLY, aCompletion, anItem, seed } from './seed'
  * an implementation that "refused" by throwing the entry away fails rather than
  * passes.
  *
+ * **Two later additions, and what they are for.** The last two blocks in this
+ * file were added after the notice existed, to cover behaviour that had none.
+ * The notice is *cleared* in two places, `addItem` and `markDone`, so a stale
+ * refusal does not sit next to a fresh offer; both clears were deleted together
+ * and all 215 tests still passed. And the session marker is cleared after a
+ * refused press, which matters in exactly one situation — the refused entry
+ * survives, so if the other context later removes what blocked it, an uncleared
+ * marker puts the offer back on its own. Each block says which wrong
+ * implementation it catches.
+ *
  * What this file cannot establish. A second *process* — the installed PWA and
  * Safari really running side by side, with a real `storage` event and real
  * interleaving — is not something jsdom can produce; this is one document
- * making two writes in a known order. Whether the notice is legible, is
- * announced by VoiceOver when it appears, or survives the app being
+ * making two writes in a known order. The last block goes one step further and
+ * constructs a `storage` event by hand, which is the only model in the file and
+ * is labelled as one on the helper that does it. Whether the notice is legible,
+ * is announced by VoiceOver when it appears, or survives the app being
  * backgrounded mid-press are real-device questions and belong to the manual
  * checklist in `plan.md`.
  */
@@ -108,6 +122,21 @@ const undoControlFor = (jobName: string) =>
 const markDone = (jobName: string) =>
   screen.getByRole('button', { name: new RegExp(`mark done.*${jobName}`, 'i') })
 
+/**
+ * The text of one job's row in the list.
+ *
+ * Scoped to the row on purpose: the undo notice quotes dates too, so a
+ * document-wide text query cannot distinguish "the schedule moved" from "an
+ * offer appeared quoting the same day".
+ */
+function rowFor(jobName: string): string {
+  const row = screen
+    .getAllByRole('listitem')
+    .find((candidate) => candidate.textContent?.includes(jobName))
+  expect(row, `no row on screen for ${jobName}`).toBeDefined()
+  return row!.textContent ?? ''
+}
+
 /** Every tick-off in storage, as job name → the dates recorded against it. */
 const storedHistoryByJob = () =>
   Object.fromEntries(
@@ -151,6 +180,60 @@ function anotherContextRecords(
         ? { ...item, completions: [...item.completions, completion] }
         : item,
     ),
+  })
+}
+
+/**
+ * A write made by somebody else that *removes* one of their own entries.
+ *
+ * The mirror of `anotherContextRecords`, and needed for one case only: the
+ * other context taking back what it recorded, which is what can leave this
+ * app's refused entry newest again.
+ */
+function anotherContextRemoves(
+  jobName: string,
+  completedOn: string,
+  basedOn: StoredDocument,
+): StoredDocument {
+  return save({
+    ...basedOn,
+    items: basedOn.items.map((item) =>
+      item.name === jobName
+        ? { ...item, completions: item.completions.filter((c) => c.completedOn !== completedOn) }
+        : item,
+    ),
+  })
+}
+
+/**
+ * The `storage` event the browser fires in *other* documents when one of them
+ * writes. **This is a model, and it is the only one in this file.**
+ *
+ * jsdom has a single document and does not fire it, so it is constructed here.
+ * What that models is narrow and worth stating: the platform's *delivery* of the
+ * news, not the app's reaction to it. `subscribeToExternalChanges` reads nothing
+ * from the event but `key`, and reloads by reading `localStorage` — so a
+ * faithful model needs only the right key, and everything downstream of the
+ * listener is the real code path. That the listener fires for this key, ignores
+ * others, and is torn down on unsubscribe is covered for real in
+ * `tests/storage/subscribe.test.ts`.
+ *
+ * The risk a hand-fired event carries is that a malformed one does nothing at
+ * all, leaving any "and then nothing bad appeared" assertion passing for the
+ * worst possible reason. The one test that uses this therefore checks, on
+ * screen, that the app really did hear it before asserting anything about what
+ * it did not do.
+ *
+ * What it cannot model: two real processes, real interleaving, and whether iOS
+ * delivers this event to an installed PWA whose other context is Safari at all.
+ * That is a real-device question and belongs to the manual checklist in
+ * `plan.md`.
+ */
+async function theBrowserTellsTheAppSomeoneElseWrote(document: StoredDocument) {
+  await act(async () => {
+    window.dispatchEvent(
+      new StorageEvent('storage', { key: STORAGE_KEY, newValue: JSON.stringify(document) }),
+    )
   })
 }
 
@@ -221,6 +304,69 @@ async function aStandingOfferOvertakenByAnotherContext() {
   expect(undoControlFor('Boiler service')).not.toBeNull()
 
   return { user, undo: undo!, otherContextsDocument }
+}
+
+/**
+ * The refusal notice, as a user would read it: the text of the alert that names
+ * the job the refused press was for.
+ *
+ * Matched on the job name and on a stable fragment of the sentence rather than
+ * on the sentence character for character, so rewording the notice — which is
+ * likely — does not break every test below.
+ */
+const refusalNoticeText = () =>
+  screen
+    .queryAllByRole('alert')
+    .map((el) => el.textContent ?? '')
+    .find((text) => text.includes('Boiler service') && /still recorded/i.test(text))
+
+/**
+ * The state the three tests below start from: the user has pressed a standing
+ * offer, the press was refused, and the app has said so on screen.
+ *
+ * **The assertion in here is what stops those tests being vacuous.** Each of
+ * them ends in "the notice is gone", and an app that had simply stopped raising
+ * the notice at all would satisfy every one of them. Establishing that the
+ * sentence really is on screen first means the only way to reach those
+ * assertions is by having raised it and then cleared it.
+ */
+async function aRefusalTheUserHasBeenTold() {
+  const context = await aStandingOfferOvertakenByAnotherContext()
+
+  await context.user.click(context.undo)
+
+  expect(
+    refusalNoticeText(),
+    'no refusal notice after a press that could not be honoured — the tests below ' +
+      'would pass by there being nothing to clear',
+  ).toBeDefined()
+
+  return context
+}
+
+/**
+ * Adding a job through the real form.
+ *
+ * The add flow is one of the two places the refusal is cleared, so it has to be
+ * the real one: a seeded document never runs it.
+ */
+async function addAJob(
+  user: ReturnType<typeof userEvent.setup>,
+  fields: { name: string; count: string; unit: string; lastDone?: string },
+) {
+  await user.click(await screen.findByRole('button', { name: /add/i }))
+
+  await user.clear(screen.getByLabelText(/name/i))
+  await user.type(screen.getByLabelText(/name/i), fields.name)
+  await user.clear(screen.getByLabelText(/how often/i))
+  await user.type(screen.getByLabelText(/how often/i), fields.count)
+  await user.selectOptions(screen.getByLabelText(/period|unit/i), fields.unit)
+  if (fields.lastDone !== undefined) {
+    await user.type(screen.getByLabelText(/last done/i), fields.lastDone)
+  }
+
+  await user.click(screen.getByRole('button', { name: /save|add/i }))
+  await screen.findByText(fields.name)
 }
 
 describe('undo takes back the tick-off it named, and only that one', () => {
@@ -346,6 +492,163 @@ describe('a press that cannot be honoured says so', () => {
     expect(storedHistoryByJob()).toEqual({
       'Boiler service': ['2026-06-01', '2026-08-08'],
       'Smoke alarms': ['2026-07-08', '2026-08-08', '2026-08-07'],
+    })
+  })
+})
+
+/**
+ * The refusal notice goes away when the user moves on.
+ *
+ * **Why this block exists.** The notice is cleared in two places, `addItem` and
+ * `markDone`, and neither was covered: both clears were deleted together and all
+ * 215 tests still passed. That is behaviour with no test that would have failed
+ * before it, which Principle III does not allow, and it is not academic — the
+ * sentence says a tick-off "is still recorded" and blames another window. Left
+ * standing next to a fresh undo offer for a job the user ticked off afterwards,
+ * it reads as though it were about *that* one, and the user takes their new
+ * offer to be already broken.
+ *
+ * **Two tests, because there are two clears and either can be deleted on its
+ * own.** One goes through marking a job done, the other through the add form,
+ * and each fails only against the deletion of its own clear.
+ *
+ * The mark-done test also asserts that the fresh offer is there. Without it the
+ * test could be satisfied by an app that had stopped raising the notice
+ * anywhere — though the shared setup guards that too, by requiring the notice on
+ * screen before the action under test.
+ */
+describe('a refusal the user has moved on from does not stay on screen', () => {
+  it('is cleared by ticking another job off, which gets its own undo offer', async () => {
+    const { user } = await aRefusalTheUserHasBeenTold()
+
+    await user.click(markDone('Smoke alarms'))
+
+    // Gone. It was about Boiler service and about a press the user has stopped
+    // waiting on.
+    expect(refusalNoticeText()).toBeUndefined()
+
+    // And there is a live offer for what they just did — so the sentence went by
+    // being cleared, not by the app having given up on saying anything.
+    expect(undoControlFor('Smoke alarms')).not.toBeNull()
+
+    // Storage, because the screen shows due dates rather than histories. Smoke
+    // alarms now holds two entries for today: the other context's, and this
+    // tick-off. Boiler service still holds the one that was refused — which is
+    // exactly what the notice said, and it was true when it said it.
+    expect(storedHistoryByJob()).toEqual({
+      'Boiler service': ['2026-06-01', '2026-08-08'],
+      'Smoke alarms': ['2026-07-08', '2026-08-08', '2026-08-08'],
+    })
+  })
+
+  it('is cleared by adding a job', async () => {
+    // The second clear, exercised through the real form. The notice lives above
+    // `<main>` and survives the navigation into the form, so an app that never
+    // cleared it would still be showing it here.
+    const { user } = await aRefusalTheUserHasBeenTold()
+
+    await addAJob(user, { name: 'Gutters', count: '1', unit: 'year' })
+
+    expect(refusalNoticeText()).toBeUndefined()
+
+    // The add really happened, so the absence above is about the notice being
+    // cleared rather than about nothing having occurred.
+    expect(storedHistoryByJob()).toEqual({
+      'Boiler service': ['2026-06-01', '2026-08-08'],
+      'Smoke alarms': ['2026-07-08', '2026-08-08'],
+      Gutters: [],
+    })
+  })
+})
+
+/**
+ * What the clearing of the session marker after a refused press is actually for.
+ *
+ * **The claim being tested.** `undoLast` clears the marker after every press.
+ * After a *successful* press that clearing is redundant — the completion is
+ * deleted, so its id can never match anything in the document again, and
+ * removing the line leaves all 215 tests green including the walk-backwards one.
+ * It earns its place in exactly one case: a press that was **refused**. There
+ * the entry survives, so the marker still names something real, and if the other
+ * context then removes the newer entry that caused the refusal, the user's own
+ * tick-off is newest again and still inside its ten seconds. An uncleared marker
+ * puts the offer back — naming a job the app has already told the user it could
+ * not take back, with no press of theirs to justify it.
+ *
+ * **This test uses the one model in this file** — a hand-constructed `storage`
+ * event, because the case needs the other context to write *and* this app to
+ * hear about it, and jsdom fires nothing between its own writes. See
+ * `theBrowserTellsTheAppSomeoneElseWrote` for what that does and does not stand
+ * in for. The judgement made here was that the model is honest enough to keep,
+ * on two conditions, both met below: it is labelled, and the test proves on
+ * screen that the app actually heard the event before asserting anything about
+ * what the app did not do. Without that second condition a mistyped storage key
+ * would produce a silent pass, which is the failure mode this suite treats as
+ * worse than no test at all.
+ */
+describe('after a refused press, the offer does not come back on its own', () => {
+  it('stays withdrawn when the other window removes the entry that blocked it', async () => {
+    const { otherContextsDocument } = await aRefusalTheUserHasBeenTold()
+
+    // The refused press pushed the freshly read document into view, so the app
+    // is now showing the other context's tick-off: Smoke alarms is monthly and
+    // was done today, so it is next due in September. This is the "before" half
+    // of the check that the event below lands.
+    expect(rowFor('Smoke alarms')).toContain('8 September 2026')
+
+    // The other context takes back what it recorded — its user pressing undo in
+    // that window, which is an ordinary thing to happen. Based on the document
+    // that context last wrote, which is still current precisely because the
+    // refused press wrote nothing.
+    const afterTheirUndo = anotherContextRemoves(
+      'Smoke alarms',
+      '2026-08-08',
+      otherContextsDocument,
+    )
+    await theBrowserTellsTheAppSomeoneElseWrote(afterTheirUndo)
+
+    // The model landed: the app reloaded and the schedule moved. Smoke alarms is
+    // back to July, so it is due today rather than in September. Asserted before
+    // anything below, because every assertion below is an absence and a storage
+    // event that did nothing would satisfy all of them.
+    //
+    // Read out of Smoke alarms' own row rather than off the whole screen. The
+    // undo notice quotes the date of the tick-off it offers to take back, so a
+    // document-wide search for today's date is answered by the very offer whose
+    // absence this test is about — which turns the sabotage into a failure here,
+    // several assertions before the one that names what went wrong.
+    expect(rowFor('Smoke alarms')).toContain('8 August 2026')
+    expect(rowFor('Smoke alarms')).not.toContain('8 September 2026')
+
+    // And the precondition that makes the absence mean something: Boiler
+    // service's tick-off is newest again and still inside its window, so nothing
+    // *except* the session marker is withholding the offer.
+    expect(
+      recordedAtOf('Boiler service', '2026-08-08'),
+      'the entry the refusal named is not the newest, so the offer is withheld for ' +
+        'a reason this test is not about',
+    ).toBe(
+      load()
+        .document.items.flatMap((item) => item.completions)
+        .reduce((newest, c) => (c.recordedAt >= newest ? c.recordedAt : newest), ''),
+    )
+    expect(
+      Date.parse(recordedAtOf('Boiler service', '2026-08-08')) + UNDO_WINDOW_MS - Date.now(),
+      'the ten seconds ran out during this test, so the window would withhold the ' +
+        'offer on its own',
+    ).toBeGreaterThan(0)
+
+    // The offer must not reappear. The user was told this tick-off could not be
+    // taken back; a button offering to take it back, arriving without them
+    // touching anything, contradicts the app's own notice.
+    expect(undoControlFor('Boiler service')).toBeNull()
+    expect(undoControl()).toBeNull()
+
+    // Nothing was lost either way round: the user's tick-off is still recorded,
+    // and the other context's removal is the only change.
+    expect(storedHistoryByJob()).toEqual({
+      'Boiler service': ['2026-06-01', '2026-08-08'],
+      'Smoke alarms': ['2026-07-08'],
     })
   })
 })

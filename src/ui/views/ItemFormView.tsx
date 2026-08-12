@@ -21,7 +21,7 @@ import type { NewItemInput } from '../useSchedule'
  * **Why editing has no "last done" field.** FR-009 covers the name and the
  * interval. A completion is immutable once saved (spec, Key Entities), so this
  * field cannot mean "correct the date" — it could only append another
- * completion, which is what the detail view's "Record it as done" already does,
+ * completion, which is what the detail view's "Add a date you did it" already does,
  * or silently rewrite history, which nothing in the spec permits.
  *
  * **An open contradiction, not a decision taken here.** FR-007b says a wrong

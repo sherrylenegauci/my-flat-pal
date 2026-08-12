@@ -127,7 +127,31 @@ export function App() {
       </header>
 
       <div className="app__notices">
-        <StorageNotice />
+        {/* The storage warning belongs where the user lands, and nowhere else.
+            It is a first-run message about whether this device has promised to
+            keep their records, and it sat above `<main>` on every view — at
+            375px, roughly the top third of the detail view, both forms and the
+            delete confirmation, repeated at someone who is part-way through
+            filling one in. Saying it again is not saying it more clearly.
+
+            On the list only, therefore, and only while the schedule list is
+            what `<main>` is showing — a read-only session replaces that view
+            entirely with a different message about the same records.
+
+            It unmounts on the way out and mounts again on the way back, so the
+            persistence question is asked again each time. That is deliberate
+            rather than tolerated: the answer can change, and on iOS installing
+            the app to the home screen is one of the things that earns a grant,
+            so a user who was refused on their first visit is not held to that
+            answer for the life of the session. Neither engine prompts for it.
+            Dismissal is untouched — it is recorded in localStorage, so it
+            survives the unmount, the relaunch and this.
+
+            The other three notices in this region are unchanged. Read-only and
+            corrupt-data are about the data the app just tried to read, and the
+            undo offer must follow the user off the list, because marking a job
+            done from the list is what raises it. */}
+        {!schedule.readOnly && nav.view.name === 'schedule' && <StorageNotice />}
         {schedule.readOnly && (
           <div role="alert" className="storage-notice">
             <p>

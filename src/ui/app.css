@@ -347,8 +347,11 @@ body {
   letter-spacing: -0.01em;
 }
 
+/* How often, and when it was last done — one line, muted, under the name.
+   "Next due" keeps a line of its own at body size below it, because that is the
+   thing someone opens a job to find out; these two are the context for it. */
 .detail__meta {
-  margin: var(--space-1) 0 var(--space-4);
+  margin: var(--space-1) 0 var(--space-2);
   color: var(--text-muted);
   font-size: var(--text-xs);
 }
@@ -358,12 +361,16 @@ body {
   font-size: var(--text-base);
 }
 
-/* "Record it as done" and "History" are real h3s, and they were losing to the
-   field labels underneath them — smaller, lighter and muted, above a label set
-   in full --text. A heading that reads as less important than the label it
-   introduces is precisely the competing-for-attention problem T101 exists to
-   fix, so these are now a weight above their section's body and no longer
-   muted. The field labels moved down a step to meet them; see .form__field. */
+/* "History" is a real h3, and it was losing to the field labels near it —
+   smaller, lighter and muted, beside a label set in full --text. A heading that
+   reads as less important than the label below it is precisely the
+   competing-for-attention problem T101 exists to fix, so it is now a weight
+   above its section's body and no longer muted. The field labels moved down a
+   step to meet it; see .form__field.
+
+   There used to be a second one of these, "Record it as done", heading a single
+   date field whose own label said the same thing. It is gone rather than
+   restyled. */
 .detail__subtitle {
   margin: var(--space-5) 0 var(--space-3);
   font-size: var(--text-base);
@@ -381,14 +388,34 @@ body {
   border-top: 1px solid var(--border);
 }
 
-/* The field is full width; its button is not, so it does not read as a second
-   page-wide action competing with the one in the header. */
 .detail__record .form__field {
   width: 100%;
 }
 
-.detail__record .detail__subtitle {
-  margin: 0;
+/* The field and its button share a row, under the label that explains both.
+   Stacked, the button read as a second page-wide action; beside the field it
+   reads as what finishes it.
+
+   The input flexes and the button does not, so the button keeps its text at any
+   width and the date field absorbs what is left. `min-width: 0` because a flex
+   item will not shrink below its intrinsic width without it, and an
+   `input[type=date]` reports a wide one — on a 375px screen that is how the row
+   overflows. Both keep the 44px minimum height they had stacked; whether they
+   actually clear it side by side is measured by e2e/layout.spec.ts in a real
+   engine, which is the only place it can be. */
+.detail__record-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.detail__record-row input[type='date'] {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.detail__record-row .button {
+  flex: 0 0 auto;
 }
 
 .detail__history {
@@ -400,12 +427,13 @@ body {
   gap: var(--space-2);
 }
 
+/* Plain lines, not cards. A card is a container for something with parts — a
+   row on the list has a name, a status and a date, and the card is what holds
+   them together. A history entry is one date. Giving it a surface, a border, a
+   radius and a shadow spent four pieces of visual machinery on a single string
+   and made the history the heaviest thing on the page. */
 .detail__history li {
-  padding: var(--space-3) var(--space-4);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-card);
+  padding: var(--space-1) 0;
 }
 
 .detail__empty {
@@ -415,7 +443,7 @@ body {
 
 /* The corrections, kept at the bottom and away from the primary action.
 
-   "Record it" is what someone opens a job to do; editing and deleting are
+   Adding a date is what someone opens a job to do; editing and deleting are
    repairs. Putting them last also puts the destructive one furthest from the
    thumb's resting position on a one-handed 375px screen, and last in the Tab
    order, so neither is the thing you hit by accident. */

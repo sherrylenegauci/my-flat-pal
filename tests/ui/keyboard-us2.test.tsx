@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { App } from '../../src/ui/App'
 import { load } from '../../src/storage/repository'
 import { YEARLY, aCompletion, anItem, seed } from './seed'
+import { named, tabUntil } from './keyboard'
 
 /**
  * T057 — SC-005 says *every* flow works by keyboard alone. US2 adds three:
@@ -24,21 +25,8 @@ beforeEach(() => {
 })
 afterEach(() => vi.useRealTimers())
 
-/** Tab until the predicate matches, or give up. Returns the focused element. */
-async function tabUntil(
-  user: ReturnType<typeof userEvent.setup>,
-  matches: (el: Element | null) => boolean,
-  limit = 25,
-): Promise<Element | null> {
-  for (let i = 0; i < limit; i++) {
-    if (matches(document.activeElement)) return document.activeElement
-    await user.tab()
-  }
-  return matches(document.activeElement) ? document.activeElement : null
-}
-
-const named = (re: RegExp) => (el: Element | null) =>
-  el?.tagName === 'BUTTON' && re.test(el.textContent ?? '')
+// `tabUntil` and `named` moved to ./keyboard when US3's keyboard file became
+// their second caller.
 
 const stored = () => load().document.items[0]
 

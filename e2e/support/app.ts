@@ -181,13 +181,12 @@ async function open(page: Page): Promise<void> {
 /**
  * The views that exist today.
  *
- * **User Stories 1 and 2 are built.** The schedule list, the add-a-job form, a
- * job's detail with its history, and the shell's empty / corrupt / read-only /
- * undo states. As US3 (edit, delete, the confirmation dialog) lands, add its
- * views here — four of the five sweeps in `e2e/` iterate this list, so a new
- * entry extends the axe scan, the contrast walk, the layout check and the focus
- * sweep at once. A view missing from this list is a view those four do not
- * cover.
+ * **User Stories 1, 2 and 3 are built.** The schedule list, the add-a-job form,
+ * the edit form, a job's detail with its history, the confirmation before a
+ * deletion, and the shell's empty / corrupt / read-only / undo states. Four of
+ * the five sweeps in `e2e/` iterate this list, so a new entry extends the axe
+ * scan, the contrast walk, the layout check and the focus sweep at once. A view
+ * missing from this list is a view those four do not cover.
  *
  * The fifth, `colour-independence.spec.ts`, deliberately does not iterate: it
  * asks whether *status* survives colour being removed, and status only exists on
@@ -330,6 +329,53 @@ export const APP_STATES: AppState[] = [
       await page.getByRole('button', { name: 'Service the boiler', exact: true }).click()
       await page.getByRole('heading', { name: 'Service the boiler', level: 2 }).waitFor()
       await page.getByRole('list', { name: 'History' }).waitFor()
+    },
+  },
+  {
+    name: 'edit a job form',
+    /**
+     * US3's other half. The same component as "add a job form" but not the same
+     * state: the fields arrive pre-filled, the last-done field is absent, and
+     * the submit button says something else — so the layout it produces is a
+     * different one, and at 375px that is exactly the sort of difference that
+     * has bitten before (T093's interval row).
+     */
+    go: async (page) => {
+      await seed(page, JSON.stringify(toDocument(WITH_HISTORY)))
+      await open(page)
+      await page.getByRole('button', { name: 'Service the boiler', exact: true }).click()
+      await page.getByRole('button', { name: 'Edit job' }).click()
+      await page.getByRole('heading', { name: 'Edit job', level: 2 }).waitFor()
+    },
+  },
+  {
+    name: 'the confirmation before deleting a job',
+    /**
+     * The dialog, open, over the job it is asking about.
+     *
+     * **This state's control list is deliberately just the dialog's two
+     * buttons.** While the dialog is open the rest of the page carries `inert`,
+     * so `readControlBoxes` excludes it — see the note there. That is the point
+     * rather than a gap: the controls behind a modal cannot be tabbed to,
+     * focused, or tapped, and the sweeps measure them in "job detail, with
+     * history", where they are live.
+     *
+     * **One thing this state cannot speak to.** `e2e/contrast.spec.ts` walks the
+     * text behind the scrim and resolves its colours from the ancestor chain,
+     * which does not include a fixed overlay — so the ratios it reports for that
+     * text are the undimmed ones, and they are the same ratios already measured
+     * in the detail state. Whether dimmed text behind a scrim is legible is not
+     * something this tier is measuring here, and it is not a question the app
+     * needs answered: the scrim exists to push that text back, not to keep it
+     * readable. Recorded so a green run is not read as more than it is.
+     */
+    go: async (page) => {
+      await seed(page, JSON.stringify(toDocument(WITH_HISTORY)))
+      await open(page)
+      await page.getByRole('button', { name: 'Service the boiler', exact: true }).click()
+      await page.getByRole('button', { name: 'Delete job' }).click()
+      await page.getByRole('dialog').waitFor()
+      await page.getByRole('button', { name: 'Delete permanently' }).waitFor()
     },
   },
   {

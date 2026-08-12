@@ -2,6 +2,7 @@ import { useId, useState } from 'react'
 import type { FormEvent } from 'react'
 import { completionsNewestFirst } from '../../domain/schedule'
 import type { CalendarDate, ItemView } from '../../domain/types'
+import { ConfirmDialog } from '../components/ConfirmDialog'
 import { StatusBadge } from '../components/StatusBadge'
 import { formatDisplayDate } from '../format'
 
@@ -20,19 +21,27 @@ import { formatDisplayDate } from '../format'
  * boiler was serviced in June is the other one, and it needs somewhere to say
  * so. Future dates are refused: you cannot have already done something you have
  * not done yet.
+ *
+ * **Correcting and deleting live here** (T069, FR-009), at the bottom, below the
+ * history the deletion would take with it.
  */
 export function ItemDetailView({
   view,
   today,
   onRecord,
+  onEdit,
+  onDelete,
 }: {
   view: ItemView
   today: CalendarDate
   onRecord: (completedOn: CalendarDate) => void
+  onEdit: () => void
+  onDelete: () => void
 }) {
   const ids = useId()
   const [completedOn, setCompletedOn] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
 
   const history = completionsNewestFirst(view.item)
 
@@ -52,6 +61,29 @@ export function ItemDetailView({
     setCompletedOn('')
     onRecord(completedOn)
   }
+
+  /**
+   * What deleting this job actually costs, said plainly rather than as "are you
+   * sure".
+   *
+   * The spec cut export and backup deliberately ("No backup, no export"), so a
+   * deleted history is gone from the only copy that exists. The count is in the
+   * sentence because "its history goes too" is abstract and "3 completions
+   * recorded" is not — the user is being asked about a specific quantity of
+   * their own records.
+   *
+   * A job that has never been done gets a different sentence, because promising
+   * to discard a history it does not have would be false, and a confirmation
+   * that says something untrue is worse than none: it teaches the user that the
+   * words in these dialogs are boilerplate.
+   */
+  const recorded = view.item.completions.length
+  const consequence =
+    recorded === 0
+      ? 'Nothing has been recorded against it yet. This app has no backup and no export, ' +
+        'so the job cannot be got back.'
+      : `Its history goes too: ${recorded} completion${recorded === 1 ? '' : 's'} recorded. ` +
+        'This app has no backup and no export, so nothing here can be got back.'
 
   return (
     <div className="detail">
@@ -111,6 +143,28 @@ export function ItemDetailView({
             <li key={completion.id}>{formatDisplayDate(completion.completedOn)}</li>
           ))}
         </ul>
+      )}
+
+      <div className="detail__corrections">
+        <button type="button" className="button" onClick={onEdit}>
+          Edit job
+        </button>
+        <button type="button" className="button" onClick={() => setConfirmingDelete(true)}>
+          Delete job
+        </button>
+      </div>
+
+      {/* The confirmation is a general component (T067) given this job's
+          particulars, not a delete-a-job dialog. T103 hands it a different
+          question to remove one completion from the history above. */}
+      {confirmingDelete && (
+        <ConfirmDialog
+          question={`Delete “${view.item.name}”?`}
+          consequence={consequence}
+          confirmLabel="Delete permanently"
+          onConfirm={onDelete}
+          onCancel={() => setConfirmingDelete(false)}
+        />
       )}
     </div>
   )

@@ -163,16 +163,71 @@ the same handful of files.
 
 ### Tests for User Story 3 (MANDATORY) ⚠️
 
-- [ ] T063 [P] [US3] Failing tests in `tests/ui/edit.test.tsx`: changing name or interval saves, the due date updates immediately, and **the edit survives a reload**
-- [ ] T064 [P] [US3] Failing tests in `tests/ui/delete.test.tsx`: deletion asks for confirmation; the confirmation states that history is discarded; **confirming actually removes the item from the schedule**; **cancelling leaves it in place** — US3's Independent Test, which no previous task asserted
-- [ ] T065 [P] [US3] Failing test in `tests/ui/confirm-dialog.test.tsx`: the dialog traps focus, is dismissible by keyboard, and passes an axe scan
-- [ ] T066 [P] [US3] Failing test in `tests/ui/keyboard-us3.test.tsx`: editing and deleting are completable by keyboard alone (SC-005)
+- [X] T063 [P] [US3] Failing tests in `tests/ui/edit.test.tsx`: changing name or interval saves, the due date updates immediately, and **the edit survives a reload**
+- [X] T064 [P] [US3] Failing tests in `tests/ui/delete.test.tsx`: deletion asks for confirmation; the confirmation states that history is discarded; **confirming actually removes the item from the schedule**; **cancelling leaves it in place** — US3's Independent Test, which no previous task asserted
+- [X] T065 [P] [US3] Failing test in `tests/ui/confirm-dialog.test.tsx`: the dialog traps focus, is dismissible by keyboard, and passes an axe scan
+- [X] T066 [P] [US3] Failing test in `tests/ui/keyboard-us3.test.tsx`: editing and deleting are completable by keyboard alone (SC-005)
+
+  **All four landed together in one commit, before any implementation, and were observed failing
+  on their assertions** — "Unable to find role=button and name Edit job", the same for "Delete
+  job", and "Unable to find an accessible element with the role dialog". `ConfirmDialog.tsx` was
+  committed first as a stub returning `null`, so the T065 tests reached their assertions instead
+  of dying on an unresolvable import, which fails identically whether a behaviour is missing or a
+  name is misspelled.
+
+  **Two of them could not check what they claimed, found by sabotage after the fact and fixed.**
+  `delete.test.tsx` deleted the *first* of two seeded jobs, so an implementation that ignored the
+  id entirely and returned `items.slice(1)` passed all 257 tests; it now deletes the middle of
+  three and asserts the survivors in order. The same defect on the edit side, and the singular
+  "1 completion recorded" wording going unread, are recorded on T107.
 
 ### Implementation for User Story 3
 
-- [ ] T067 [P] [US3] Build `src/ui/components/ConfirmDialog.tsx` with focus trapping and keyboard dismissal
-- [ ] T068 [US3] Extend `src/ui/views/ItemFormView.tsx` to handle editing
-- [ ] T069 [US3] Wire edit and delete into `src/ui/views/ItemDetailView.tsx` (repository write path already exists from T028)
+- [X] T067 [P] [US3] Build `src/ui/components/ConfirmDialog.tsx` with focus trapping and keyboard dismissal
+
+  **Built general, because it has a second customer already**: T103 reuses it to remove one
+  completion from a job's history, so the caller supplies the question, the consequence and the
+  confirm label and nothing about deleting a job is inside it. That is the second concrete use
+  case Principle I asks for before an abstraction appears, and it existed before the file did.
+
+  **Not a native `<dialog>`.** It would give trapping, Escape, the top layer and focus restoration
+  for free in a browser, but jsdom 25 implements no `showModal` — probed, not assumed — so the
+  behaviour tier could not exercise any of it, and the Testing Strategy forbids a check that
+  cannot check.
+
+  **Focus return is the part that took two attempts.** The obvious rule — restore if the dialog
+  still holds focus — never fires, because a `useEffect` cleanup is passive and React has already
+  detached the dialog by then, so focus is on `<body>` in every case including the ones needing
+  the restore. It now restores only when focus was lost, which also leaves alone a caller that has
+  placed focus itself.
+
+  **The page behind is made `inert`**, not merely `aria-modal`. `aria-modal` is an instruction a
+  screen reader may honour; `inert` removes the content from the focus order and the accessibility
+  tree, so a VoiceOver swipe cannot walk out of the dialog into the page behind. `readControlBoxes`
+  and `focusNthControl` in `e2e/support/probe.ts` now skip inert subtrees, so the browser sweeps
+  measure what a user can actually reach. **This mechanism is covered by exactly one test on one
+  engine** — see T108.
+- [X] T068 [US3] Extend `src/ui/views/ItemFormView.tsx` to handle editing
+
+  One component for both, not two: they ask for the same two things under the same rules, and the
+  first divergence between two copies would be a bug in one of them. `editing` changes the
+  heading, the submit label, the starting values, and whether the last-done field exists.
+
+  **The edit form has no last-done field, and FR-007b assumes it does.** FR-009 covers the name and
+  the interval; a Completion is immutable once saved (spec, Key Entities). FR-007b nonetheless says
+  a wrong last-done date on a new job "is corrected by editing it (FR-009)", which is not something
+  FR-009 provides. T103 would make it true by a different route — remove the entry from the
+  history and record it again. **Unresolved, and Sherrylene's call**; recorded rather than decided.
+- [X] T069 [US3] Wire edit and delete into `src/ui/views/ItemDetailView.tsx` (repository write path already exists from T028)
+
+  Both controls sit at the bottom, below the history a deletion would take with it, so the
+  destructive one is furthest from the thumb and last in the Tab order. The confirmation names the
+  job and says what it costs — with the number of completions in the sentence, and a different
+  sentence for a job that has never been done, because promising to discard a history that does
+  not exist teaches the user that these dialogs are boilerplate.
+
+  Editing leaves completions alone; the next due date moves anyway, because it is derived on every
+  render and never stored, so US3 scenario 1 needed no code of its own.
 
 **Checkpoint**: All three user stories independently functional.
 
@@ -266,7 +321,7 @@ asking for new behaviour, so it needs no task.
   nothing from sweeping vacuously — so the exception is made explicit per state rather than the
   guard relaxed
 - [ ] T100 [P] **Design refresh: colour and personality** (issue #99). The app is near-monochrome — white cards on grey, one blue accent, status as small coloured text — and reads as a spreadsheet rather than something for a home. Constraints: Principle I forbids a component library, so this is CSS and tokens; status MUST NOT be carried by colour alone, which `e2e/colour-independence.spec.ts` enforces; 375px first; 44×44 targets hold. **Every ratio must be computed, not estimated** — `tokens.css` once carried twelve ratios recorded as measured that were all estimates, and `focus.css` claimed 3.6:1 for a ring that measured 2.69:1. `e2e/contrast.spec.ts` now checks this against real browser-resolved colours on both engines, so a careless palette turns the suite red rather than shipping
-- [ ] T103 **RELEASE BLOCKER — a mistaken completion cannot be removed, by any means** (FR-007a). Sequenced after US3 by decision on 2026-08-11: removing a completion needs a confirmation dialog and T067 builds one, so doing this first would build that dialog twice. **Waiting is safe only because nothing is released.** Today: tap Mark done by mistake, let ten seconds pass, and that entry is permanent — there is no control to remove it, and no way to delete the job either, since US3 is unbuilt. The only remedy is clearing site storage, which destroys every job. The cost is not one wrong row: the completion is dated today, so the next due date moves a full interval and an annual service drops off the list for a year, and the history — kept because `spec.md` says it is "worth being able to prove" — now records work that never happened. **FR-007a's closing sentence, "correcting an older mistake is done from the item's history", is false until this exists**, and the same claim justifies session-scoped undo in `spec.md`, `plan.md` and T102. Add a control in the detail view's history list that removes one completion, reusing T067's dialog. Do not ship without it
+- [ ] T103 **RELEASE BLOCKER — a mistaken completion cannot be removed, by any means** (FR-007a). Sequenced after US3 by decision on 2026-08-11: removing a completion needs a confirmation dialog and T067 builds one, so doing this first would build that dialog twice. **Waiting is safe only because nothing is released.** Today: tap Mark done by mistake, let ten seconds pass, and that entry is permanent — there is no control to remove it. **Corrected 2026-08-12, since US3 landed**: this line used to add "and no way to delete the job either, since US3 is unbuilt", which is no longer true and was never much of a remedy anyway. Deleting the job now works, and it destroys that job's entire history to remove one wrong row. The only alternative is clearing site storage, which destroys every job. Neither is a correction; both are amputations. The cost is not one wrong row: the completion is dated today, so the next due date moves a full interval and an annual service drops off the list for a year, and the history — kept because `spec.md` says it is "worth being able to prove" — now records work that never happened. **FR-007a's closing sentence, "correcting an older mistake is done from the item's history", is false until this exists**, and the same claim justifies session-scoped undo in `spec.md`, `plan.md` and T102. Add a control in the detail view's history list that removes one completion, reusing T067's dialog. Do not ship without it
 - [X] T104 [P] **Pin the undo window to the completion, not to mount** (FR-007). Nothing in the suite establishes this. Sabotage proved it: capture a timestamp when the hook first runs and measure the window from that instead of from `recordedAt`, and **209 of 209 tests still pass** — reproduced independently by the verification agent and by me. The regression it permits points the opposite way from the original defect and is worse in practice: with a mount-relative window, anyone who has had the app open more than ten seconds gets no undo offer at all when they tick something off, which is every real user. `tests/domain/undo-window.test.ts` pins the arithmetic; nothing pins what is passed into it. Add a behaviour test that opens the app, lets well over the window pass with nothing recorded, then marks a job done and asserts the offer appears and works
 
   **Done. No source change — this task was coverage for behaviour that was already correct**, which
@@ -363,6 +418,27 @@ asking for new behaviour, so it needs no task.
   **Two comments left standing that are now weaker than they read.** `undo-expiry.test.tsx`'s "does not resurrect an expired offer when the app is reopened" and "offers nothing on an app opened on old completions" still pass, but session scope alone now satisfies them, so they no longer discriminate mount-relative expiry from completion-relative expiry. The window is still genuinely exercised by "withdraws itself once the window passes" and by the press-time enforcement test, both within one session.
 - [ ] T101 [P] **Design refresh: typographic hierarchy** (issue #99). Everything sits at roughly the same size and weight, so a job's name, its status and its due date compete instead of reading in order of importance. Touches `tokens.css` and `app.css` only; do not change markup structure, because the heading and list semantics are what the axe and VoiceOver checks depend on
 
+### Found by verifying US3 (2026-08-12)
+
+- [X] T107 [P] **Close three US3 assertions that cannot fail.** All three were found by sabotage after US3 went green, and each lets an obviously wrong implementation ship: (1) **nothing establishes that an edit changes the job you opened** — every editing test seeds one job and reads storage back as `items[0]`, so an `editItem` that ignores `itemId` and always rewrites the first stored job passes all 257 tests. This is the identical defect already fixed on the delete side, where deleting the first of two could not be told apart from `items.slice(1)`. Seed three, edit the middle one, change the name *and* the interval, assert all three of each in storage order. (2) **The singular consequence sentence is rendered under test and never read** — replacing `completion${n === 1 ? '' : 's'}` with a bare `completions`, so the dialog says "1 completions recorded", passes everything. (3) **Focus returning to "Delete job" after a cancel is pinned only in `confirm-dialog.test.tsx`'s own harness**, never in the app, where the opener survives and the wiring differs
+
+  **Done. Five tests, 257 → 262, each accepted on sabotage rather than on a green run**, since all
+  three cover behaviour that was already correct. `editItem` rewritten to ignore `itemId` and
+  always change `items[0]` fails only the two new "changes only the job that was opened" tests
+  (2 failed / 260 passed) — they seed three jobs, edit the middle one, change the name *and* the
+  interval together, and read all three names and all three intervals back from storage in seeded
+  order. A bare `completions` in the consequence fails only "counts one completion in the
+  singular". And focus return was sabotaged on the *app* side rather than in `ConfirmDialog`,
+  by remounting the corrections row so the opener is disconnected when the dialog reaches for
+  it: the two new app-level tests fail and every test in `confirm-dialog.test.tsx` stays green,
+  which is exactly the wiring mistake a harness cannot see.
+
+  **A fourth hole closed on the way**: every edit test typed a number and left the period dropdown
+  alone, so an edit form that discarded the unit and re-saved the loaded one would have gone
+  unnoticed. The new tests change months to years.
+- [ ] T108 **The dialog's containment is verified on one engine, and not the one the phone runs.** Removing `sibling.setAttribute('inert', '')` from `ConfirmDialog` leaves all 257 unit tests green and fails exactly one browser test: the Tab-order sweep in `e2e/focus-visibility.spec.ts`, which skips WebKit by design because Safari does not Tab to buttons unless the user turns that on. So on WebKit nothing establishes that a user cannot leave the dialog and reach the page behind it, and `inert`'s interaction with VoiceOver's rotor is precisely the open question. Not fixable in the browser tier without running a Tab sweep that WebKit would pass vacuously — which is the check the constitution forbids. **Routed to T078 instead**, where it now names the dialog explicitly; recorded here so a green suite is not read as covering it
+- [ ] T109 [P] **Two US3 guards that no test defends.** Neither is wrong today; both are load-bearing and unpinned. (1) **FR-010a and the read-only view**: Edit and Delete are unreachable in a read-only session because `load()` returns an empty document for a too-new file, so there is no job to open — not because of the `readOnly ?` branch that leads `App`'s render. Moving that branch to the end of the ternary leaves all 257 tests green. It cannot be tested through the app today (the read-only document has no items by construction), and `tests/ui/read-only.test.tsx` already records the class of gap — but its header names only "Mark done" and "Record it" and needs US3's two controls adding. This becomes reachable the moment a read-only session shows the user's data. (2) **`handleDelete`'s explicit `headingRef.current?.focus()`**: deleting the line leaves all 257 green, because `nav.back()` changes the view name and the existing effect focuses the heading anyway. The line closes the window *before* `popstate` arrives, when focus has fallen to `<body>`; whether that window is observable through Testing Library's act-based waiting is not established either way, so the comment on it should say what it protects and that nothing distinguishes it, or the line should go
+
 **The design tasks need no new test tasks.** `e2e/contrast.spec.ts` and `e2e/colour-independence.spec.ts` already check exactly what could go wrong here, on both engines, against real rendered colours — that is the safety net that makes a palette change safe to attempt. Adding jsdom tests for colour would be writing a check that cannot check, which the constitution forbids.
 
 **Not absorbed, and staying manual**: T075 (service-worker update path), T076/T077 (timings needing
@@ -381,6 +457,7 @@ across force-quit and restart). A green e2e suite must not be read as covering t
 - [ ] T077 Time a first-time user recording their first item against SC-001, which had no verification at all
 - [ ] T078 **Run the full manual device checklist in plan.md § Running and checking it on a real iPhone and a real Android phone** — SC-006 and Constitution gate 2b. Not automatable
   - **Now also covers touch-free operation.** Constitution v1.4.0 makes VoiceOver on a real iPhone the check that discharges the accessibility gate; automated keyboard traversal is supporting evidence only. So this task must include driving each flow with VoiceOver — swipe between elements, double-tap to activate — for adding a job, marking one done, undoing, and viewing history. Nothing in the repository approximates this.
+  - **Extended by US3, 2026-08-12, and three of these are new questions rather than more of the same.** Add: **editing a job** (including changing the interval unit, which is the one control nothing automated operates — jsdom implements no keyboard behaviour for `<select>` at all, so "every six months instead of three" is verified only in the half that is a number input); **deleting a job**; and **the confirmation dialog**, which needs the most attention of anything on this list. Four separate things to check on it, none of which any tier can answer: that VoiceOver announces the dialog has opened rather than leaving the user to discover it; that it reads the question *and* the consequence, since the consequence is carried by `aria-describedby` and is the sentence saying the history is about to go; that the rotor and swipe navigation stay inside the dialog — the app sets `inert` on everything behind it, and whether WebKit honours that for VoiceOver is unverified; and that after cancelling, focus lands back on the control that opened it. Also check the scrim's doubled safe-area insets: a `position: fixed` overlay escapes `.app`'s own insets, so the card is padded separately and nothing has looked at that on a device with a notch.
   - **Partly done, 2026-08-09**: the interval dropdown was checked on a real iPhone in Safari and opens the native wheel picker correctly. Still outstanding: everything else on the checklist, and home-screen install in particular, which cannot be checked over a LAN address because service workers require HTTPS or localhost. A proper HTTPS preview is needed to close this task.
   - **Do not test dropdowns in Chrome's device emulation.** A `<select>`'s option list is drawn by the browser and the OS outside the document — it has no DOM node, no CSS reaches it, and it does not appear in screenshots, so neither Playwright nor a page capture can see it. Under device emulation the page is scaled to a fake phone while that popup is positioned and sized in real screen coordinates, so it renders small and lands top-right instead of under the field. This is an emulation artifact affecting every site with a `<select>`, and it cost an investigation before being recognised. Judge native pickers on a real device only.
 - [ ] T079 Verify the data durability checklist: persistence requested, refusal reported honestly, items survive force-quit and device restart (SC-007)
@@ -410,7 +487,7 @@ Every `[P]` group below was checked for file collisions.
 - **Phase 2 storage**: T022, T023, T024, T025, T026, T027 — distinct files
 - **Phase 3**: T040–T046 — seven distinct test files
 - **Phase 4**: T053–T058 — six distinct test files
-- **Phase 5**: T063–T066 — four distinct test files
+- **Phase 5**: T063–T066 — four distinct test files. **T067 is not in fact parallel with T068 and T069**, and its `[P]` marker is wrong: `ItemDetailView` imports `ConfirmDialog`, so T069 cannot be written against a component that does not exist. Built in the order T067 → T068 → T069
 
 ```bash
 # Phase 3 — genuinely parallel, one file each:

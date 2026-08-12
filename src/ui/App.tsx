@@ -105,6 +105,28 @@ export function App() {
         {schedule.undoable && (
           <UndoNotice undoable={schedule.undoable} onUndo={handleUndo} />
         )}
+        {/* An undo press that could not be honoured, said out loud.
+
+            The offer leaves the screen whether the press worked or not, so
+            silence here means the user cannot tell a tick-off that was taken
+            back from one that is still recorded — they would find out on the
+            next reload, if ever. `role="alert"` rather than `status` because
+            they asked for something and did not get it, and because focus moves
+            to the heading on every press: a polite announcement would queue
+            behind the heading's and could be cut off.
+
+            Styled as `.storage-notice` on purpose. That colour pair is already
+            walked by `e2e/contrast.spec.ts` against real browser-resolved
+            colours, so reusing it inherits a measured result instead of adding
+            an unaudited one — the same reasoning recorded on `.undo-notice`. */}
+        {schedule.undoRefusedFor !== null && (
+          <div role="alert" className="storage-notice">
+            <p>
+              {schedule.undoRefusedFor} is still recorded. Something else was saved in another
+              window, so nothing was taken back.
+            </p>
+          </div>
+        )}
       </div>
 
       <main className="app__main">

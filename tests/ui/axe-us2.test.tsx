@@ -2,8 +2,9 @@ import { describe, it, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { App } from '../../src/ui/App'
+import { load, save } from '../../src/storage/repository'
 import { expectNoViolations } from './axe-helper'
-import { YEARLY, aCompletion, anItem, seed } from './seed'
+import { MONTHLY, YEARLY, aCompletion, anItem, seed } from './seed'
 
 /**
  * T058 — structural accessibility across the views US2 adds.
@@ -71,6 +72,58 @@ describe('accessibility', () => {
 
     await user.click(await screen.findByRole('button', { name: /mark done/i }))
     await screen.findByRole('button', { name: /undo/i })
+
+    await expectNoViolations(container)
+  })
+
+  it('the list showing a refused undo has no violations', async () => {
+    // The notice a refused press raises is a state no other sweep reaches, so
+    // without this it would ship outside every accessibility check there is.
+    // See `undo-other-context.test.tsx` for what the state is and why a direct
+    // `save()` is a fair model of a second tab.
+    //
+    // What this cannot establish: whether VoiceOver actually interrupts and
+    // reads the sentence when it appears, or whether it is legible against the
+    // page. axe in jsdom sees the role attribute and nothing else — no
+    // announcement, no layout, no resolved colour. Both belong to the real
+    // device.
+    seed([
+      anItem({ id: 'itm_a', name: 'Boiler service', interval: YEARLY, completions: [aCompletion('2026-06-01')] }),
+      anItem({ id: 'itm_b', name: 'Smoke alarms', interval: MONTHLY, completions: [aCompletion('2026-07-08')] }),
+    ])
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    const { container } = render(<App />)
+
+    await user.click(
+      await screen.findByRole('button', { name: /mark done.*Boiler service/i }),
+    )
+    const undo = await screen.findByRole('button', { name: /undo recording Boiler service/i })
+
+    // Another context records something newer, which this app never hears
+    // about, so the offer on screen no longer names the newest entry.
+    vi.setSystemTime(new Date(Date.now() + 1_000))
+    const current = load().document
+    save({
+      ...current,
+      items: current.items.map((item) =>
+        item.name === 'Smoke alarms'
+          ? {
+              ...item,
+              completions: [
+                ...item.completions,
+                {
+                  id: 'cmp_other',
+                  completedOn: '2026-08-08',
+                  recordedAt: new Date().toISOString(),
+                },
+              ],
+            }
+          : item,
+      ),
+    })
+
+    await user.click(undo)
+    await screen.findByRole('alert')
 
     await expectNoViolations(container)
   })

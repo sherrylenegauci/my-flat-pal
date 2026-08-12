@@ -51,6 +51,17 @@ export interface Schedule {
    */
   undoable: RecordedCompletion | null
   undoLast: () => void
+  /**
+   * The job an undo offer named when the press could not be honoured, or null.
+   *
+   * Set only when the entry the user was offered is no longer the newest in
+   * storage — another context recorded something and this one never heard about
+   * it — so taking the press at face value would delete an entry the user never
+   * touched. Nothing is deleted and nothing is saved, and this is what lets the
+   * shell say so instead of leaving a button that visibly does nothing
+   * (FR-010a).
+   */
+  undoRefusedFor: string | null
 }
 
 export function useSchedule(): Schedule {
@@ -106,6 +117,17 @@ export function useSchedule(): Schedule {
    */
   const [, setExpiryTick] = useState(0)
 
+  /**
+   * The job named by the last undo press this app had to refuse, if any.
+   *
+   * State rather than a ref, because the user has to see it: a refused press
+   * takes the offer off the screen exactly as a successful one does, so without
+   * this the two are indistinguishable and the user walks away believing a
+   * tick-off was taken back that is still recorded. Cleared by the next thing
+   * they do, since by then they have moved on and the sentence is stale.
+   */
+  const [undoRefusedFor, setUndoRefusedFor] = useState<string | null>(null)
+
   const reload = useCallback(() => {
     const outcome = load()
     setDoc(outcome.document)
@@ -135,13 +157,37 @@ export function useSchedule(): Schedule {
    * Reading from storage rather than from React state also closes the window
    * where the two disagree: storage owns `revision`, so the compare-and-swap is
    * checked against the thing that actually holds it.
+   *
+   * **A change function that hands back the array it was given is declining**,
+   * and that is honoured by not writing at all. Returns whether anything was
+   * written, so a caller can tell a change that landed from one that was
+   * refused — `undoLast` is the one that needs to, because a refusal there has
+   * to be said out loud rather than left as a button that did nothing.
+   *
+   * Writing the unchanged document anyway is not harmless. `save` increments
+   * `revision` whatever the content, so a no-op write moves the number the
+   * compare-and-swap is checked against, and the *other* context — which did
+   * nothing wrong and is holding the document it last wrote — has its next save
+   * refused and is sent into stale-write recovery over a write with nothing in
+   * it. That recovery is for a genuine race; spending it on a phantom is how a
+   * real conflict later gets treated as routine.
    */
   const mutate = useCallback(
-    (change: (items: MaintenanceItem[]) => MaintenanceItem[]) => {
+    (change: (items: MaintenanceItem[]) => MaintenanceItem[]): boolean => {
       const current = load().document
+      const nextItems = change(current.items)
+
+      // Declined. Still push the freshly read document into state, because it
+      // may well be newer than what this session was rendering — that is
+      // usually *why* the change declined — and the screen should catch up.
+      if (nextItems === current.items) {
+        setDoc(current)
+        return false
+      }
 
       try {
-        setDoc(save({ ...current, items: change(current.items) }))
+        setDoc(save({ ...current, items: nextItems }))
+        return true
       } catch (error) {
         if (error instanceof StaleWriteError) {
           // A genuine race: another context wrote between our read and our
@@ -149,8 +195,18 @@ export function useSchedule(): Schedule {
           // now, because `current` was read fresh — this path can only be
           // reached when someone else really did write in between.
           const fresh = load().document
-          setDoc(save({ ...fresh, items: change(fresh.items) }))
-          return
+          const freshItems = change(fresh.items)
+
+          // The re-application can decline where the first attempt did not: the
+          // change function is being asked about different items this time, and
+          // whoever won the race is exactly who might have removed its target.
+          if (freshItems === fresh.items) {
+            setDoc(fresh)
+            return false
+          }
+
+          setDoc(save({ ...fresh, items: freshItems }))
+          return true
         }
         throw error
       }
@@ -188,6 +244,7 @@ export function useSchedule(): Schedule {
       // *without* a date changes nothing about what is newest, and there is no
       // reason a way back from the previous tap should disappear because the
       // user added something unrelated.
+      setUndoRefusedFor(null)
       mutate((items) => [...items, item])
     },
     [mutate, today],
@@ -215,6 +272,11 @@ export function useSchedule(): Schedule {
       // view — both are the user completing something, which is what undo is a
       // way back from.
       recordedThisSession.current = completion.id
+
+      // Whatever an earlier refused press had to say is about a tick-off the
+      // user has now moved on from. Leaving it standing next to a fresh offer
+      // would read as though it applied to this one.
+      setUndoRefusedFor(null)
 
       mutate((items) =>
         items.map((item) =>
@@ -266,6 +328,9 @@ export function useSchedule(): Schedule {
    */
   const offerId = undoable?.completion.id ?? null
   const offerRecordedAt = undoable?.completion.recordedAt ?? null
+  // Read here rather than inside the press, so the name in any message is the
+  // one that was on the button the user actually pressed.
+  const offerItemName = undoable?.item.name ?? null
 
   useEffect(() => {
     if (offerRecordedAt === null) return
@@ -282,8 +347,18 @@ export function useSchedule(): Schedule {
    * The target is re-checked inside the change function against the items as
    * they are at the moment of writing, so a retry after a concurrent write
    * undoes what is actually there. If what is there is no longer the entry the
-   * user was offered, nothing happens at all: another context having recorded
-   * something in between is not licence to delete it.
+   * user was offered, nothing is deleted: another context having recorded
+   * something in between is not licence to delete its work. Without that check
+   * the button labelled "Undo recording Boiler service as done" removes whatever
+   * happens to be newest, which a probe showed to be a different job's entry
+   * written by a second tab.
+   *
+   * **A refusal is reported, not swallowed.** Nothing being deleted used to mean
+   * nothing at all: the offer left the screen exactly as it does after a
+   * successful undo, so the user had no way to tell the two apart and would
+   * find out on the next reload, if ever. That is the fault FR-010a exists to
+   * forbid, and the same reasoning already applied a few lines up to the expired
+   * case.
    */
   const undoLast = useCallback(() => {
     if (offerId === null || offerRecordedAt === null) return
@@ -304,7 +379,9 @@ export function useSchedule(): Schedule {
       return
     }
 
-    mutate((items) => {
+    // Returning `items` unchanged is how the refusal is expressed, and `mutate`
+    // reads it as a decision not to write rather than as a document to save.
+    const undone = mutate((items) => {
       const target = mostRecentlyRecorded(items)
       if (target === null || target.completion.id !== offerId) return items
       return items.map((item) => (item.id === target.item.id ? undoCompletion(item) : item))
@@ -315,8 +392,14 @@ export function useSchedule(): Schedule {
     // rather than something the user just did, and clearing here is what stops
     // it sliding into the offer that was occupied a moment ago — the
     // walk-backwards through history the requirement forbids.
+    //
+    // Cleared on a refusal too. The entry is no longer the newest, so the offer
+    // is withheld either way, and leaving the marker set would mean it returned
+    // the moment the other context's entry was itself undone.
     recordedThisSession.current = null
-  }, [mutate, offerId, offerRecordedAt])
+
+    setUndoRefusedFor(undone ? null : offerItemName)
+  }, [mutate, offerId, offerItemName, offerRecordedAt])
 
   return {
     views: orderForDisplay(doc.items, today),
@@ -327,5 +410,6 @@ export function useSchedule(): Schedule {
     markDone,
     undoable,
     undoLast,
+    undoRefusedFor,
   }
 }

@@ -1,7 +1,10 @@
 import { useEffect, useRef } from 'react'
 import { StorageNotice } from './components/StorageNotice'
+import { UndoNotice } from './components/UndoNotice'
 import { ScheduleView } from './views/ScheduleView'
+import { ItemDetailView } from './views/ItemDetailView'
 import { ItemFormView } from './views/ItemFormView'
+import { ReadOnlyView } from './views/ReadOnlyView'
 import { useNavigation } from './navigation'
 import { useSchedule } from './useSchedule'
 import type { NewItemInput } from './useSchedule'
@@ -36,6 +39,38 @@ export function App() {
     nav.back()
   }
 
+  /**
+   * Undo removes its own control, so focus would fall to `<body>` — which
+   * silently returns a keyboard or screen-reader user to the top of the
+   * document with no indication that anything happened. Same treatment as a
+   * view change, for the same reason.
+   */
+  function handleUndo() {
+    schedule.undoLast()
+    headingRef.current?.focus()
+  }
+
+  /**
+   * The offer also withdraws itself when its window runs out, and it can do that
+   * while the Undo button holds focus — which drops focus to `<body>` exactly as
+   * pressing it once did, except that this time the user did nothing to cause
+   * it. Catching it here rather than inside the notice keeps it to one rule:
+   * if the offer has gone and focus went nowhere, put it back on the heading.
+   */
+  const undoId = schedule.undoable?.completion.id ?? null
+  useEffect(() => {
+    if (undoId !== null) return
+    if (document.activeElement === null || document.activeElement === document.body) {
+      headingRef.current?.focus()
+    }
+  }, [undoId])
+
+  // A detail view for a job that is no longer there is not a state to render;
+  // falling through to the list is what the user would do next anyway.
+  const detailId = nav.view.name === 'detail' ? nav.view.itemId : null
+  const detail =
+    detailId === null ? undefined : schedule.views.find((view) => view.item.id === detailId)
+
   return (
     <div className="app">
       <header className="app__header">
@@ -67,13 +102,55 @@ export function App() {
             </p>
           </div>
         )}
+        {schedule.undoable && (
+          <UndoNotice undoable={schedule.undoable} onUndo={handleUndo} />
+        )}
+        {/* An undo press that could not be honoured, said out loud.
+
+            The offer leaves the screen whether the press worked or not, so
+            silence here means the user cannot tell a tick-off that was taken
+            back from one that is still recorded — they would find out on the
+            next reload, if ever. `role="alert"` rather than `status` because
+            they asked for something and did not get it, and because focus moves
+            to the heading on every press: a polite announcement would queue
+            behind the heading's and could be cut off.
+
+            Styled as `.storage-notice` on purpose. That colour pair is already
+            walked by `e2e/contrast.spec.ts` against real browser-resolved
+            colours, so reusing it inherits a measured result instead of adding
+            an unaudited one — the same reasoning recorded on `.undo-notice`. */}
+        {schedule.undoRefusedFor !== null && (
+          <div role="alert" className="storage-notice">
+            <p>
+              {schedule.undoRefusedFor} is still recorded. Something else was saved in another
+              window, so nothing was taken back.
+            </p>
+          </div>
+        )}
       </div>
 
       <main className="app__main">
-        {nav.view.name === 'new' ? (
+        {/* Read-only comes first, and it replaces the view rather than
+            decorating it. Every other branch below draws a control that would
+            write, and FR-010a says a control that appears usable but silently
+            does nothing must not be shown. */}
+        {schedule.readOnly ? (
+          <ReadOnlyView />
+        ) : nav.view.name === 'new' ? (
           <ItemFormView today={schedule.today} onSave={handleSave} onCancel={nav.back} />
+        ) : detail ? (
+          <ItemDetailView
+            view={detail}
+            today={schedule.today}
+            onRecord={(completedOn) => schedule.markDone(detail.item.id, completedOn)}
+          />
         ) : (
-          <ScheduleView views={schedule.views} onAdd={() => nav.go({ name: 'new' })} />
+          <ScheduleView
+            views={schedule.views}
+            onAdd={() => nav.go({ name: 'new' })}
+            onOpen={(itemId) => nav.go({ name: 'detail', itemId })}
+            onMarkDone={(itemId) => schedule.markDone(itemId, schedule.today)}
+          />
         )}
       </main>
     </div>

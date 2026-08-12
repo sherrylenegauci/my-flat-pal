@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { APP_STATES } from './support/app'
+import { APP_STATES, hasControlsToSweep } from './support/app'
 import { INTERACTIVE_SELECTOR, readControlBoxes, readOverflow } from './support/probe'
 
 /**
@@ -48,8 +48,11 @@ for (const state of APP_STATES) {
 
     const boxes = await page.evaluate(readControlBoxes, INTERACTIVE_SELECTOR)
 
-    // A state with no controls would make this vacuous, so say so out loud.
-    expect(boxes.length, `no interactive controls found in "${state.name}"`).toBeGreaterThan(0)
+    // A state with no controls would make everything below vacuous, so the
+    // count is asserted rather than assumed. The one state that legitimately
+    // has none declares it, and is asserted to have none — see
+    // `hasControlsToSweep`.
+    if (!hasControlsToSweep(state, boxes.map((box) => box.element))) return
 
     const undersized = boxes
       .filter(

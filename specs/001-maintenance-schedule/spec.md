@@ -26,6 +26,21 @@ export it. If you get a new phone, you start again. We chose that deliberately �
 
 ---
 
+## Clarifications
+
+### Session 2026-08-11
+
+- Q: FR-007 promised undo survives closing and reopening the app, but undo is now a short window — which changes? → A: Undo is a short window (~10s) for the completion just recorded; older corrections happen in the job's history in the detail view. FR-007's second sentence is replaced.
+- Q: Adding a job with a last-done date records a completion — should that raise an undo offer? → A: No. Undo covers marking done and backdating only. A wrong date on a new job is fixed by editing the job.
+- Q: When the app finds data from a newer version and refuses to save, what should the write controls do? → A: Hide or disable them, so the screen matches the message. The app becomes a viewer of your data.
+- Q: Recording a job you did in the past is built but unspecified — keep it, and how much of it? → A: Keep it and specify it fully: past dates accepted, future dates refused, and an entry older than the newest one says the schedule has not moved.
+- Q: SC-005 promises keyboard-only operation, but that is a desktop idea and is only evidenced on Chromium — what should it promise instead? → A: Operating the app without touch on a phone, checked with VoiceOver on a real iPhone. This is mobile-first, and it replaces Tab-order traversal as the thing the criterion points at. *(Conflict closed by constitution v1.4.0.)*
+- Q: A ten-second window alone still lets a reload resurrect the offer (T102). Fix by storing which completion is undoable, or by scoping the offer to the session that recorded it? → A: Scope it to the session. Undo is offered only for a completion this session recorded, and never on a freshly opened app.
+
+  **Note, because this looks like a reversal and is not one.** Session-scoping was removed from the original design precisely because it made a mis-tap permanent once the phone backgrounded, and at that time nothing else could recover it. The detail view now shows full history, so an older mistake has a home. Session-scoping is safe *because* that view exists, and would not have been before it.
+
+---
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - See what my flat needs (Priority: P1)
@@ -74,8 +89,11 @@ group, remember the date, and show a sensible next due date — and still be the
    gets a new due date based on how often it recurs.
 2. **Given** I've ticked something off, **When** I look at it, **Then** I can see when it was last
    done.
-3. **Given** I ticked something off by mistake, **When** I undo it, **Then** everything goes back
-   exactly as it was, including the old due date. This works even if I've closed the app since.
+3. **Given** I have just ticked something off by mistake, **When** I undo it straight away, **Then**
+   everything goes back exactly as it was, including the old due date.
+3a. **Given** I ticked something off a while ago, **When** I open the app, **Then** I am not offered
+   an undo for it — correcting that is done from the job's history, so nothing I did weeks ago can
+   be deleted by a stray tap.
 4. **Given** a job has been done several times, **When** I open it, **Then** I can see the full
    history, most recent first.
 
@@ -147,14 +165,31 @@ to be precise rather than friendly. Everything above is the readable version.
   reloading or reinstalling the app.
 - **FR-006**: Users MUST be able to mark an item done, which MUST record the completion and schedule
   the next occurrence.
-- **FR-007**: Users MUST be able to undo a completion they entered by mistake. Undo MUST remain
-  available after the app is closed and reopened.
+- **FR-006a**: Users MUST be able to record a job they did in the past but did not log at the time.
+  A date in the future MUST be refused and nothing saved. If the date entered is older than the most
+  recent completion already recorded, the entry MUST be added to the history and the schedule MUST
+  NOT move — and the system MUST say so, because a tap that appears to do nothing reads as a fault.
+- **FR-007**: Users MUST be able to undo a completion immediately after recording it. The offer
+  MUST be limited to a completion recorded **in the current session**, and MUST expire a short time
+  after that — around ten seconds. It MUST NOT be offered on a freshly opened app, whatever the
+  clock says, and MUST NOT be offered for any completion this session did not record.
+- **FR-007a**: Undo MUST affect only the completion the user has just recorded. It MUST NOT
+  remove any earlier completion, and repeated use MUST NOT walk backwards through history.
+  Correcting an older mistake is done from the item's history, not from the undo offer.
+- **FR-007b**: Undo applies to marking an item done and to recording a past completion. It MUST
+  NOT be offered for the completion created by adding a new item with a last-done date — the user
+  added an item rather than completing one, and undo would strip the date while leaving the item.
+  A wrong date on a new item is corrected by editing it (FR-009).
 - **FR-008**: The system MUST retain the completion history of each item and present it in date
   order.
 - **FR-009**: Users MUST be able to edit an item's name and interval, and MUST be able to delete an
   item after confirming.
 - **FR-010**: The system MUST persist all items and history across app closure, device restart, and
   app updates.
+- **FR-010a**: If the stored data was written by a newer version of the app, the system MUST refuse
+  to save rather than risk damaging it, and MUST make that visible: every control that would change
+  something MUST be hidden or disabled, so what is on screen matches what the app says. A control
+  that appears usable but silently does nothing MUST NOT be shown.
 - **FR-011**: The system MUST show an empty state that explains the app's purpose when no items
   exist.
 - **FR-012**: The system MUST NOT present a long-overdue recurring item as multiple outstanding
@@ -189,9 +224,19 @@ How we know it worked:
 - **SC-003**: Every job whose due date has passed shows as overdue, with nothing needed from you to
   refresh it.
 - **SC-004**: Ticking something off takes no more than two taps from the main screen.
-- **SC-005**: Every part of this works by keyboard alone on a 375px-wide screen, with WCAG 2.1 AA
-  contrast throughout and touch targets of at least 44x44px. *(Required by the project
-  constitution.)*
+- **SC-005**: Every part of this can be operated on a phone without touching the screen, checked
+  with VoiceOver on a real iPhone — swiping between elements and double-tapping, which is how
+  someone who cannot use touch actually drives a phone. WCAG 2.1 AA contrast throughout, and touch
+  targets of at least 44x44px. *(Required by the project constitution.)*
+
+  Tab-order traversal in a desktop browser is no longer what this criterion points at. It was a
+  poor proxy for a phone app, and it was only ever evidence from Chromium: Safari does not Tab to
+  buttons unless the user turns that on, so the browser tier honestly skips the sweep there rather
+  than reporting a pass for a traversal that never happened.
+
+  Keyboard operability is still required — it is WCAG 2.1.1 at Level A, and the constitution's
+  semantic-HTML rule delivers it by construction. It is simply no longer what we point at when we
+  claim this app is accessible. *(Conflict closed by constitution v1.4.0, 2026-08-11.)*
 - **SC-006**: Every part of this works in the installed app on a real phone, with nothing hidden
   behind the notch or home indicator, and without depending on browser buttons. *(Also required by
   the constitution.)*

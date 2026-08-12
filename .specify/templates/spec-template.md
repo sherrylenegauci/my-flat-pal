@@ -117,10 +117,17 @@
 - **SC-003**: [User satisfaction metric, e.g., "90% of users successfully complete primary task on first attempt"]
 - **SC-004**: [Business metric, e.g., "Reduce support tickets related to [X] by 50%"]
 - **SC-005**: [MANDATORY per Constitution II — accessibility outcome. Must cover all four
-  requirements, not a subset: keyboard-only operation, **a visible focus indicator**, **touch
-  targets of at least 44x44px**, and WCAG 2.1 AA contrast, at a 375px viewport. e.g., "Every flow
-  in this feature is completable by keyboard alone at 375px, with a visible focus indicator on
-  every control, 44x44px minimum touch targets, and AA contrast throughout"]
+  requirements, not a subset: **operable without touching the screen**, **a visible focus
+  indicator**, **touch targets of at least 44x44px**, and WCAG 2.1 AA contrast, at a 375px
+  viewport. e.g., "Every flow in this feature can be operated without touch, checked with
+  VoiceOver on a real iPhone, with a visible focus indicator on every control, 44x44px minimum
+  touch targets, and AA contrast throughout at 375px".
+
+  Write the touch-free clause in terms of the device, not the desktop. Keyboard operability
+  remains required — it is WCAG 2.1.1 at Level A — but Tab-order traversal in a desktop browser
+  is supporting automated evidence, not the criterion. It cannot be the criterion for a phone
+  app: Safari does not Tab to buttons unless the user turns that on, so such a sweep only ever
+  reports on Chromium.]
 - **SC-006**: [MANDATORY per Constitution II + PWA constraints — installed outcome, e.g., "Every
   flow in this feature works in the installed app on a real phone, with no content obscured by
   the notch or home indicator and no dependence on browser chrome"]

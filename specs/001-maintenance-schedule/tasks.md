@@ -137,19 +137,19 @@ the same handful of files.
 
 ### Tests for User Story 2 (MANDATORY) ⚠️
 
-- [ ] T053 [P] [US2] Failing tests in `tests/ui/complete.test.tsx`: marking a due item done removes it from the attention group and schedules the next occurrence (FR-006); it takes no more than two taps from the main view (SC-004); **the completion survives a reload** (the defect that made US2 depend on a Phase 5 task)
-- [ ] T054 [P] [US2] Failing tests in `tests/ui/undo.test.tsx`: undo restores the exact prior state including the previous due date; **undo still works after the app is closed and reopened** (plan.md § Data model — session-scoping was removed because it made a mis-tap permanent)
-- [ ] T055 [P] [US2] Failing tests in `tests/ui/backdate.test.tsx`: a completion may be backdated; a future `completedOn` is rejected; a backdated completion older than the newest one adds to history **and gives the user feedback that nothing about the schedule changed** (previously a silent no-op contradicting FR-006)
-- [ ] T056 [P] [US2] Failing tests in `tests/ui/item-detail.test.tsx`: last-done date is shown (US2 scenario 2); completion history lists newest first (FR-008)
-- [ ] T057 [P] [US2] Failing test in `tests/ui/keyboard-us2.test.tsx`: mark-done, undo, and viewing history are each completable by keyboard alone (SC-005 — "every flow")
-- [ ] T058 [P] [US2] Failing test in `tests/ui/axe-us2.test.tsx`: axe scan of the detail view reports no violations
+- [X] T053 [P] [US2] Failing tests in `tests/ui/complete.test.tsx`: marking a due item done removes it from the attention group and schedules the next occurrence (FR-006); it takes no more than two taps from the main view (SC-004); **the completion survives a reload** (the defect that made US2 depend on a Phase 5 task)
+- [X] T054 [P] [US2] Failing tests in `tests/ui/undo.test.tsx`: undo restores the exact prior state including the previous due date; **undo still works after the app is closed and reopened** (plan.md § Data model — session-scoping was removed because it made a mis-tap permanent)
+- [X] T055 [P] [US2] Failing tests in `tests/ui/backdate.test.tsx`: a completion may be backdated; a future `completedOn` is rejected; a backdated completion older than the newest one adds to history **and gives the user feedback that nothing about the schedule changed** (previously a silent no-op contradicting FR-006)
+- [X] T056 [P] [US2] Failing tests in `tests/ui/item-detail.test.tsx`: last-done date is shown (US2 scenario 2); completion history lists newest first (FR-008)
+- [X] T057 [P] [US2] Failing test in `tests/ui/keyboard-us2.test.tsx`: mark-done, undo, and viewing history are each completable by keyboard alone (SC-005 — "every flow")
+- [X] T058 [P] [US2] Failing test in `tests/ui/axe-us2.test.tsx`: axe scan of the detail view reports no violations
 
 ### Implementation for User Story 2
 
-- [ ] T059 [US2] Build `src/ui/views/ItemDetailView.tsx` showing last-done and history, with a visible back control to the schedule (T011)
-- [ ] T060 [US2] Add the mark-done action to `src/ui/components/ItemRow.tsx`, reachable in one tap
-- [ ] T061 [US2] Add the durable undo affordance to `src/ui/App.tsx`
-- [ ] T062 [US2] Wire completion and undo through the repository (write path already exists from T028)
+- [X] T059 [US2] Build `src/ui/views/ItemDetailView.tsx` showing last-done and history, with a visible back control to the schedule (T011)
+- [X] T060 [US2] Add the mark-done action to `src/ui/components/ItemRow.tsx`, reachable in one tap
+- [X] T061 [US2] Add the durable undo affordance to `src/ui/App.tsx`
+- [X] T062 [US2] Wire completion and undo through the repository (write path already exists from T028)
 
 **Checkpoint**: The schedule now stays true over time, and mis-taps are recoverable.
 
@@ -198,6 +198,173 @@ their acceptance criteria — each one names the manual task it takes over.
 
 - [X] T093 **Fix the interval row's layout and make the dropdown look like one** — found by Sherrylene looking at the running app, not by any check. The `Period` label was a fourth item in a three-column grid, so it wrapped and dragged the dropdown onto its own row, leaving it stranded from the label naming it and reading as a stray text field. The label is now visually hidden (still in the accessibility tree, so it is still announced), the count and unit share a row, and the chevron went from 12×8 to 16×10 so the control announces itself as a dropdown before you tap it. **Nothing automated could have caught this**: axe was satisfied because `htmlFor` correctly associated the label, and the layout checks were satisfied because nothing overflowed and every target met 44×44. It was only wrong to look at — the exact gap the constitution records when it says the real-browser tier cannot replace a person on a device
 
+### Undo, read-only and design (from the 2026-08-11 clarification)
+
+Test tasks come first, as Principle III requires. An earlier revision listed T097 and T099
+below as implementation-only, which would have repeated exactly the gap recorded against
+US1 — where tests and implementation landed in one commit and test-first became
+unverifiable after the fact.
+
+**FR-006a** (recording a past completion) is already covered: T055's tests and the US2
+implementation satisfy it. The clarification wrote down behaviour that existed rather than
+asking for new behaviour, so it needs no task.
+
+- [X] T094 [P] Failing tests in `tests/domain/undo-window.test.ts`: a pure function deciding whether a completion is still undoable at a given moment, with the moment passed as a parameter and never read from a clock. True just after `recordedAt`, false well after it, and false for a completion recorded days ago. Belongs in the domain tier because it is arithmetic on two timestamps, and because time as a parameter is how every other date decision in this codebase is tested
+- [X] T095 [P] Failing tests in `tests/ui/undo-expiry.test.tsx` using fake timers (FR-007, FR-007a): the offer appears on marking done and disappears once the window passes without the user acting; **an app opened on a document containing only old completions offers no undo at all**; and pressing undo once removes exactly one completion and leaves the rest of the history intact. That last assertion is the regression guard for the defect — the current behaviour removes one per press, forever, until nothing is left
+- [X] T096 [P] Failing test in `tests/ui/undo-not-after-add.test.tsx` (FR-007b): adding a job with a last-done date raises no undo offer. The current behaviour offers one, and taking it strips the date and turns the job just created into "Never done" — so this test must assert the *absence* of the control, which means it must be observed failing against today's code or it proves nothing
+- [X] T097 **Time-limit the undo offer, and stop it deleting history** (issue #98, spec FR-007/FR-007a/FR-007b). Undo is derived from the newest `recordedAt` anywhere in the schedule with nothing to expire it, so on a freshly opened app it offers to delete history the user never touched — verified by probe: three presses removed completions dated 2020, 2022 and 2024, with no confirmation, on a document the app had never written. It is also the first thing above `<main>`, so a keyboard user could Tab once and Enter into losing data. Needs no storage-contract change: `recordedAt` is already stored, so the offer stays derived and additionally checks the completion is within ~10 seconds. Must be measured against `recordedAt` versus now, **not** against when the component mounted, or reopening the app would resurrect an expired offer. Adding a job with a last-done date must raise no offer at all (FR-007b). **This is a data-loss defect, not a polish item — it should land before US3 builds on top of it.**
+
+  **Correction, found while implementing.** The sentence above — "the offer stays derived and
+  additionally checks the completion is within ~10 seconds" — is not sufficient, and neither is
+  the matching claim in `plan.md` that FR-007b falls out of the bound. It does not. The window
+  delivers FR-007 and it stops a freshly opened app offering to delete old history, but two rules
+  in FR-007a and FR-007b cannot be derived from the stored document at all:
+
+  - **FR-007b.** An item created today holding one completion recorded a second ago is what you
+    get *both* from adding a job with a last-done date *and* from adding a job and then ticking
+    it off. The document does not distinguish them, so no rule reading it can.
+  - **FR-007a.** Tick two different jobs off within the same ten seconds and undo once: the
+    other job's tick-off is now the newest and still inside the window, so the offer returns and
+    a second press walks backwards. Verified by probe, both with and without the fix.
+
+  Both are handled by remembering one completion id in `useSchedule` — the entry that must *not*
+  be offered, set when a job is added with a date and again after an undo. It is only ever used
+  to withhold an offer, so a stale value can only decline to undo something. The alternative that
+  would keep the offer purely derived is a field in the stored document, which is a persistence
+  choice and therefore needs a plan amendment first (Technology Constraints). Not taken here.
+
+  The cost of that choice is larger than first written, and is now T102: the remembered id does
+  not survive a relaunch, so both rules above fail across one. Confirmed by probe, twice
+  independently and then a third time by hand.
+- [X] T098 [P] Failing tests in `tests/ui/read-only.test.tsx` (FR-010a): with a stored document carrying a higher `schemaVersion`, no control that would change anything is present or enabled — not Add job, not Mark done, not Undo — and the notice explaining why is shown. Seed through the repository rather than the UI, since the UI cannot create this state
+
+  **Written differently from the line above, deliberately.** "No Mark done, no Undo" cannot be
+  asserted honestly here: `load()` returns an empty document for a too-new file, so a read-only
+  screen has no rows for those controls to belong to and the assertion could never fail — which
+  the constitution's Testing Strategy forbids outright. The test enumerates every control the
+  read-only screen renders and requires that none of the live ones is a write control, so any
+  write control appearing fails it, including ones that do not exist yet. The row-level and
+  detail-level write controls remain genuinely uncovered in a read-only session, and that gap is
+  recorded in the test file rather than papered over.
+- [X] T099 **Make read-only sessions honest** (spec FR-010a). When the stored document came from a newer build, `save` throws `ReadOnlyError`, but Add job, Mark done and Undo all still render. React does not catch errors thrown from event handlers, so the tap saves nothing and says nothing, while the banner claims "Nothing can be changed". Hide or disable every write control instead, so the screen matches the message. Unreachable today — the schema has never left v1 — but US2 moved it from inside a form to the opening screen
+
+  **Done by replacing the view rather than gating controls one by one.** A read-only session now
+  renders `src/ui/views/ReadOnlyView.tsx` in place of the schedule: a heading, a paragraph, and
+  no controls at all. Gating each control instead would have meant threading a flag through
+  `ScheduleView`, `ItemRow` and `ItemDetailView` to reach code that can never run, since the
+  read-only document has no items — dead code that no test could honestly exercise.
+
+  **A second dishonesty fixed at the same time, not in the original task.** The read-only screen
+  used to render the ordinary empty state, headed "Nothing recorded yet". That is a claim this
+  build cannot support: the user may well have a full schedule, written by the newer build, that
+  this one declined to read. In an app with no export and no backup, being told your records are
+  gone is not a small thing to get wrong.
+
+  **Browser-tier consequence.** The read-only state now has zero interactive controls, which
+  trips the `controls.length > 0` guard that `e2e/layout.spec.ts` and `e2e/focus-visibility.spec.ts`
+  apply to every state in `APP_STATES`. The guard is right — it stops a state that renders
+  nothing from sweeping vacuously — so the exception is made explicit per state rather than the
+  guard relaxed
+- [ ] T100 [P] **Design refresh: colour and personality** (issue #99). The app is near-monochrome — white cards on grey, one blue accent, status as small coloured text — and reads as a spreadsheet rather than something for a home. Constraints: Principle I forbids a component library, so this is CSS and tokens; status MUST NOT be carried by colour alone, which `e2e/colour-independence.spec.ts` enforces; 375px first; 44×44 targets hold. **Every ratio must be computed, not estimated** — `tokens.css` once carried twelve ratios recorded as measured that were all estimates, and `focus.css` claimed 3.6:1 for a ring that measured 2.69:1. `e2e/contrast.spec.ts` now checks this against real browser-resolved colours on both engines, so a careless palette turns the suite red rather than shipping
+- [ ] T103 **RELEASE BLOCKER — a mistaken completion cannot be removed, by any means** (FR-007a). Sequenced after US3 by decision on 2026-08-11: removing a completion needs a confirmation dialog and T067 builds one, so doing this first would build that dialog twice. **Waiting is safe only because nothing is released.** Today: tap Mark done by mistake, let ten seconds pass, and that entry is permanent — there is no control to remove it, and no way to delete the job either, since US3 is unbuilt. The only remedy is clearing site storage, which destroys every job. The cost is not one wrong row: the completion is dated today, so the next due date moves a full interval and an annual service drops off the list for a year, and the history — kept because `spec.md` says it is "worth being able to prove" — now records work that never happened. **FR-007a's closing sentence, "correcting an older mistake is done from the item's history", is false until this exists**, and the same claim justifies session-scoped undo in `spec.md`, `plan.md` and T102. Add a control in the detail view's history list that removes one completion, reusing T067's dialog. Do not ship without it
+- [X] T104 [P] **Pin the undo window to the completion, not to mount** (FR-007). Nothing in the suite establishes this. Sabotage proved it: capture a timestamp when the hook first runs and measure the window from that instead of from `recordedAt`, and **209 of 209 tests still pass** — reproduced independently by the verification agent and by me. The regression it permits points the opposite way from the original defect and is worse in practice: with a mount-relative window, anyone who has had the app open more than ten seconds gets no undo offer at all when they tick something off, which is every real user. `tests/domain/undo-window.test.ts` pins the arithmetic; nothing pins what is passed into it. Add a behaviour test that opens the app, lets well over the window pass with nothing recorded, then marks a job done and asserts the offer appears and works
+
+  **Done. No source change — this task was coverage for behaviour that was already correct**, which
+  is why the acceptance step was sabotage rather than a green run. "offers undo, and honours it,
+  for a job ticked off long after the app was opened" is in `tests/ui/undo-expiry.test.tsx`. It
+  lets three windows pass with nothing recorded, then ticks a job off, and asserts the offer both
+  appears and takes the entry back. Applying the exact sabotage in the task line — a `mountedAt`
+  ref substituted for `newest.completion.recordedAt` at the render-time offer and for
+  `offerRecordedAt` at the press-time re-check — turned that one test red and nothing else:
+  3 failed / 211 passed, where two of the three were the T105b tests still awaiting their fix.
+  `src/ui/useSchedule.ts` was restored byte-identical afterwards. The press half is not decoration:
+  the substitution made only inside `undoLast` leaves the button on screen and would slip past an
+  appearance-only assertion.
+
+  **The file's header claimed two other tests did this job.** They do not, and the header is
+  corrected under T106.
+- [X] T105 [P] **Test the guard that stops undo deleting another context's completion** (FR-007a). **Decision 2026-08-11: the expired press stays silent — no message, closed as won't-fix.** The rationale is that the list already tells the truth: after a completion the row shows as done with its new due date, and it does not revert, so nothing is concealed from a user who looks. A message would add weight to a 375px screen for a case whose state is already on screen. Noted as a decision rather than an oversight, so it is not re-raised as a defect: the *other* silent press (another window saved in between) genuinely was one, because there the user's expectation and the stored state diverge with nothing on screen explaining it. Load-bearing and untested: delete the id comparison in `undoLast` and the suite still passes 209 of 209, while a probe shows the button labelled "Undo recording Boiler service as done" deleting a *different* job's entry written by a second tab. Add a test where a second context writes a completion, the standing offer is pressed, and both jobs' stored histories are asserted unchanged. Worth fixing while there: that press is a silent no-op which still increments `revision` — the same "a control that visibly does nothing reads as a fault" problem FR-010a exists to legislate against
+
+  **Done, in two halves that were held to different standards.** All four tests are in
+  `tests/ui/undo-other-context.test.tsx`, which models a second tab by calling `save()` from the
+  repository directly — jsdom dispatches no `storage` event for a same-document write, so the
+  running app genuinely never hears about it, which is the only way the offer can still be standing
+  when its target is no longer newest. A test that fired a storage event would make the app reload
+  and withdraw the offer, leaving nothing to press.
+
+  *The guard* was already correct, so its test was accepted on sabotage: replacing
+  `if (target === null || target.completion.id !== offerId)` with `if (target === null)` turned
+  "deletes nothing from either job when another window has saved since" red. The failure is a diff
+  showing Smoke alarms' entry deleted by a button naming Boiler service.
+
+  **The count that sabotage gives has since changed, and this note used to state it as a fact
+  anyone could reproduce.** At the test commit it was 3 failed / 211 passed and the guard test was
+  the only previously-green one among them. At HEAD it is 4 failed / 211 passed, because the fix
+  below added three tests that stand downstream of the same mechanism: with the guard gone the
+  press succeeds, so no refusal notice is raised, no `StaleWriteError` is provoked, and the axe
+  sweep has no refusal state to visit. That is the mechanism being well covered rather than the
+  test failing to isolate — but "and nothing else" is no longer true and is withdrawn.
+
+  *The silent no-op* was a real fix and went test-first. Both tests were observed failing against
+  the old code — one on the absent message (`Alerts on screen: []`), one on a `StaleWriteError` the
+  other context should never have seen. `mutate` now treats a change function returning the array
+  it was given as a decision not to write, on the first attempt and on the stale-write
+  re-application alike, and reports whether anything landed; `undoLast` uses that to raise a
+  `role="alert"` notice naming the job: "<job> is still recorded. Something else was saved in
+  another window, so nothing was taken back." It clears on the next thing the user records, adds or
+  undoes. `axe-us2.test.tsx` now visits the state, which no other sweep reaches.
+
+  **Two judgements, recorded because the task did not settle them.** The wording and the choice of
+  `role="alert"` over `status` are mine — alert because the user asked for something and did not
+  get it, and because focus moves to the heading on every press, so a polite announcement would
+  queue behind the heading's. Whether VoiceOver actually interrupts and reads it is a real-device
+  question and jsdom cannot answer it.
+
+  **Not fixed, and it is the same class of silence**: pressing Undo *after the window has passed*
+  is also a no-op that only removes the button. `useSchedule` treats the button disappearing as
+  sufficient there. The two cases need different sentences, so unifying them is a scope decision
+  rather than a tidy-up, and it is Sherrylene's.
+- [X] T106 [P] **Correct four places that still describe the pre-T102 design.** They do not change behaviour; they hand the next reader an invariant the code does not have. `src/domain/schedule.ts` says undo is derived "which is what makes it survive the app being closed... no remembered session, nothing to expire" — all three clauses now false, on the function the whole offer is built on. `plan.md` calls the derived design "genuinely good" eighteen lines above the paragraph explaining why it was insufficient, and still files "session-scoped undo made a mis-tap permanent — undo is now durable" under fixed findings, which is exactly what T102 reversed. And `undo-expiry.test.tsx`'s header claims two tests discriminate mount-relative from completion-relative expiry, which T104 shows they no longer do
+
+  **Done, and it was five places rather than four.** `plan.md` also listed "durable undo" among
+  what the UI tests cover, in the same list-of-coverage sentence — the same falsehood as the fixed
+  finding, so it is corrected with it and now reads "session-scoped undo and its window".
+
+  **Nothing was deleted.** Both `plan.md` entries record real findings that were correct when made,
+  and the constitution's own history keeps superseded reasoning rather than erasing it. The
+  "genuinely good" paragraph keeps the praise and says what it was believed about and why the
+  property being praised is the one that had to go. The fixed finding keeps "session-scoped undo
+  made a mis-tap permanent" and records that the answer changed twice: durable undo was right until
+  the detail view existed, produced two data-loss defects of its own (T097, T102), and was reversed
+  on 2026-08-11 once full history gave an older mistake a home.
+
+  `src/domain/schedule.ts`'s comment on `mostRecentlyRecorded` mattered most and got the most: it
+  now says outright that being newest is necessary and nowhere near sufficient, names the two
+  conditions `useSchedule` adds that no function reading the document could supply, and keeps the
+  struck-through claim so the next reader recognises it if they meet it elsewhere. It also keeps
+  the one thing the derived answer still genuinely buys — that the entry the notice names and the
+  entry `undoCompletion` removes are computed the same way and cannot drift apart
+- [X] T102 **Scope the undo offer to the session that recorded the completion** (FR-007, FR-007a, FR-007b). **Decision taken 2026-08-11: session scope, not a stored field.** Invert the current logic — instead of remembering one completion id to *refuse*, remember the completion id this session *recorded* and offer undo only for that. It fails closed: a lost memory means no offer rather than a wrong one, where the current arrangement fails open. It needs no change to what is stored, so no plan amendment for a persistence change. It drops undo across a relaunch entirely, which is consistent with the ten-second window already chosen — locking the phone after tapping was already accepted as losing the offer. Two existing tests in `tests/ui/undo.test.tsx` assert survival across a reopen inside the window and must change; **change them deliberately and say so**, since editing a test to fit an implementation is how a broken feature gets hidden. Session-scoping was rejected in the original design because it made a mis-tap permanent when the phone backgrounded — that no longer holds, because the detail view now shows full history. Numbered after the design tasks because it was found after them, by verification of T097; it is not lower priority than them. The offer is derived from the stored document, but the one id the app refuses to offer lives in a React ref, so a relaunch resets the refusal without resetting the offer. Two sequences, both reproduced by probe three times independently:
+
+  1. Add a job with a last-done date. No offer, correctly. Reopen the app within ten seconds and the offer is there — "Undo recording Gutters as done". Pressing it leaves storage at `{"Gutters":[]}` and the row reads "Never done". That is the exact outcome FR-007b exists to prevent.
+  2. Tick off Boiler, tick off Alarms two seconds later, press undo once. Correctly no second offer. Reopen within the window and the offer returns naming Boiler; pressing it removes Boiler's tick-off too. Two presses, two completions, separated only by a relaunch — FR-007a's "repeated use MUST NOT walk backwards through history".
+
+  **Bounded, not unbounded.** The window still holds, so only completions recorded in the last ten seconds are reachable and the 2020/2022/2024 history that started all this is not. Both entries a user could lose this way are ones they made seconds earlier. This is a much smaller defect than the one T097 fixed, but it is the same defect.
+
+  **Three fixes, all with costs, and the choice is Sherrylene's because they differ in kind:**
+  - *Move the refused id into the stored document.* Satisfies every requirement including across a relaunch, and keeps the offer derived as `plan.md` describes. Costs a change to the persistence contract, which the constitution says must be specified in the plan before implementation — so this needs a plan amendment first, which is why it was not taken unilaterally.
+  - *Invert to a positive marker* — offer undo only for a completion this session recorded. Fails closed, needs no stored change, and closes both sequences. Costs undo across a relaunch entirely, and contradicts two tests that currently assert the offer survives one. Note those tests assert more than FR-007 requires: the spec demands undo "immediately after recording", and says the offer must not appear on a freshly opened app.
+  - *Accept it as documented.* Defensible given how narrow it is, but FR-007a and FR-007b are written without qualifiers, so this means amending the spec rather than leaving it be.
+
+  **Done: the second option, as decided.** `useSchedule` now holds `recordedThisSession` — the completion id `markDone` minted, cleared when undo is pressed, never set by `addItem`. The offer requires that id *and* that the entry is still the newest by `recordedAt` *and* that it is inside the window; each refuses on its own. The newest-entry check stays because `undoLast` removes the most recently recorded completion, so offering anything else would delete an entry other than the one named. `addItem` now satisfies FR-007b by doing nothing, and does not clear the marker: adding a job with a date makes that completion the newest, so an earlier offer is withheld without help, and adding one without a date is no reason to remove the way back from the user's last tap.
+
+  **The task line above is wrong on one detail.** The two tests asserting survival across a reopen are one per file — `tests/ui/undo.test.tsx` ("still works after the app has been closed and reopened inside the window") and `tests/ui/undo-expiry.test.tsx` ("still offers undo when the app is reopened inside the window"). Both were changed to require the offer's absence *and* that the completion is still stored, so neither can pass against an implementation that withholds the offer by discarding the tick-off; `undo.test.tsx` also asserts the entry is listed in the job's detail-view history. Both sequences above are now tests in `tests/ui/undo-across-relaunch.test.tsx`, observed failing against the old code with the button rendered and named ("Undo recording Gutters as done", "Undo recording Boiler service as done").
+
+  **Two comments left standing that are now weaker than they read.** `undo-expiry.test.tsx`'s "does not resurrect an expired offer when the app is reopened" and "offers nothing on an app opened on old completions" still pass, but session scope alone now satisfies them, so they no longer discriminate mount-relative expiry from completion-relative expiry. The window is still genuinely exercised by "withdraws itself once the window passes" and by the press-time enforcement test, both within one session.
+- [ ] T101 [P] **Design refresh: typographic hierarchy** (issue #99). Everything sits at roughly the same size and weight, so a job's name, its status and its due date compete instead of reading in order of importance. Touches `tokens.css` and `app.css` only; do not change markup structure, because the heading and list semantics are what the axe and VoiceOver checks depend on
+
+**The design tasks need no new test tasks.** `e2e/contrast.spec.ts` and `e2e/colour-independence.spec.ts` already check exactly what could go wrong here, on both engines, against real rendered colours — that is the safety net that makes a palette change safe to attempt. Adding jsdom tests for colour would be writing a check that cannot check, which the constitution forbids.
+
 **Not absorbed, and staying manual**: T075 (service-worker update path), T076/T077 (timings needing
 a named device), T078 (real-iPhone/Android gate, including home-screen install), T079 (durability
 across force-quit and restart). A green e2e suite must not be read as covering these.
@@ -213,6 +380,7 @@ across force-quit and restart). A green e2e suite must not be read as covering t
 - [ ] T076 Measure app-shell start-up against SC-002 on a named device or a stated CPU-throttle factor — "mid-range phone" is not reproducible
 - [ ] T077 Time a first-time user recording their first item against SC-001, which had no verification at all
 - [ ] T078 **Run the full manual device checklist in plan.md § Running and checking it on a real iPhone and a real Android phone** — SC-006 and Constitution gate 2b. Not automatable
+  - **Now also covers touch-free operation.** Constitution v1.4.0 makes VoiceOver on a real iPhone the check that discharges the accessibility gate; automated keyboard traversal is supporting evidence only. So this task must include driving each flow with VoiceOver — swipe between elements, double-tap to activate — for adding a job, marking one done, undoing, and viewing history. Nothing in the repository approximates this.
   - **Partly done, 2026-08-09**: the interval dropdown was checked on a real iPhone in Safari and opens the native wheel picker correctly. Still outstanding: everything else on the checklist, and home-screen install in particular, which cannot be checked over a LAN address because service workers require HTTPS or localhost. A proper HTTPS preview is needed to close this task.
   - **Do not test dropdowns in Chrome's device emulation.** A `<select>`'s option list is drawn by the browser and the OS outside the document — it has no DOM node, no CSS reaches it, and it does not appear in screenshots, so neither Playwright nor a page capture can see it. Under device emulation the page is scaled to a fake phone while that popup is positioned and sized in real screen coordinates, so it renders small and lands top-right instead of under the field. This is an emulation artifact affecting every site with a `<select>`, and it cost an investigation before being recognised. Judge native pickers on a real device only.
 - [ ] T079 Verify the data durability checklist: persistence requested, refusal reported honestly, items survive force-quit and device restart (SC-007)

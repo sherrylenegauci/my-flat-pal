@@ -121,6 +121,58 @@ export function completeItem(
   return { ...item, completions: [...item.completions, completion] }
 }
 
+/** A tick-off together with the job it belongs to. */
+export interface RecordedCompletion {
+  item: MaintenanceItem
+  completion: Completion
+}
+
+/**
+ * The tick-off undo would remove: the highest `recordedAt` anywhere in the
+ * schedule, and the job holding it.
+ *
+ * Undo is one step across the whole schedule rather than per job, so "which
+ * entry would undo remove" has to be answerable from the items alone. That is
+ * what this function is for, and it is all it is for.
+ *
+ * **It does not decide whether undo is offered, and must not be read as though
+ * it did.** This comment used to say the derived answer was "what makes it
+ * survive the app being closed", with "no remembered session, nothing to expire,
+ * and nothing to restore on start-up". All three clauses are now false, and the
+ * first was the defect: derived-with-nothing-to-expire-it meant a freshly opened
+ * app offered to delete history it had never written — three presses removed
+ * completions dated 2020, 2022 and 2024, with no confirmation at any point.
+ *
+ * FR-007 as amended on 2026-08-11 requires two further conditions that no
+ * function reading the document can supply, and `useSchedule` applies both on
+ * top of this one. The entry must have been recorded **in the current session**,
+ * so a relaunch offers nothing whatever the clock says — storage cannot tell a
+ * tick-off from a date typed into the add form, which is why this had to become
+ * a remembered session (T102). And it must be inside a ten-second window
+ * measured from its own `recordedAt` against the clock now, so there is very
+ * much something to expire (T097). Being newest is necessary here and nowhere
+ * near sufficient.
+ *
+ * What it still buys is that the entry the notice *names* and the entry
+ * `undoCompletion` *removes* are computed the same way and cannot drift apart.
+ *
+ * Ties on `recordedAt` resolve to the last one encountered, which is the most
+ * recently appended. They are only reachable when two entries share a
+ * millisecond, but leaving it to chance would make undo and the notice
+ * describing it disagree about which entry they mean.
+ */
+export function mostRecentlyRecorded(items: MaintenanceItem[]): RecordedCompletion | null {
+  let newest: RecordedCompletion | null = null
+  for (const item of items) {
+    for (const completion of item.completions) {
+      if (newest === null || completion.recordedAt >= newest.completion.recordedAt) {
+        newest = { item, completion }
+      }
+    }
+  }
+  return newest
+}
+
 /**
  * Undo the most recently *recorded* tick-off — the highest `recordedAt`, not
  * the latest `completedOn`.
@@ -128,21 +180,34 @@ export function completeItem(
  * Those differ exactly when someone backdates an entry, which is the case where
  * getting it wrong hurts: you mistype a date, hit undo, and the wrong tick-off
  * disappears. The entry you just made is the one you mean.
+ *
+ * Defined in terms of `mostRecentlyRecorded` so that the entry the app *names*
+ * in its undo notice and the entry undo actually removes cannot drift apart.
  */
 export function undoCompletion(item: MaintenanceItem): MaintenanceItem {
-  if (item.completions.length === 0) return item
+  const target = mostRecentlyRecorded([item])
+  if (target === null) return item
 
-  let newestIndex = 0
-  for (let i = 1; i < item.completions.length; i++) {
-    const candidate = item.completions[i]
-    const incumbent = item.completions[newestIndex]
-    if (candidate && incumbent && candidate.recordedAt > incumbent.recordedAt) {
-      newestIndex = i
-    }
-  }
+  // By identity rather than by id: two entries sharing an id would be a bug,
+  // but it must not become a bug that silently deletes both.
+  return { ...item, completions: item.completions.filter((c) => c !== target.completion) }
+}
 
-  return {
-    ...item,
-    completions: item.completions.filter((_, i) => i !== newestIndex),
-  }
+/**
+ * The job's history in the order a person reads it: most recent first (FR-008).
+ *
+ * Ordered by the day the work happened, since that is what the list shows.
+ * `recordedAt` breaks ties, so two jobs done on the same day appear with the
+ * one entered later at the top — the same "newest" the rest of the app means.
+ *
+ * Sorted rather than trusted: `completeItem` appends, so the stored array is in
+ * the order entries were made, which is only the same thing until somebody
+ * backdates one.
+ */
+export function completionsNewestFirst(item: MaintenanceItem): Completion[] {
+  return [...item.completions].sort((a, b) =>
+    a.completedOn === b.completedOn
+      ? b.recordedAt.localeCompare(a.recordedAt)
+      : b.completedOn.localeCompare(a.completedOn),
+  )
 }

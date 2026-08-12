@@ -1,7 +1,44 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version change: 1.2.2 → 1.3.0
+Version change: 1.3.0 → 1.4.0
+Bump rationale: MINOR — Principle II's accessibility clause materially expanded.
+Nothing was removed: keyboard operability remains a MUST, because it is WCAG 2.1.1
+at Level A and dropping it while requiring AA contrast would be incoherent. What
+changed is what the clause is verified against, and what the release gate accepts
+as evidence.
+
+Modified principles:
+- II. Accessibility & Mobile-First — the keyboard clause now leads with "operable
+  without touching the screen", names VoiceOver on a real iPhone as the check that
+  counts, and demotes desktop Tab-order traversal to supporting automated evidence.
+  Rationale recorded inline: the Tab sweep only ever ran on Chromium, because Safari
+  does not Tab to buttons by default, so it was never evidence about the target
+  platform.
+
+Modified sections:
+- Development Workflow, release gate 3 (Accessibility) — now requires touch-free
+  operation checked on a real device, and states explicitly that automated keyboard
+  traversal does not on its own discharge the gate.
+
+Prompted by: feature 001 clarification session 2026-08-11, which rewrote SC-005 to
+promise phone operation via VoiceOver and left an open conflict with this document.
+That conflict is now closed.
+
+Templates requiring updates:
+- ✅ .specify/templates/plan-template.md — gate 2 now says "operable without touch",
+  names VoiceOver as the check that counts, demotes keyboard traversal to supporting
+- ✅ .specify/templates/spec-template.md — SC-005 guidance rewritten around the device,
+  with the reason a desktop Tab sweep cannot be the criterion for a phone app
+- ✅ .specify/templates/tasks-template.md — the accessibility verification task now
+  requires a real device and says automated traversal does not discharge it alone
+- ✅ specs/001-maintenance-schedule/tasks.md — T078 extended to cover driving every
+  flow with VoiceOver
+- ✅ specs/001-maintenance-schedule/spec.md — SC-005 already rewritten in the
+  2026-08-11 clarification session; the "Open conflict" note it carried is now stale
+  and is removed by this amendment
+
+Prior: 1.2.2 → 1.3.0
 Bump rationale: MINOR — Principle III materially expanded with a Testing
 Strategy section (three tiers, what each covers, and what the environment
 genuinely cannot check) and an Agents section defining two standing agents.
@@ -106,8 +143,23 @@ The application is designed for a phone screen first and MUST be usable by every
 
 - Markup MUST be semantic HTML; interactive controls MUST be real buttons, links, and
   form elements, never click-handled `div`s.
-- Every interactive flow MUST be completable by keyboard alone, with a visible focus
-  indicator at all times.
+- Every interactive flow MUST be operable without touching the screen, and MUST be
+  completable by keyboard alone, with a visible focus indicator at all times.
+
+  **What this is verified against.** This is a phone app, so the check that counts is
+  **VoiceOver on a real iPhone** — swiping between elements and double-tapping, which is
+  how someone who cannot use touch actually drives a phone. Tab-order traversal in a
+  desktop browser is a supporting automated check, not the evidence for this clause. It
+  was a poor proxy: it only ever ran on Chromium, because Safari does not Tab to buttons
+  unless the user turns that on, so the browser tier honestly skips the sweep there
+  rather than report a pass for a traversal that never happened.
+
+  **Keyboard operability is not dropped, and MUST NOT be.** It is WCAG 2.1.1, a Level A
+  criterion — more fundamental than the AA contrast this same principle requires, so
+  removing it while keeping AA would be incoherent. It also costs nothing here: the
+  semantic-HTML rule above already mandates real buttons and form elements, which are
+  keyboard-operable by construction. What changed is which check we point at when we
+  claim the app is accessible, not the standard the app is held to.
 - Text and meaningful UI MUST meet WCAG 2.1 AA contrast (4.5:1 body text, 3:1 large
   text and interface components).
 - Images and icons that convey meaning MUST carry text alternatives; decorative ones
@@ -260,8 +312,10 @@ plan exist.
    passing, with any violation justified in Complexity Tracking.
 2. **Tests** — the full test suite passes, and each new behaviour traces to a test that
    failed before its implementation existed.
-3. **Accessibility** — keyboard traversal, focus visibility, and AA contrast verified for
-   every new or changed view.
+3. **Accessibility** — focus visibility and AA contrast verified for every new or changed
+   view, and every new or changed flow operable without touch, checked with VoiceOver on a
+   real device. Automated keyboard traversal is supporting evidence and does not on its own
+   discharge this gate.
 4. **Dependencies** — no new dependency has been added without its justification.
 
 **Review**: Every change is reviewed against these four gates explicitly. "Looks fine" is
@@ -290,4 +344,4 @@ gates above. Complexity MUST be justified, never assumed. Agent-specific runtime
 lives in agent context files at the repository root and MUST NOT restate or contradict
 this constitution — it points here instead.
 
-**Version**: 1.3.0 | **Ratified**: 2026-08-07 | **Last Amended**: 2026-08-08
+**Version**: 1.4.0 | **Ratified**: 2026-08-07 | **Last Amended**: 2026-08-11

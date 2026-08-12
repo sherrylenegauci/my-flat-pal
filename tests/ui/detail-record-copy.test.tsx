@@ -26,6 +26,21 @@ import { YEARLY, anItem, seed } from './seed'
  * lookup by test id or by tag would happily find an unlabelled input and report
  * a pass.
  *
+ * **And why that is not enough on its own.** `getByLabelText` matches an
+ * `aria-label` too, so it cannot tell a visible label from an invisible one: the
+ * label element could be deleted, the accessible name moved onto the input, and
+ * every query in this file would still find what it was looking for. What that
+ * leaves is a date field with nothing beside it explaining what to put in it,
+ * which is precisely what the dropped heading was traded for. A second
+ * assertion pins the visible half, and ties the words to the field they label.
+ *
+ * **How far that assertion reaches, and where it stops.** jsdom loads no
+ * stylesheet, so "on the screen" here means "present in the document as text
+ * that labels this field". Text hidden by CSS — a `.visually-hidden` span, say
+ * — would satisfy it, because nothing in this tier can resolve that the words
+ * are painted. Whether the label is legible, and whether it sits where a person
+ * expects it relative to the field, belongs to the real browser.
+ *
  * **Why "Add" is pinned exactly rather than as `/add/i`.** That pattern also
  * matches "Add job", "Add your first job" and the label of the field beside it.
  * On a screen that will shortly have four buttons on it, a loose match is a test
@@ -82,6 +97,29 @@ describe('the date field on a job', () => {
     await openDetail(user, 'Boiler service')
 
     expect(screen.getByLabelText('Add a date you did it')).toBeTruthy()
+  })
+
+  it('says so in words on the screen, not only into the accessibility tree', async () => {
+    // `getByLabelText` matches `aria-label` exactly as happily as a `<label>`,
+    // so the assertion above is satisfied by an input carrying
+    // `aria-label="Add a date you did it"` and no visible text at all — which
+    // is a screen with an unexplained date field on it. That matters here
+    // specifically: the heading was dropped on the grounds that "the field's
+    // label does the explaining", and only half of that agreement was pinned.
+    //
+    // Both halves, then. The words are on the screen, and they are the label of
+    // *this* field rather than a line of prose that happens to say the same
+    // thing somewhere else on the page — which is what a sighted user relies on
+    // when they look at the field and when they tap the words to reach it.
+    seed([anItem({ name: 'Boiler service', interval: YEARLY })])
+    const { user } = launch()
+    await openDetail(user, 'Boiler service')
+
+    const field = screen.getByLabelText('Add a date you did it')
+    const words = screen.getByText('Add a date you did it')
+
+    expect(words).toBeInstanceOf(HTMLLabelElement)
+    expect((words as HTMLLabelElement).control).toBe(field)
   })
 
   it('no longer answers to the old label', async () => {

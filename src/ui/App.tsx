@@ -113,6 +113,22 @@ export function App() {
   const editing =
     editId === null ? undefined : schedule.views.find((view) => view.item.id === editId)
 
+  /**
+   * Whether the schedule list is what `<main>` is actually showing.
+   *
+   * Derived from the same four conditions the render below branches on, rather
+   * than from the route name, because the two can disagree: the fall-throughs
+   * above mean a `detail` or `edit` route whose job has gone — deleted in
+   * another window — renders the list while the route still says otherwise.
+   * Asking `nav.view.name === 'schedule'` left the storage warning off a screen
+   * that was, to the user, the schedule list.
+   *
+   * An empty schedule counts. `ScheduleView` draws the empty state itself, and
+   * a first run is precisely the launch the warning exists for.
+   */
+  const showingScheduleList =
+    !schedule.readOnly && nav.view.name !== 'new' && editing === undefined && detail === undefined
+
   return (
     <div className="app">
       <header className="app__header">
@@ -134,9 +150,12 @@ export function App() {
             delete confirmation, repeated at someone who is part-way through
             filling one in. Saying it again is not saying it more clearly.
 
-            On the list only, therefore, and only while the schedule list is
-            what `<main>` is showing — a read-only session replaces that view
-            entirely with a different message about the same records.
+            On the list only, therefore — and on the list as rendered rather
+            than as routed, which is why the condition is derived above instead
+            of asked of `nav`. A read-only session is excluded because it
+            replaces that view entirely with a different message about the same
+            records, and puts a "Got it" button on a screen whose whole contract
+            is that there is nothing to press (FR-010a).
 
             It unmounts on the way out and mounts again on the way back, so the
             persistence question is asked again each time. That is deliberate
@@ -151,7 +170,7 @@ export function App() {
             corrupt-data are about the data the app just tried to read, and the
             undo offer must follow the user off the list, because marking a job
             done from the list is what raises it. */}
-        {!schedule.readOnly && nav.view.name === 'schedule' && <StorageNotice />}
+        {showingScheduleList && <StorageNotice />}
         {schedule.readOnly && (
           <div role="alert" className="storage-notice">
             <p>

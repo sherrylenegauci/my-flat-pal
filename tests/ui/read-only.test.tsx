@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { StrictMode } from 'react'
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import { App } from '../../src/ui/App'
 import { resetReadOnlyForTests } from '../../src/storage/repository'
 import { STORAGE_KEY } from '../../src/storage/schema'
@@ -44,6 +44,20 @@ import { YEARLY, aCompletion, anItem, seed } from './seed'
  * read-only screen show the user's data — which is the only way to stop the app
  * claiming nothing is recorded — those controls become reachable and will need
  * their own tests then.
+ *
+ * **The storage warning is covered here rather than in
+ * `notice-placement.test.tsx`**, and the reason is which requirement the
+ * absence belongs to. That file is about *where* the warning is said, and its
+ * answer — the schedule list, nowhere else — is a copy decision. This is not:
+ * the read-only screen's contract is that there is nothing on it to press
+ * (FR-010a, and `e2e/support/app.ts` declares `noControlsBecause` for the same
+ * state and asserts zero controls), and a "Got it" button breaks that contract
+ * whatever the sentence above it says. The enumeration that enforces it already
+ * lives in this file, so the assertion belongs next to it. It is a separate
+ * test rather than an addition to `WRITE_CONTROL`, because that regex
+ * deliberately excludes dismissal — "Got it" changes what is displayed, not
+ * what is recorded, and widening it would misstate why the button must not be
+ * there.
  */
 beforeEach(() => {
   localStorage.clear()
@@ -56,7 +70,44 @@ beforeEach(() => {
 afterEach(() => {
   vi.useRealTimers()
   resetReadOnlyForTests()
+  // Two of the tests below answer the persistence question; nothing else in
+  // this file does, and a stub left standing would silently change what the
+  // others render.
+  Reflect.deleteProperty(navigator, 'storage')
 })
+
+/**
+ * A device that will not promise to keep the user's records.
+ *
+ * The same stub `persistence-notice.test.tsx` and `notice-placement.test.tsx`
+ * use. Without it jsdom answers nothing at all, `requestPersistence` reports
+ * `unsupported`, and the notice never renders — so an absence assertion would
+ * pass on a screen where the notice could not have appeared for any reason.
+ */
+function persistenceIsRefused() {
+  Object.defineProperty(navigator, 'storage', {
+    value: { persisted: async () => false, persist: async () => false },
+    configurable: true,
+    writable: true,
+  })
+}
+
+/**
+ * Let the persistence question be asked and answered.
+ *
+ * The notice appears only after a promise chain resolves, so "it is not on the
+ * screen" is a claim about timing as much as about the guard. Flushing
+ * microtasks inside `act` is deterministic — no timers are involved — so it
+ * cannot come out differently on a slow machine. The control test below waits
+ * exactly this long and requires the notice to be *there*, which is what stops
+ * a flush that was too short turning the absence into a free pass.
+ */
+const settle = () =>
+  act(async () => {
+    await Promise.resolve()
+    await Promise.resolve()
+    await Promise.resolve()
+  })
 
 /**
  * A schedule written by a build that knows a schema this one does not.
@@ -187,6 +238,55 @@ describe('a session holding data from a newer build', () => {
     await screen.findByRole('alert')
 
     expect(localStorage.getItem(STORAGE_KEY)).toBe(NEWER_DOCUMENT)
+  })
+
+  it('does not offer the storage warning, or anything to dismiss it with', async () => {
+    // A device that refused persistence *and* a document written by a newer
+    // build. Both are ordinary on their own, and nothing covered them together:
+    // this file never stubbed `navigator.storage`, so the notice was silent
+    // here whatever the guard on it said.
+    //
+    // The consequence is not cosmetic. The warning carries a "Got it" button,
+    // and this is the one screen in the app whose stated contract is that there
+    // is nothing to press — a control that appears usable but silently does
+    // nothing MUST NOT be shown (FR-010a). It is also the wrong message: the
+    // user is being told their records might not survive, on a screen that has
+    // just declined to read the records it is talking about.
+    persistenceIsRefused()
+    localStorage.setItem(STORAGE_KEY, NEWER_DOCUMENT)
+    launch()
+    await screen.findByRole('alert')
+    await settle()
+
+    expect(
+      screen.queryByText(/promised to keep your history safe/i),
+      'the storage warning is on the read-only screen',
+    ).toBeNull()
+    expect(
+      screen.queryByRole('button', { name: 'Got it' }),
+      'the read-only screen has something to press on it',
+    ).toBeNull()
+    // The state's whole contract, in one line, and the same one
+    // `e2e/support/app.ts` asserts through `noControlsBecause`. Written out as
+    // the labels rather than a count, so a failure names what appeared.
+    expect(screen.queryAllByRole('button').map(name)).toEqual([])
+  })
+
+  it('shows that same warning to that same device in an ordinary session', async () => {
+    // The control for the test above, and it is what stops that one passing for
+    // the wrong reason. Every assertion up there is an absence, and a stub that
+    // never took effect — or a flush that ended before the persistence promise
+    // resolved — would satisfy all of them on a screen where the notice could
+    // not have appeared at all. Same stub, same wait, ordinary document: the
+    // notice is there and so is its button.
+    persistenceIsRefused()
+    seed([anItem({ name: 'Boiler service', interval: YEARLY, completions: [aCompletion('2026-06-01')] })])
+    launch()
+    await screen.findByText('Boiler service')
+    await settle()
+
+    expect(screen.queryByText(/promised to keep your history safe/i)).not.toBeNull()
+    expect(screen.queryByRole('button', { name: 'Got it' })).not.toBeNull()
   })
 
   it('finds those same controls in an ordinary session', async () => {

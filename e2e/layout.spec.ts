@@ -63,3 +63,59 @@ for (const state of APP_STATES) {
     expect(undersized, `undersized touch targets in "${state.name}"`).toEqual([])
   })
 }
+
+/**
+ * The date field and the button that records it, side by side (375px).
+ *
+ * One of the four changes asked for, and the tier below cannot say anything
+ * about it: jsdom performs no layout, so every element there reports a
+ * zero-sized box at 0,0 and any arrangement assertion would pass whatever the
+ * stylesheet did. DOM order is not position either — the button follows the
+ * field in the markup whether it is rendered beside it, under it, or off the
+ * screen.
+ *
+ * **Why it is worth a test rather than a look.** An inline row at 375px wraps
+ * silently: nothing errors, nothing overflows, the layout sweep above stays
+ * green, and the field simply ends up on one line with the button underneath.
+ * A date input is one of the widest controls the platform draws and its
+ * intrinsic width differs between the two engines, so the margin here is narrow
+ * on the device the app is actually used on. T093's interval row was the same
+ * shape of bug.
+ *
+ * **The relationship, not the numbers.** Both boxes are read from a real engine
+ * that has laid the page out, and what is asserted is that they share a row and
+ * that the button comes after the field. The pixel values are a palette or
+ * spacing change away from moving and pinning them would make this a test of
+ * the current stylesheet rather than of the arrangement.
+ */
+test('the Add button sits beside the date field, not under it', async ({ page }) => {
+  const state = APP_STATES.find((s) => s.name === 'job detail, with history')
+  if (!state) throw new Error('The "job detail, with history" state has been renamed or removed')
+  await state.go(page)
+
+  // Found the way each is found by the person using them: the field by the
+  // words that label it, the button by what it is called. `exact` because "Add"
+  // is a prefix of other names this app uses.
+  const field = await page.getByLabel('Add a date you did it').boundingBox()
+  const button = await page.getByRole('button', { name: 'Add', exact: true }).boundingBox()
+
+  expect(field, 'the date field is not laid out at all').not.toBeNull()
+  expect(button, 'the Add button is not laid out at all').not.toBeNull()
+  if (!field || !button) return
+
+  // Vertical ranges overlap → they are on the same line. A wrap moves the
+  // button clear of the field's band entirely, so the overlap goes to nothing.
+  const sameRow = button.y < field.y + field.height && field.y < button.y + button.height
+  // And it is after the field rather than before it, with no overlap: "beside"
+  // means the two do not sit on top of each other.
+  const afterTheField = button.x >= field.x + field.width
+
+  expect(
+    { sameRow, afterTheField },
+    'the Add button is not beside the date field at 375px. ' +
+      `field x ${field.x.toFixed(1)}–${(field.x + field.width).toFixed(1)}, ` +
+      `y ${field.y.toFixed(1)}–${(field.y + field.height).toFixed(1)}; ` +
+      `button x ${button.x.toFixed(1)}–${(button.x + button.width).toFixed(1)}, ` +
+      `y ${button.y.toFixed(1)}–${(button.y + button.height).toFixed(1)}`,
+  ).toEqual({ sameRow: true, afterTheField: true })
+})

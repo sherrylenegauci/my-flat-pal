@@ -1,7 +1,46 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version change: 1.4.0 → 1.5.0
+Version change: 1.5.0 → 1.6.0
+Bump rationale: MINOR — Technology Constraints materially expanded with a planned
+major feature and the constraints binding on it. No principle removed or redefined.
+
+Version bump reasoning, since it is arguable. The case for MAJOR is that this
+changes what the product is, and that a 3D engine cannot satisfy Principle I's
+three-call-site rule. But Principle I already provides for that: a violation with
+a justification is permitted, recorded in Complexity Tracking. So no principle is
+redefined and nothing is removed — guidance is expanded. MINOR.
+
+Added:
+- Technology Constraints — "Room design in 3D is planned, and it changes what this
+  app is." Three binding constraints: the room is a data model first with 3D as a
+  view of it; the 3D layer is never loaded by anyone who has not asked for it; and
+  the engine dependency is recorded as a Principle I violation rather than argued
+  into compliance.
+
+Why the model-first rule is written as binding rather than as advice: Principle II
+requires every interactive flow to be operable without touch, verified with
+VoiceOver. Direct manipulation of a canvas cannot satisfy that alone. Without the
+rule, the feature contradicts a MUST that predates it, and a constitution cannot
+promise a feature that violates its own principles. Overturning it means amending
+Principle II.
+
+Deferred:
+- TODO(ROOM_3D_SCOPE) — whether the point is designing a room or seeing one;
+  whether this is the same feature as the LLM decor suggestions; and whether the
+  app is now a home app whose first feature was maintenance rather than a
+  maintenance app with a designer attached.
+- TODO(ROOM_3D_DURABILITY) — localStorage is device-bound with no export, and this
+  document has already recorded that detecting loss is impossible. Whether that is
+  acceptable for a room someone spent an hour arranging, or whether this forces the
+  export question 001 deliberately closed.
+
+Templates requiring updates:
+- ✅ none — this adds no mandatory section and no new gate. The constraints bind the
+  specification that eventually describes the feature, and Principle I's existing
+  Complexity Tracking requirement already carries the dependency case.
+
+Prior: 1.4.0 → 1.5.0
 Bump rationale: MINOR — two principles added, none removed or redefined.
 
 Added principles:
@@ -388,6 +427,53 @@ via the Anthropic API — not a curated in-repo ruleset. The recorded default mo
   (which preserves it). No implementation of suggestions may begin until this is decided
   and this section amended to record it.
 
+**Room design in 3D is planned, and it changes what this app is.** The app will let someone lay
+out a room in three dimensions and decorate it. This is a major feature — larger than everything
+built so far combined — and recording it here is what stops it arriving as a surprise that breaks
+principles nobody re-read.
+
+Three constraints follow, and they are binding on whatever specification eventually describes it.
+
+- **The room MUST be a data model first, and 3D MUST be a view of that model.** Walls, dimensions
+  and placed objects MUST be editable through ordinary lists and forms. The 3D canvas renders that
+  model and MAY offer direct manipulation as an *alternative* way to do the same things. It MUST
+  NOT be the only way to do any of them.
+
+  This is not an architectural preference. Principle II requires every interactive flow to be
+  operable without touching the screen, verified with VoiceOver on a real iPhone. Dragging an
+  object around a canvas cannot satisfy that on its own. Without the model-first rule the feature
+  contradicts a MUST that predates it, and a constitution cannot promise a feature that violates
+  its own principles. Overturning this rule therefore means amending Principle II, not this
+  paragraph.
+
+  It also pays for itself elsewhere: the model is testable in the domain tier where this project's
+  date logic already lives, and no 3D scene is required to test that a sofa cannot occupy a wall.
+
+- **The 3D layer MUST NOT be loaded by anyone who has not asked for it.** The app is 220 kB of
+  JavaScript today, 69 kB gzipped, and a 3D engine is several times that before any model or
+  texture. SC-002-style promises — the overdue list legible within seconds of opening — apply to
+  someone who opened the app to check the boiler and will never touch a room. The engine is loaded
+  on demand or not at all.
+
+- **The dependency MUST be recorded as a violation of Principle I, not argued into compliance.**
+  A 3D engine cannot meet the three-call-site rule and is exactly the kind of thing that principle
+  exists to make expensive. Principle I already provides for this: a violation with a justification
+  is permitted, a violation dressed as compliance is not. The plan that introduces it records it in
+  Complexity Tracking with what was rejected and why.
+
+TODO(ROOM_3D_SCOPE): three questions are open and each changes the feature materially. Whether the
+point is *designing* a room — placing and moving objects — or *seeing* one described elsewhere.
+Whether this is the same feature as the LLM decor suggestions above, which would make a room the
+place a suggestion is shown rather than two separate things. And whether the app is now a home app
+whose first feature was maintenance, rather than a maintenance app with a designer attached; that
+one decides what "simplicity" means for everything built after it.
+
+TODO(ROOM_3D_DURABILITY): storage is `localStorage`, device-bound, with no export and no backup,
+and this document has already recorded that detecting data loss is impossible. Losing a job list is
+an annoyance. Losing a room someone spent an hour arranging is a different order of loss, and the
+data is larger. Whether that is acceptable, or whether room design forces the export question this
+project deliberately closed, MUST be settled before the feature is planned.
+
 ## Development Workflow & Quality Gates
 
 **Specification flow**: Features follow the Spec Kit flow — constitution → specify →
@@ -432,4 +518,4 @@ gates above. Complexity MUST be justified, never assumed. Agent-specific runtime
 lives in agent context files at the repository root and MUST NOT restate or contradict
 this constitution — it points here instead.
 
-**Version**: 1.5.0 | **Ratified**: 2026-08-07 | **Last Amended**: 2026-08-12
+**Version**: 1.6.0 | **Ratified**: 2026-08-07 | **Last Amended**: 2026-08-19

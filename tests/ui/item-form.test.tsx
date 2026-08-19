@@ -1,7 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { StrictMode } from 'react'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { App } from '../../src/ui/App'
+import { MONTHLY, aCompletion, anItem, seed } from './seed'
 
 /**
  * T041 — adding a job. US1 scenarios 2 and 4, FR-001, FR-002, FR-004a.
@@ -26,8 +28,11 @@ async function fillIn(
   await user.type(screen.getByLabelText(/name/i), fields.name)
 
   if (fields.count !== undefined) {
-    await user.clear(screen.getByLabelText(/how often/i))
-    await user.type(screen.getByLabelText(/how often/i), fields.count)
+    // The interval count box, by its visible label "Every" (T115). Not
+    // `/how often/i`: the legend is borrowed back through `aria-labelledby`, so
+    // that regex matches this input under both wordings and can never go red.
+    await user.clear(screen.getByLabelText(/^every$/i))
+    await user.type(screen.getByLabelText(/^every$/i), fields.count)
   }
   if (fields.unit !== undefined) {
     await user.selectOptions(screen.getByLabelText(/period|unit/i), fields.unit)
@@ -121,7 +126,7 @@ describe('adding a job', () => {
     await fillIn(user, { name: 'Something', count: '0', unit: 'month' })
     await user.click(screen.getByRole('button', { name: /save|add/i }))
 
-    expect(screen.getByLabelText(/how often/i).getAttribute('aria-invalid')).toBe('true')
+    expect(screen.getByLabelText(/^every$/i).getAttribute('aria-invalid')).toBe('true')
   })
 
   it('refuses a last-done date in the future', async () => {
@@ -146,5 +151,132 @@ describe('adding a job', () => {
 
     expect(await screen.findByText('Boiler service')).toBeTruthy()
     expect(screen.getByText(/overdue/i)).toBeTruthy()
+  })
+})
+
+/**
+ * T115 — the interval question, asked once.
+ *
+ * The fieldset asked the same thing twice, one line apart: the legend said
+ * "How often does it need doing?" and the number box beneath it was labelled
+ * "How often — every", so the form read
+ *
+ *     How often does it need doing?
+ *     How often — every  [ 1 ]  [ years ]
+ *
+ * The legend asks the question; the field says "Every".
+ *
+ * **Why these tests are anchored on `^every$` and not on `/how often/i`.** A
+ * `<legend>` names the *group*, not the controls inside it, so a bare "Every"
+ * label would leave the number box with the accessible name "Every" — worse
+ * than the self-contained "How often — every" it replaced. The box therefore
+ * borrows the legend back through `aria-labelledby`, which means `/how often/i`
+ * goes on matching it after the change as well as before. A lookup written that
+ * way cannot be observed failing, so it is not evidence of anything. Every
+ * lookup in this suite was re-anchored on the visible label for that reason.
+ *
+ * **What the accessible-name test below is, and what it is not.** It is a name
+ * computed by jsdom, via the same accessible-name algorithm Testing Library
+ * uses. It is *not* evidence about what VoiceOver on an iPhone announces when
+ * someone swipes onto this field — no tier in this repo can establish that, and
+ * Principle II (Constitution v1.6.0) puts it on the device. Read it as a guard
+ * against someone tidying the `aria-labelledby` away and shipping a field
+ * announced as a bare "Every", not as an accessibility pass.
+ */
+describe('the interval question is asked once', () => {
+  /**
+   * Rendered under StrictMode, as `main.tsx` does. Nothing here writes, so it
+   * changes no outcome — but a test that renders the app differently from
+   * production proves less than it appears to, and there is no reason to add a
+   * new one that does.
+   */
+  async function openTheAddForm(user: ReturnType<typeof userEvent.setup>) {
+    const view = render(
+      <StrictMode>
+        <App />
+      </StrictMode>,
+    )
+    await user.click(await screen.findByRole('button', { name: /add/i }))
+    await screen.findByRole('heading', { name: 'Add a job', level: 2 })
+    return view
+  }
+
+  /** The same fieldset, on the other form that renders it. `editing` drops the
+   *  last-done field and renames the save button, so it is a different form
+   *  around the same markup. */
+  async function openTheEditForm(user: ReturnType<typeof userEvent.setup>) {
+    seed([
+      anItem({
+        name: 'Boiler service',
+        interval: MONTHLY,
+        completions: [aCompletion('2026-06-01')],
+      }),
+    ])
+    const view = render(
+      <StrictMode>
+        <App />
+      </StrictMode>,
+    )
+    await user.click(await screen.findByRole('button', { name: 'Boiler service' }))
+    await user.click(await screen.findByRole('button', { name: 'Edit job' }))
+    await screen.findByRole('heading', { name: 'Edit job', level: 2 })
+    return view
+  }
+
+  const forms = [
+    ['the add form', openTheAddForm],
+    ['the edit form', openTheEditForm],
+  ] as const
+
+  /** The interval fieldset, reached the way assistive technology reaches it:
+   *  a group named by its legend. */
+  const intervalGroup = () => screen.getByRole('group', { name: 'How often does it need doing?' })
+
+  /** The number box, found without reference to any label, so that the label
+   *  assertions below have something independent to be checked against. */
+  const countBox = () => screen.getByRole('spinbutton')
+
+  describe.each(forms)('%s', (_label, open) => {
+    it('asks the question once, in the legend', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      await open(user)
+
+      // Scoped to the fieldset because that is where the duplication was: the
+      // legend and the label beneath it. Two matches before, one after.
+      const asked = intervalGroup().textContent?.match(/how often/gi) ?? []
+      expect(asked).toHaveLength(1)
+    })
+
+    it('labels the number box "Every", and nothing longer', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      await open(user)
+
+      // The visible label, as a sighted user reads it.
+      expect(screen.getByText('Every', { selector: 'label' }).textContent).toBe('Every')
+      // ...and it names the number box, not the period dropdown beside it.
+      expect(screen.getByLabelText(/^every$/i)).toBe(countBox())
+    })
+
+    it('no longer says "How often — every" anywhere on the form', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      const { container } = await open(user)
+
+      // Pinning the absence of a removed string, as T113 did for the removed
+      // error phrasing. Tolerant of the dash character so that swapping the em
+      // dash for a hyphen does not read as a fix.
+      expect(container.textContent).not.toMatch(/how often\s*[—–-]\s*every/i)
+    })
+
+    it('still announces the number box with the question, not a bare "Every"', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      await open(user)
+
+      // See the block comment above: a computed name in jsdom, not a device
+      // check. The exact string is asserted because the failure worth catching
+      // is the name shrinking to "Every", which any looser matcher would pass.
+      expect(
+        screen.getByRole('spinbutton', { name: 'How often does it need doing? Every' }),
+      ).toBe(countBox())
+    })
   })
 })

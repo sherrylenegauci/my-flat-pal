@@ -96,7 +96,10 @@ describe('keyboard only', () => {
 
     await tabIntoTheEditForm(user)
 
-    expect(await tabUntil(user, (el) => el === screen.getByLabelText(/how often/i))).not.toBeNull()
+    // The interval count box, by its visible label "Every" (T115). Not
+    // `/how often/i`: the legend is borrowed back through `aria-labelledby`, so
+    // that regex matches this input under both wordings and can never go red.
+    expect(await tabUntil(user, (el) => el === screen.getByLabelText(/^every$/i))).not.toBeNull()
     await user.keyboard('6')
 
     expect(await tabUntil(user, named(/^Save changes$/))).not.toBeNull()

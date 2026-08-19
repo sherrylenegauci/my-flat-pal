@@ -312,7 +312,10 @@ export const APP_STATES: AppState[] = [
       await seed(page, null)
       await open(page)
       await page.getByRole('button', { name: 'Add your first job' }).click()
-      await page.getByLabel('How often — every').fill('0')
+      // The interval count box, by its visible label (T115). `exact` because
+      // this input also borrows the fieldset's legend through `aria-labelledby`,
+      // so Playwright sees two labels for it — the question and the word.
+      await page.getByLabel('Every', { exact: true }).fill('0')
       await page.getByRole('button', { name: 'Save job' }).click()
       // Both errors, so the sweeps see error text in two different layouts:
       // a stacked field and the inline interval grid.

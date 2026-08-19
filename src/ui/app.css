@@ -606,9 +606,13 @@ body {
    9rem wide at 375px, which clipped "months" under the chevron. The "Period"
    label is visually hidden rather than laid out — as a fourth item it wrapped
    onto its own row and took the dropdown with it, stranding it from its label. */
-.form__field--inline { display: grid; grid-template-columns: 5rem 1fr; align-items: center; gap: var(--space-2); }
+/* The visible label is now one short word ("Every"), so it sits inline again
+   rather than taking a row of its own. It had that row when it read "How often —
+   every", which was too wide to share with the count and the unit at 375px. On its
+   own row a one-word label reads as orphaned, which is worse than the wrapping it
+   was protecting against. */
+.form__field--inline { display: grid; grid-template-columns: auto 4.5rem 1fr; align-items: center; gap: var(--space-2); }
 .form__field--inline legend { grid-column: 1 / -1; }
-.form__field--inline > label:not(.visually-hidden) { grid-column: 1 / -1; }
 .form__field--inline .form__error { grid-column: 1 / -1; }
 
 input[type='text'],

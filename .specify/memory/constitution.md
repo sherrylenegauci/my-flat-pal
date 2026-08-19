@@ -1,7 +1,76 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version change: 1.3.0 → 1.4.0
+Version change: 1.5.0 → 1.6.0
+Bump rationale: MINOR — Technology Constraints materially expanded with a planned
+major feature and the constraints binding on it. No principle removed or redefined.
+
+Version bump reasoning, since it is arguable. The case for MAJOR is that this
+changes what the product is, and that a 3D engine cannot satisfy Principle I's
+three-call-site rule. But Principle I already provides for that: a violation with
+a justification is permitted, recorded in Complexity Tracking. So no principle is
+redefined and nothing is removed — guidance is expanded. MINOR.
+
+Added:
+- Technology Constraints — "Room design in 3D is planned, and it changes what this
+  app is." Three binding constraints: the room is a data model first with 3D as a
+  view of it; the 3D layer is never loaded by anyone who has not asked for it; and
+  the engine dependency is recorded as a Principle I violation rather than argued
+  into compliance.
+
+Why the model-first rule is written as binding rather than as advice: Principle II
+requires every interactive flow to be operable without touch, verified with
+VoiceOver. Direct manipulation of a canvas cannot satisfy that alone. Without the
+rule, the feature contradicts a MUST that predates it, and a constitution cannot
+promise a feature that violates its own principles. Overturning it means amending
+Principle II.
+
+Deferred:
+- TODO(ROOM_3D_SCOPE) — whether the point is designing a room or seeing one;
+  whether this is the same feature as the LLM decor suggestions; and whether the
+  app is now a home app whose first feature was maintenance rather than a
+  maintenance app with a designer attached.
+- TODO(ROOM_3D_DURABILITY) — localStorage is device-bound with no export, and this
+  document has already recorded that detecting loss is impossible. Whether that is
+  acceptable for a room someone spent an hour arranging, or whether this forces the
+  export question 001 deliberately closed.
+
+Templates requiring updates:
+- ✅ none — this adds no mandatory section and no new gate. The constraints bind the
+  specification that eventually describes the feature, and Principle I's existing
+  Complexity Tracking requirement already carries the dependency case.
+
+Prior: 1.4.0 → 1.5.0
+Bump rationale: MINOR — two principles added, none removed or redefined.
+
+Added principles:
+- IV. One App, Several Features — the app must present a single top-level structure
+  from which every feature is reachable; every feature spec must say where it lives;
+  the shell is cross-cutting and not owned by whichever feature was built first.
+- V. One Visual Identity — one palette in one file, contrast computed never estimated,
+  meaning never carried by colour alone, and an identity that is quiet and durable
+  rather than distinctive.
+
+Why now: both were written from a cost already paid. Feature 001's plan rejected a
+router because three screens do not need one — correct then, silently wrong the moment
+a second feature was contemplated, and nothing recorded that the reasoning had an expiry
+date. And a design pass on 001 had no recorded identity to work against, so it was
+guessed, built, reviewed and rejected; the next attempt would have been another guess.
+
+Deferred:
+- TODO(VISUAL_IDENTITY_PALETTE) — the concrete palette is deliberately not recorded yet.
+  The direction is "clean and crisp"; an implementation is in review. Enshrining values
+  before they have been looked at would repeat the mistake with more ceremony.
+
+Templates requiring updates:
+- ⚠ .specify/templates/spec-template.md — should require a feature to state where it
+  lives in the app's structure (Principle IV)
+- ⚠ .specify/templates/plan-template.md — Constitution Check needs gates for IV and V
+- ✅ .specify/templates/tasks-template.md — no change; neither principle adds a task type
+- ⚠ specs/001-maintenance-schedule/plan.md — its "Rejected: a router" line is now
+  superseded and should record the condition under which it held
+
+Prior: 1.3.0 → 1.4.0
 Bump rationale: MINOR — Principle II's accessibility clause materially expanded.
 Nothing was removed: keyboard operability remains a MUST, because it is WCAG 2.1.1
 at Level A and dropping it while requiring AA contrast would be incoherent. What
@@ -241,6 +310,64 @@ and the constitution fresh, which the author of a change cannot do.
 only mechanism that keeps a refactor toward simplicity safe, and it is the gate at which
 accessibility assertions can be made to hold automatically rather than by memory.
 
+### IV. One App, Several Features
+
+my-flat-pal is not a maintenance app. It is an app about a flat, and maintenance is its
+first feature. Room decor suggestions are already recorded in Technology Constraints, and
+more will follow.
+
+- The application MUST present a **single top-level structure** from which every feature is
+  reachable. A feature MUST NOT be a separate app, a separate entry point, or reachable only
+  by knowing a URL.
+- Every feature specification MUST say **where the feature lives** in that structure, and
+  what a user who is not looking for it sees. A feature that cannot answer this is not ready
+  to plan.
+- The shell — the top-level structure, its navigation, and the state it holds — is
+  **cross-cutting**. It MUST NOT be owned by whichever feature happened to be built first,
+  and changing it is an amendment-level decision rather than a feature-level one.
+- Navigation between features MUST meet Principle II in full: reachable without touch,
+  visible focus, 44x44 targets, and no dependence on browser chrome.
+
+**Rationale**: this is written down because its absence has already cost something. Feature
+001's plan rejected a routing library on the grounds that three screens do not need one.
+That was correct when there was one feature and three screens, and it silently stopped being
+correct the moment a second feature was contemplated — but nothing recorded that the
+reasoning had an expiry date, so it reads as settled. Decisions that are right only under
+conditions that will change MUST record the condition. This principle is that record.
+
+**What this does not mandate**: tabs specifically, a routing library specifically, or any
+particular interaction. It mandates that there *is* a structure, that features declare their
+place in it, and that nobody owns it privately.
+
+### V. One Visual Identity
+
+The app looks like one app. A feature MUST NOT introduce its own look.
+
+- **One palette, in one file.** Colour, type scale and spacing live in `src/ui/tokens.css`.
+  A feature MUST NOT define a colour, a font size or a spacing value locally. If it needs one
+  that does not exist, it adds it to the tokens with a justification, in that file.
+- **Every contrast ratio MUST be computed, never estimated**, and recorded with the value.
+  A ratio written from judgement is a guess wearing the costume of a measurement.
+- **Status and meaning MUST NOT be carried by colour alone**, in any feature. This is
+  Principle II restated where designers will actually meet it.
+- The identity is **quiet and durable** rather than distinctive. This app is opened for
+  years, for a few seconds at a time, usually to find out whether something is overdue.
+  Design that draws attention to itself is a cost paid on every one of those visits.
+
+**Rationale**: also written from a real cost. A design pass on feature 001 had no recorded
+identity to work against, so it was guessed, built, reviewed and rejected — and the next
+attempt would have been another guess. Separately, `tokens.css` once carried twelve contrast
+ratios described as measured that were all estimates, and `focus.css` claimed 3.6:1 for a
+ring that measured 2.69:1: below the AA floor, shipped, and invisible to every test then
+existing.
+
+TODO(VISUAL_IDENTITY_PALETTE): the concrete palette is **not yet recorded here**, deliberately.
+The stated direction is *clean and crisp* — cool neutrals, crisp contrast, one confident
+accent — and an implementation of it is in review. Writing specific values into governance
+before they have been looked at would enshrine a guess with more ceremony than the last one.
+The values are added to this section once a palette has been approved, and until then
+`src/ui/tokens.css` is the working record.
+
 ## Technology Constraints
 
 **Stack**: React single-page application built with Vite. TypeScript is the
@@ -300,6 +427,53 @@ via the Anthropic API — not a curated in-repo ruleset. The recorded default mo
   (which preserves it). No implementation of suggestions may begin until this is decided
   and this section amended to record it.
 
+**Room design in 3D is planned, and it changes what this app is.** The app will let someone lay
+out a room in three dimensions and decorate it. This is a major feature — larger than everything
+built so far combined — and recording it here is what stops it arriving as a surprise that breaks
+principles nobody re-read.
+
+Three constraints follow, and they are binding on whatever specification eventually describes it.
+
+- **The room MUST be a data model first, and 3D MUST be a view of that model.** Walls, dimensions
+  and placed objects MUST be editable through ordinary lists and forms. The 3D canvas renders that
+  model and MAY offer direct manipulation as an *alternative* way to do the same things. It MUST
+  NOT be the only way to do any of them.
+
+  This is not an architectural preference. Principle II requires every interactive flow to be
+  operable without touching the screen, verified with VoiceOver on a real iPhone. Dragging an
+  object around a canvas cannot satisfy that on its own. Without the model-first rule the feature
+  contradicts a MUST that predates it, and a constitution cannot promise a feature that violates
+  its own principles. Overturning this rule therefore means amending Principle II, not this
+  paragraph.
+
+  It also pays for itself elsewhere: the model is testable in the domain tier where this project's
+  date logic already lives, and no 3D scene is required to test that a sofa cannot occupy a wall.
+
+- **The 3D layer MUST NOT be loaded by anyone who has not asked for it.** The app is 220 kB of
+  JavaScript today, 69 kB gzipped, and a 3D engine is several times that before any model or
+  texture. SC-002-style promises — the overdue list legible within seconds of opening — apply to
+  someone who opened the app to check the boiler and will never touch a room. The engine is loaded
+  on demand or not at all.
+
+- **The dependency MUST be recorded as a violation of Principle I, not argued into compliance.**
+  A 3D engine cannot meet the three-call-site rule and is exactly the kind of thing that principle
+  exists to make expensive. Principle I already provides for this: a violation with a justification
+  is permitted, a violation dressed as compliance is not. The plan that introduces it records it in
+  Complexity Tracking with what was rejected and why.
+
+TODO(ROOM_3D_SCOPE): three questions are open and each changes the feature materially. Whether the
+point is *designing* a room — placing and moving objects — or *seeing* one described elsewhere.
+Whether this is the same feature as the LLM decor suggestions above, which would make a room the
+place a suggestion is shown rather than two separate things. And whether the app is now a home app
+whose first feature was maintenance, rather than a maintenance app with a designer attached; that
+one decides what "simplicity" means for everything built after it.
+
+TODO(ROOM_3D_DURABILITY): storage is `localStorage`, device-bound, with no export and no backup,
+and this document has already recorded that detecting data loss is impossible. Losing a job list is
+an annoyance. Losing a room someone spent an hour arranging is a different order of loss, and the
+data is larger. Whether that is acceptable, or whether room design forces the export question this
+project deliberately closed, MUST be settled before the feature is planned.
+
 ## Development Workflow & Quality Gates
 
 **Specification flow**: Features follow the Spec Kit flow — constitution → specify →
@@ -344,4 +518,4 @@ gates above. Complexity MUST be justified, never assumed. Agent-specific runtime
 lives in agent context files at the repository root and MUST NOT restate or contradict
 this constitution — it points here instead.
 
-**Version**: 1.4.0 | **Ratified**: 2026-08-07 | **Last Amended**: 2026-08-11
+**Version**: 1.6.0 | **Ratified**: 2026-08-07 | **Last Amended**: 2026-08-19

@@ -284,6 +284,15 @@ named device rather than a CI runner; T078 is the real-iPhone-and-Android gate, 
 browser can verify a home-screen install. Those stay manual, and Phase 6 should say so plainly
 rather than let a green suite imply cover it does not give.
 
+> **Superseded in part, 2026-08-12 (Constitution v1.5.0, Principle IV).** The router
+> rejection below held *while the app had one feature and three screens*. It stopped holding
+> the moment a second feature was contemplated, and nothing here recorded the condition — so
+> it read as settled when it was conditional. Principle IV now requires a single top-level
+> structure from which every feature is reachable. Whether that needs a routing library is
+> still open; that it needs *something* is not. This note is left rather than the line
+> deleted, because the reasoning was correct under the conditions stated and deleting it
+> would hide why the app was built the way it was.
+
 **Rejected**: a router (R4), a state library (React's own state suffices at three screens; Principle
 I forbids the abstraction before a second use case), a date library (R5), a component library (the
 UI is a list, a form and a dialog — and an imported library would need auditing against Principle II

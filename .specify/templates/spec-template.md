@@ -78,6 +78,16 @@
 - What happens when [boundary condition]?
 - How does system handle [error scenario]?
 
+## Where this lives *(mandatory per Constitution IV)*
+
+<!--
+  One or two sentences: where in the app's top-level structure this feature sits, and what
+  someone who is not looking for it sees. A feature that cannot answer this is not ready to
+  plan. The shell is cross-cutting — a feature declares its place in it, it does not own it.
+-->
+
+[Where the feature is reached from, and what a user not looking for it sees.]
+
 ## Requirements *(mandatory)*
 
 <!--

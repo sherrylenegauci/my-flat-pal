@@ -12,7 +12,7 @@
  * `theme_color` two palettes stale.
  *
  * One geometry, imported by both, is the fix for half of that. The other half is
- * `tests/build/icon-assets.test.ts`, which reads the generated pixels and
+ * `tests/assets/icons.test.ts`, which reads the generated pixels and
  * compares them against `tokens.css` — so a palette change that is not followed
  * by a re-run of the script turns the suite red instead of shipping.
  *
@@ -30,7 +30,7 @@
  * to an arbitrary shape and only the inner 80% is guaranteed to survive. A
  * centred square of side s has its corners at s x root(2) / 2 from the centre,
  * so it fits inside that 80%-diameter circle only while s stays under 56.6% of
- * the canvas. `tests/build/icon-assets.test.ts` checks the pixels rather than
+ * the canvas. `tests/assets/icons.test.ts` checks the pixels rather than
  * trusting this paragraph.
  *
  * ## No colour lives here

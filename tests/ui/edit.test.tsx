@@ -5,6 +5,7 @@ import userEvent from '@testing-library/user-event'
 import { App } from '../../src/ui/App'
 import { load } from '../../src/storage/repository'
 import { MONTHLY, aCompletion, anItem, seed } from './seed'
+import { historyDates } from './history'
 
 /**
  * T063 — correcting a job. US3 scenario 1, FR-009 (name and interval),
@@ -176,11 +177,7 @@ describe('correcting a job', () => {
       'cmp_2026-06-01',
     ])
     // And the user can see it, not only the storage layer.
-    expect(
-      within(screen.getByRole('list', { name: /history/i }))
-        .getAllByRole('listitem')
-        .map((li) => li.textContent),
-    ).toEqual(['1 June 2026', '11 May 2025', '6 May 2024'])
+    expect(historyDates()).toEqual(['1 June 2026', '11 May 2025', '6 May 2024'])
   })
 
   it('still shows the change after the app is closed and reopened', async () => {

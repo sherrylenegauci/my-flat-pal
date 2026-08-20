@@ -313,11 +313,34 @@ body {
   gap: var(--space-2);
 }
 
+/* The date on the left, its own Remove control on the right (T103).
+
+   `gap` rather than only `justify-content`, so a long date and the button keep
+   visible space between them at 375px instead of meeting in the middle — the
+   spacing Principle II asks for between adjacent targets, which matters here
+   because the control is destructive and the rows stack closely. */
 .detail__history li {
-  padding: var(--space-3) var(--space-4);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
+}
+
+/* Plain `.button`, deliberately: it already carries `min-height:
+   var(--touch-target)`, and its colours are `--text` on `--surface`, a pair
+   e2e/contrast.spec.ts already walks and has measured. Introducing a quieter
+   variant here would add an unaudited pair to the palette while T100's design
+   refresh is still open, which is the decision that principle exists to defer.
+
+   It is not `--danger`. The confirmation is where the consequence is stated and
+   where the destructive styling belongs; a row of red buttons down a history
+   list would make the list itself read as dangerous to be near. */
+.detail__history-remove {
+  flex: none;
 }
 
 .detail__empty {

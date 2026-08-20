@@ -197,6 +197,12 @@ export function App() {
             onRecord={(completedOn) => schedule.markDone(detail.item.id, completedOn)}
             onEdit={() => nav.go({ name: 'edit', itemId: detail.item.id })}
             onDelete={() => handleDelete(detail.item.id)}
+            // No `nav.back()` and no focus placement here, unlike deleting:
+            // the job survives a corrected history, so the user stays where
+            // they are and the view puts focus back on its own History heading.
+            onRemoveCompletion={(completionId) =>
+              schedule.removeCompletion(detail.item.id, completionId)
+            }
           />
         ) : (
           <ScheduleView

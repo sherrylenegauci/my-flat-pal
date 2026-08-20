@@ -1,8 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { render, screen, within } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { App } from '../../src/ui/App'
 import { YEARLY, aCompletion, anItem, seed } from './seed'
+import { historyDates } from './history'
 
 /**
  * T056 — opening a job: US2 scenario 2 (when was it last done) and scenario 4
@@ -27,10 +28,6 @@ const launch = () => ({
   ...render(<App />),
 })
 
-const historyEntries = () =>
-  within(screen.getByRole('list', { name: /history/i }))
-    .getAllByRole('listitem')
-    .map((li) => li.textContent ?? '')
 
 describe('opening a job from the list', () => {
   it('shows that job, by name', async () => {
@@ -72,7 +69,7 @@ describe('opening a job from the list', () => {
     await user.click(await screen.findByRole('button', { name: 'Boiler service' }))
     await screen.findByRole('heading', { name: 'Boiler service', level: 2 })
 
-    expect(historyEntries()).toEqual(['11 May 2025', '6 May 2024', '2 May 2023'])
+    expect(historyDates()).toEqual(['11 May 2025', '6 May 2024', '2 May 2023'])
   })
 
   it('says so when a job has never been done, rather than showing an empty list', async () => {

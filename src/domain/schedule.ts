@@ -194,6 +194,33 @@ export function undoCompletion(item: MaintenanceItem): MaintenanceItem {
 }
 
 /**
+ * **STUB — T103. Not implemented; the tests for it are written and failing.**
+ *
+ * Remove one entry from a job's history, chosen by id: the correction FR-007a
+ * already promises ("correcting an older mistake is done from the item's
+ * history, not from the undo offer") and that nothing in the app provides.
+ *
+ * This body exists so that `tests/domain/remove-completion.test.ts` fails on
+ * its assertions rather than on an unresolvable import. An import error proves
+ * nothing — it reads the same whether the behaviour is missing or the name is
+ * misspelled — so the stub is what makes the red in Red-Green mean something.
+ *
+ * Two rules the tests already pin, recorded here because they are the ones an
+ * obvious implementation gets wrong:
+ *
+ *   - Chosen by **id**, never by recency. `undoCompletion` above takes the
+ *     highest `recordedAt`; the history list is ordered by `completedOn`, and
+ *     a backdated entry has a late `recordedAt` with an early `completedOn`.
+ *   - An id that is not there returns **this same object**, by reference.
+ *     `mutate` in `useSchedule` reads an unchanged array as a decision not to
+ *     write; writing anyway bumps `revision` and sends any other open window
+ *     into stale-write recovery over a write with nothing in it.
+ */
+export function removeCompletion(item: MaintenanceItem, _completionId: string): MaintenanceItem {
+  return item
+}
+
+/**
  * The job's history in the order a person reads it: most recent first (FR-008).
  *
  * Ordered by the day the work happened, since that is what the list shows.

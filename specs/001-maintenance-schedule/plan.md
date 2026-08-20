@@ -409,14 +409,28 @@ and a second press walks backwards.
 
 **Why session-scoping is acceptable now, having been rejected before.** It was removed from the
 original design because it made a mis-tap permanent once the phone backgrounded, and at that time
-nothing else could recover it. The detail view now shows full history, so an older mistake has a
-home. The property that made session-scoping wrong no longer holds — it is safe *because* that view
-exists, and would not have been before it.
+nothing else could recover it. The property that made session-scoping wrong no longer holds — but
+only since T103, and this paragraph overstated its case for a week before that.
 
-Correcting an older mistake therefore happens in the item's history. And adding a job with a
-last-done date raises no offer at all: the user added a job rather than completing one, and undo
-there would strip the date while leaving the job, silently turning something just created into
-"never done".
+What it used to say was that "the detail view now shows full history, so an older mistake has a
+home", and that was the justification offered in three documents for taking undo away from anything
+older than ten seconds. **Showing a mistake is not correcting it.** The history was a read-only list
+of dates: a user could see the entry that should not be there and could do nothing whatever about
+it. The only remedies were deleting the whole job, which throws away every correct entry to remove
+one wrong one, and clearing site storage, which throws away every job. Neither is a correction; both
+are amputations. So session-scoped undo was, for that week, exactly the thing it had originally been
+rejected for being.
+
+What actually discharges it is that **each entry in that history now carries its own control to
+remove it**, behind a confirmation that says what the removal does to the schedule (T103, FR-007a).
+That is the home an older mistake has. The claim above is true now because of a control, not because
+of a list.
+
+And adding a job with a last-done date raises no offer at all: the user added a job rather than
+completing one, and undo there would strip the date while leaving the job, silently turning
+something just created into "never done". The wrong date is corrected by the same route — remove the
+entry, record the right one — which is what FR-007b now says instead of pointing at an edit form
+that has no last-done field (T111).
 
 See FR-007, FR-007a and FR-007b, and T094–T099 plus T102.
 
@@ -424,7 +438,13 @@ An earlier revision of this paragraph said undo was "most recent only, one step,
 was true of each individual press and false of the sequence, and it is the sentence that let the
 defect look like the design.
 
-Deleting a job needs confirmation, because it throws away the history too.
+Deleting a job needs confirmation, because it throws away the history too. Removing a single entry
+from that history needs one for a different reason: it moves the schedule. The next due date is
+derived from the last completion and never stored, so taking the newest entry out moves the date
+backwards and can put a job straight back onto the overdue list — which is the correction being made
+and not a side effect, but it has to be said before it happens rather than discovered after. The
+confirmation therefore names the date it moves to and the status the job will then show, in the
+badge's own words, and says plainly when the date does not move at all.
 
 ### States
 
@@ -595,7 +615,9 @@ npm run test:run     # single pass — this is the merge gate
   recovery, newer-version refusal, migration against the fixture.
 - **UI**: empty state, adding, ordering, visible due dates, reload survival, duplicate names,
   ticking off, session-scoped undo and its window, backdating, editing a job, deleting one after
-  confirming, the confirmation dialog's focus behaviour, keyboard-only flows, axe scans.
+  confirming, removing a single completion from a job's history after confirming — including which
+  of the three consequence sentences the confirmation shows — the confirmation dialog's focus
+  behaviour, keyboard-only flows, axe scans.
 
   **This list named "edit, delete-actually-deletes" until 2026-08-12, and both were fiction at the
   time.** US3 was unbuilt: there was no `onEdit` or `onDelete` anywhere in `src/`, and no test file
@@ -632,6 +654,18 @@ npm run preview -- --host    # note the network URL, open it on your phone, inst
 - [ ] Status readable without relying on colour
 - [ ] Persistent storage requested on first use; refusal reported plainly
 - [ ] Jobs survive force-quitting and a phone restart
+- [ ] **The Remove control on each history row is comfortable and hard to hit by accident.** It is
+  the one destructive control the app repeats down a list that grows without limit, on rows that
+  stack closely, and a mis-tap here is the same class of accident the control exists to repair.
+  jsdom reports a zero-sized box for every element, so nothing in the behaviour tier can tell 44x44
+  from 4x4; the browser tier measures it at 375px on the "job detail, with history" scenario, but
+  only a thumb can say whether the spacing is enough in the hand
+- [ ] **Two completions recorded on the same date can be told apart with VoiceOver.** They currently
+  produce two controls with the same accessible name — both "Remove the completion on 5 June 2025" —
+  so a user swiping the rotor meets two identically named destructive controls with nothing to say
+  which row they are on, or which one went. Same-day duplicates are one of the ways the mistake gets
+  made in the first place, so this is not a rare shape. Open, and it needs a decision about what the
+  name carries when dates collide
 - [ ] **The `storage` event actually crosses contexts on iOS** — open the installed app and the
   same site in Safari, tick a job off in one, and check the other notices. This is not a nicety:
   the compare-and-swap, the reload-on-external-change, and the whole refused-undo path built for
@@ -657,14 +691,17 @@ Fixed:
 - **Ticking off would have been lost on reload** — the storage write path sat in a later phase.
 - **FR-005 had no implementing task** — nothing triggered a re-check when the date changed.
 - **Two open contexts could destroy the whole history** — now guarded by `revision`.
-- **Session-scoped undo made a mis-tap permanent** — undo was made durable, and that was later
-  **reversed**. The finding was correct when it was made: at the time nothing else could recover a
-  mis-tap, because the detail view showing full history did not exist yet. Making the offer durable
-  then produced two data-loss defects of its own (T097, T102), and once the detail view existed the
-  property that made session scope unacceptable no longer held. Undo is session-scoped again as of
-  2026-08-11, by decision, and an older mistake is corrected from the job's history instead. Left
-  here rather than deleted because it is the record of a real finding and of why the answer changed
-  twice; see the undo paragraphs above for what the design actually is now.
+- **Session-scoped undo made a mis-tap permanent** — undo was made durable, that was **reversed**,
+  and the reversal was then justified by something that had not been built. The finding was correct
+  when it was made: nothing else could recover a mis-tap. Making the offer durable produced two
+  data-loss defects of its own (T097, T102), so undo went back to session scope on 2026-08-11, by
+  decision, on the grounds that "an older mistake is corrected from the job's history instead".
+  **That was not true when it was written.** The history was a read-only list of dates, so for about
+  a week the original finding was live again and unnoticed, in the one state the reversal was
+  supposed to have made safe. T103 built the correction the reversal had assumed, and the finding is
+  closed by that rather than by the decision that cited it. Left here rather than deleted because
+  the lesson is not about undo: a decision was discharged against a capability nobody checked
+  existed, and it read as settled in three documents. See the undo paragraphs above for the design.
 - Document integrity: a requirement number pointing at two different requirements, a wrong amendment
   date, three documents citing three constitution versions, 21 falsely-parallel task markers.
 

@@ -91,6 +91,25 @@ export default defineConfig({
       },
       {
         test: {
+          // The asset tier. Reads files that ship as-is out of `public/` and
+          // compares them against the source of truth they were generated from.
+          //
+          // Separate from the build tier below for one reason: that tier runs a
+          // full production build, and a second file there is a second build.
+          // Nothing here needs one — an icon PNG is copied into `dist/`
+          // untouched, so reading it from `public/` reads exactly what ships.
+          //
+          // Node, no DOM. This exists because the icons drifted two palettes
+          // behind the app without anything noticing, and the reason nothing
+          // noticed is that no tier had ever opened one.
+          name: 'assets',
+          globals: true,
+          environment: 'node',
+          include: ['tests/assets/**/*.test.ts'],
+        },
+      },
+      {
+        test: {
           // The build tier. Asserts things that only exist once `vite build`
           // has run — principally what the generated service worker precaches,
           // which is the offline floor the constitution requires and which no

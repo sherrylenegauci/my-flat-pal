@@ -322,8 +322,10 @@ from the same origin.
 **Rejected**: Inter — the obvious choice, and already in half the apps on the phone, which is the
 original complaint restated in a different typeface. A CDN or a Google Fonts `<link>` — see
 offline, above; it also adds an origin that must be reached before first paint. A separate serif
-for headings — built and looked at rather than dismissed; see the note beside `--font-heading` in
-`tokens.css` for why one face won.
+for headings — built as a third candidate rather than dismissed, and turned down on size on
+2026-08-20: Newsreader over this same body face is 86,824 bytes and takes a first load to 161,647,
+more than doubling it, to buy character rather than function. The reasoning is beside
+`--font-heading` in `tokens.css`, which is where anyone tempted to try it again will be standing.
 
 **On adding Playwright.** The constitution permits automated browser tests but does not mandate
 them, and asks that the trigger be the manual checklist growing long enough that people skip it.

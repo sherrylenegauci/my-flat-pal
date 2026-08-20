@@ -293,17 +293,32 @@
 
   --font: 'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
 
-  /* Headings and body share a face here, and that was a decision rather than an
+  /* Headings and body share a face, and that is a decision rather than an
      omission. A serif for headings over a sans for text is the classic way to
-     buy character, and it was built and looked at — it is a second file and
-     roughly three times the bytes, on an app whose whole shell transfers about
-     74 kB. It also makes a louder claim than Principle V's "quiet and durable"
-     wants, on content that is mostly a job name the user typed rather than
-     anything editorial.
+     buy an interface some character, and character is exactly what the system
+     stack was turned down for — so it was built rather than dismissed, as a
+     third candidate, with Newsreader over this same body face.
 
-     The token exists anyway, pointing at --font, because the split is a live
-     option and the alternative is that every heading rule has to be found and
-     changed to try it. */
+     **Turned down on 2026-08-20, on size.** Two files rather than one: 86,824
+     bytes against 28,740, which takes a first load from 103,531 bytes to
+     161,647 — more than doubling it, on a shell that transfers 74,791 gzipped
+     without any font at all. What that buys is character rather than function;
+     the app works identically either way. It also makes a louder claim than
+     Principle V's "quiet and durable" wants, on content that is mostly a job
+     name someone typed rather than anything editorial.
+
+     The token stays, pointing at --font, for two reasons. Every heading rule in
+     app.css already reads through it, so trying the split again is a one-line
+     change here rather than a hunt through the stylesheet. And it is the seam
+     the decision was measured at, so leaving it in place keeps the choice
+     reversible instead of merely regrettable.
+
+     One consequence worth knowing, recorded where someone will meet it: while
+     this points at --font, nothing verifies the token. Misspell it and
+     `font-family: var(--font-heading)` becomes invalid at computed-value time,
+     an invalid inherited property falls back to `inherit`, and headings quietly
+     get --font — the same face, the right result, for the wrong reason. See the
+     note beside the heading sample in e2e/typeface.spec.ts. */
   --font-heading: var(--font);
 }
 

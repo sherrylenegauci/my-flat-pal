@@ -1,6 +1,6 @@
 import { build } from 'vite'
 import { existsSync, readFileSync } from 'node:fs'
-import { TYPEFACE_URL, precacheEntryFor } from '../support/typeface'
+import { BUNDLED_FACES, precacheEntryFor } from '../support/typeface'
 
 /**
  * The build tier — the only place the offline claim can be checked.
@@ -27,11 +27,11 @@ import { TYPEFACE_URL, precacheEntryFor } from '../support/typeface'
  *
  * ## What this asserts, stated honestly
  *
- * It asserts that the generated service worker's **precache manifest lists the
- * font**. It does not execute a service worker, does not install one, and does
- * not fetch anything with the network off. Node has no service worker to run
- * one in. The gap between "the manifest lists it" and "an installed phone with
- * no signal paints text in it" is real, and it closes on a device — the
+ * It asserts that the generated service worker's **precache manifest lists each
+ * bundled font**. It does not execute a service worker, does not install one,
+ * and does not fetch anything with the network off. Node has no service worker
+ * to run one in. The gap between "the manifest lists it" and "an installed phone
+ * with no signal paints text in it" is real, and it closes on a device — the
  * constitution already requires installed behaviour to be verified there before
  * a release. This test covers the failure that has actually happened and can
  * regress silently: the file being left out of the manifest entirely.
@@ -39,10 +39,17 @@ import { TYPEFACE_URL, precacheEntryFor } from '../support/typeface'
  * ## One build, several assertions
  *
  * `vite build` takes roughly two and a half seconds and the unit suite runs in
- * about eight, so the build happens once in `beforeAll` and both tests read the
- * same output. The two are kept separate because they fail for different
- * reasons and a maintainer should be told which: the font not being in `dist/`
- * at all is a different bug from the font being in `dist/` and unprecached.
+ * about eight, so the build happens once in `beforeAll` and every test reads the
+ * same output. Adding a face must not add a build, so the tests are generated
+ * from `BUNDLED_FACES` inside this one file rather than split across files — the
+ * `build` project in vite.config.ts says the same thing, and means it.
+ *
+ * Two tests per face, because they fail for different reasons and a maintainer
+ * should be told which: a font not being in `dist/` at all is a different bug
+ * from a font being in `dist/` and left out of the manifest. That second failure
+ * is the one that has actually happened here, and with two faces it can now
+ * happen to one of them while the other is fine — which is exactly the shape a
+ * single test naming a single file would have missed.
  */
 
 /** The repo root, derived from this file rather than from the working directory. */
@@ -93,27 +100,29 @@ function precachedUrls(sw: string): string[] {
   return urls
 }
 
-test('the bundled typeface is in the build output', () => {
-  const file = `${OUT_DIR}${precacheEntryFor(TYPEFACE_URL)}`
+for (const face of BUNDLED_FACES) {
+  test(`${face.family} is in the build output`, () => {
+    const file = `${OUT_DIR}${precacheEntryFor(face.url)}`
 
-  expect(
-    existsSync(file),
-    `the build produced no ${TYPEFACE_URL} — the file is missing from public/, or it has been renamed since tests/support/typeface.ts was written`,
-  ).toBe(true)
-})
+    expect(
+      existsSync(file),
+      `the build produced no ${face.url} — the file is missing from public/, or it has been renamed since tests/support/typeface.ts was written`,
+    ).toBe(true)
+  })
 
-test('the service worker precaches the bundled typeface', () => {
-  const precached = precachedUrls(serviceWorker)
+  test(`the service worker precaches ${face.family}`, () => {
+    const precached = precachedUrls(serviceWorker)
 
-  // Guard, not a claim: if this fails the pattern above has stopped reading the
-  // manifest, and every result below it is meaningless rather than passing.
-  expect(
-    precached,
-    'could not read a precache manifest out of dist/sw.js — the pattern in precachedUrls() no longer matches what workbox emits',
-  ).toContain('index.html')
+    // Guard, not a claim: if this fails the pattern above has stopped reading the
+    // manifest, and every result below it is meaningless rather than passing.
+    expect(
+      precached,
+      'could not read a precache manifest out of dist/sw.js — the pattern in precachedUrls() no longer matches what workbox emits',
+    ).toContain('index.html')
 
-  expect(
-    precached,
-    `${TYPEFACE_URL} is not precached, so an installed launch with no network has no font to paint with and falls back silently. Check workbox.globPatterns in vite.config.ts covers woff2.`,
-  ).toContain(precacheEntryFor(TYPEFACE_URL))
-})
+    expect(
+      precached,
+      `${face.url} is not precached, so an installed launch with no network has no font to paint ${face.appliesTo} with and falls back silently. Check workbox.globPatterns in vite.config.ts covers woff2.`,
+    ).toContain(precacheEntryFor(face.url))
+  })
+}

@@ -70,50 +70,55 @@ export interface MarkShape {
 }
 
 /**
- * Candidate A — **the block**.
+ * Candidate B — **the window**.
  *
- * The building a flat is in, seen straight on: three storeys, and a way in at
- * street level.
+ * A four-pane window sitting on its sill.
  *
  * ## Why this idea rather than a house
  *
  * A house is the obvious mark and the icon this replaces proves how dull it can
- * be. The specific thing a house gets wrong here is that the app is called *my
- * flat pal*, and a flat is precisely the dwelling that is not a house — it is
- * one of several in a shared building. Drawing the building says that in one
- * shape without a caption.
+ * be. A window is the one piece of a home that is unmistakably domestic without
+ * being a whole dwelling — it says *inside* and *outside* at once, and it is the
+ * same object whether the flat is a Victorian conversion or a new-build, which
+ * a roofline is not.
  *
  * It also ages in the right direction. The constitution's Technology Constraints
  * record a 3D room designer as planned, and LLM decor suggestions before that,
  * so maintenance will not stay the whole of this app. A spanner or a calendar
- * would be a mark for the first feature; a building is a mark for the subject.
+ * would be a mark for the first feature; a window belongs to the room the
+ * designer will eventually draw as much as to the sash that needs painting.
  *
  * ## Why it survives 48px
  *
- * Four straight strokes, one gap, and nothing smaller than a sixteenth of the
- * box. Rendered at the 48px a home screen uses, the walls are about 3.4px and
- * the doorway about 5px — measured off the generated PNG rather than reasoned
- * about, in `~/Desktop/my-flat-pal-mark/`.
+ * Four shapes, all of them large, arranged symmetrically — the arrangement that
+ * degrades most gracefully, because losing detail leaves a smaller version of
+ * the same thing rather than a lopsided one. The sill is what stops it reading
+ * as a grid or a table at the smallest size, and it costs one flat bar.
  *
  * ## What was built and rejected
  *
- * A floor plan — outer walls, one internal wall, a doorway gap — was drawn and
- * screenshotted alongside this. It is the best idea of the three for where the
- * app is going, because it is about interiors. It was dropped anyway: at 48px it
- * stops reading as a plan and becomes an abstract glyph, and "simple enough to
- * survive being small" is the constraint that decides this rather than
- * aptness. The screenshot is kept so the judgement can be disagreed with.
+ * A version with the top-left pane filled solid — the light on in one room — was
+ * drawn and screenshotted. It is a warmer idea and at 512px it works. It was
+ * dropped because at 48px the filled pane merges into the frame beside it and
+ * the window stops looking symmetrical without looking like anything else, and
+ * because a highlighted cell in a grid is what a spreadsheet does.
+ *
+ * A floor plan was also drawn: the best of the ideas for where the app is going,
+ * since it is about interiors, and the worst small — at 48px it stops reading as
+ * a plan and becomes an abstract glyph. The screenshots are kept so both
+ * judgements can be disagreed with.
  */
 export const MARK_SHAPES: readonly MarkShape[] = [
-  // The outer walls, drawn as one open path so the entrance is a gap in the
-  // line rather than a shape sitting on top of it. Starts at the near side of
-  // the doorway, runs anticlockwise all the way round, stops at its far side.
-  { d: 'M 42 95 L 15 95 L 15 5 L 85 5 L 85 95 L 58 95', paint: 'stroke' },
-  // The two floors. They run to 10 and 90 rather than to the wall centrelines,
-  // so they finish flush with the building's silhouette instead of leaving a
-  // five-unit nick at each end.
-  { d: 'M 10 35 H 90', paint: 'stroke' },
-  { d: 'M 10 65 H 90', paint: 'stroke' },
+  // The frame.
+  { d: 'M 12 10 H 88 V 74 H 12 Z', paint: 'stroke' },
+  // The mullion and the transom, drawn as two separate strokes rather than one
+  // cross, so each meets the frame at both ends.
+  { d: 'M 50 10 V 74', paint: 'stroke' },
+  { d: 'M 12 42 H 88', paint: 'stroke' },
+  // The sill. Wider than the frame, because a sill that stopped at the reveal
+  // would read as a fifth pane; rounded, because it is the one shape here that
+  // is a solid object rather than a line.
+  { d: roundedRectPath(4, 84, 92, 10, 3), paint: 'fill' },
 ]
 
 /**

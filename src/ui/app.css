@@ -18,7 +18,7 @@ body {
   background: var(--surface-sunken);
   color: var(--text);
   font-family: var(--font);
-  font-size: 17px;
+  font-size: var(--text-root);
   line-height: 1.5;
   /* Stops iOS inflating text in ways that break the 375px layout. */
   -webkit-text-size-adjust: 100%;
@@ -55,9 +55,11 @@ body {
    reads as a masthead rather than as another line of interface. */
 .app__title {
   margin: 0;
+  font-family: var(--font-heading);
   font-size: var(--text-lg);
-  font-weight: 600;
-  letter-spacing: -0.01em;
+  font-weight: var(--weight-name);
+  line-height: var(--heading-leading);
+  letter-spacing: var(--heading-tracking);
 }
 
 .app__back {
@@ -122,7 +124,7 @@ body {
   border-radius: var(--radius-sm);
   color: var(--text);
   font: inherit;
-  font-weight: 500;
+  font-weight: var(--weight-button);
   cursor: pointer;
 }
 
@@ -188,7 +190,7 @@ body {
 .schedule__title {
   margin: 0;
   font-size: var(--text-sm);
-  font-weight: 600;
+  font-weight: var(--weight-label);
   letter-spacing: 0.01em;
   color: var(--text-muted);
 }
@@ -237,13 +239,18 @@ body {
 }
 
 /* First stop for the eye. A full step above body text, and the only thing in
-   the row set in --text at 600 — the status is smaller, the date smaller and
-   lighter still. That ordering is the whole of T101. */
+   the row set in --text at the name weight — the status is smaller, the date
+   smaller and lighter still. That ordering is the whole of T101.
+
+   The leading is tighter than the body's 1.5. A name long enough to wrap used
+   to read as two separate lines; at --heading-leading the two stay one name. */
 .row__name {
   margin: 0;
+  font-family: var(--font-heading);
   font-size: var(--text-lg);
-  font-weight: 600;
-  letter-spacing: -0.01em;
+  font-weight: var(--weight-name);
+  line-height: var(--heading-leading);
+  letter-spacing: var(--heading-tracking);
 }
 
 /* Third stop: when, in the quietest thing the row says. */
@@ -282,7 +289,7 @@ body {
   text-decoration: underline;
   text-decoration-color: var(--border-strong);
   text-decoration-thickness: 1px;
-  text-underline-offset: 5px;
+  text-underline-offset: var(--underline-offset);
   cursor: pointer;
 }
 
@@ -319,7 +326,7 @@ body {
   border: 1px solid;
   border-radius: var(--radius-sm);
   font-size: var(--text-xs);
-  font-weight: 600;
+  font-weight: var(--weight-label);
   letter-spacing: 0.01em;
   white-space: nowrap;
 }
@@ -342,9 +349,11 @@ body {
    name is the largest thing on it. */
 .detail__title {
   margin: 0;
+  font-family: var(--font-heading);
   font-size: var(--text-xl);
-  font-weight: 600;
-  letter-spacing: -0.01em;
+  font-weight: var(--weight-title);
+  line-height: var(--heading-leading);
+  letter-spacing: var(--heading-tracking);
 }
 
 /* How often, and when it was last done — one line, muted, under the name.
@@ -373,8 +382,9 @@ body {
    restyled. */
 .detail__subtitle {
   margin: var(--space-5) 0 var(--space-3);
+  font-family: var(--font-heading);
   font-size: var(--text-base);
-  font-weight: 600;
+  font-weight: var(--weight-name);
   color: var(--text);
 }
 
@@ -494,9 +504,11 @@ body {
 
 .dialog__question {
   margin: 0 0 var(--space-3);
+  font-family: var(--font-heading);
   font-size: var(--text-lg);
-  font-weight: 600;
-  letter-spacing: -0.01em;
+  font-weight: var(--weight-name);
+  line-height: var(--heading-leading);
+  letter-spacing: var(--heading-tracking);
 }
 
 /* --text rather than --text-muted: this sentence says the history is about to
@@ -525,9 +537,11 @@ body {
 
 .empty__title {
   margin: 0 0 var(--space-3);
+  font-family: var(--font-heading);
   font-size: var(--text-xl);
-  font-weight: 600;
-  letter-spacing: -0.01em;
+  font-weight: var(--weight-title);
+  line-height: var(--heading-leading);
+  letter-spacing: var(--heading-tracking);
 }
 .empty__body { margin: 0 0 var(--space-5); color: var(--text-muted); }
 
@@ -542,7 +556,7 @@ body {
   color: var(--text);
   font: inherit;
   font-size: var(--text-base);
-  font-weight: 500;
+  font-weight: var(--weight-button);
   cursor: pointer;
 }
 
@@ -550,7 +564,7 @@ body {
   background: var(--accent);
   border-color: var(--accent);
   color: #fff;
-  font-weight: 600;
+  font-weight: var(--weight-button-strong);
 }
 
 .button--primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
@@ -565,7 +579,7 @@ body {
   background: var(--danger);
   border-color: var(--danger);
   color: #fff;
-  font-weight: 600;
+  font-weight: var(--weight-button-strong);
 }
 
 /* ---- Form -------------------------------------------------------------- */
@@ -573,9 +587,11 @@ body {
 .form { display: flex; flex-direction: column; gap: var(--space-4); }
 .form__title {
   margin: 0;
+  font-family: var(--font-heading);
   font-size: var(--text-xl);
-  font-weight: 600;
-  letter-spacing: -0.01em;
+  font-weight: var(--weight-title);
+  line-height: var(--heading-leading);
+  letter-spacing: var(--heading-tracking);
 }
 
 .form__field { display: flex; flex-direction: column; gap: var(--space-2); border: none; padding: 0; margin: 0; }
@@ -583,8 +599,8 @@ body {
    it, and at the same size and weight as the value it labels the two compete.
    The inputs themselves stay at 17px — shrinking what the user types would be
    solving the wrong problem. */
-.form__field legend { padding: 0; font-size: var(--text-sm); font-weight: 600; }
-.form__field label { font-size: var(--text-sm); font-weight: 600; }
+.form__field legend { padding: 0; font-size: var(--text-sm); font-weight: var(--weight-label); }
+.form__field label { font-size: var(--text-sm); font-weight: var(--weight-label); }
 
 /* Available to any label that must be announced but not shown. The clip-path pair is
    the standard technique: it keeps the element in the accessibility tree, where

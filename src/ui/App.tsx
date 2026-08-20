@@ -9,6 +9,7 @@ import { useNavigation } from './navigation'
 import { useSchedule } from './useSchedule'
 import type { NewItemInput } from './useSchedule'
 import './tokens.css'
+import './fonts.css'
 import './focus.css'
 import './app.css'
 

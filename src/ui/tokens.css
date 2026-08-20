@@ -181,20 +181,88 @@
   --danger: #b3261e;
 
   /* ---- Type ------------------------------------------------------------
-     A job's name, its status and its due date used to sit at roughly the same
-     size and weight, so they competed (T101). The ladder below is what makes
-     them read in order: name, then status, then date. Size does the coarse
-     work; weight and --text-muted do the rest.
+     ## The face is bundled now, not the system's
 
-     Root is 17px, so: xs 13.8px · sm 15.9px · base 17px · lg 19.1px · xl
-     23.4px. All well under WCAG's 24px "large text" threshold except xl, which
-     is 23.4px and therefore still held to the full 4.5:1 — deliberately, so no
-     heading gets a relaxed floor by accident. */
+     --font was `-apple-system, BlinkMacSystemFont, …`, which is San Francisco
+     on the phone this app is for. San Francisco is a good typeface and it cost
+     nothing — no bytes, no licence, no build step. It was turned down for the
+     one thing a platform default cannot fix: being the default, so the app
+     looked like every other app on the phone. "Generic" was the objection.
+
+     Source Sans 3 replaces it. SIL OFL 1.1, self-hosted from /fonts, precached
+     by the service worker, variable on the weight axis from 200 to 900. The
+     @font-face is in fonts.css and the licence ships beside the file. See
+     plan.md § Dependency budget for why a typeface is allowed to be the third
+     thing that reaches the device, and what it costs.
+
+     The system stack stays behind it in the stack below. A font that fails to
+     arrive should leave a readable app, not a blank one.
+
+     ## The ladder is T101's. The numbers are not
+
+     A job's name, its status and its due date used to sit at roughly the same
+     size and weight, so they competed (T101). They still read in order — name,
+     then status, then date — and that is not what was being objected to.
+
+     What changed is every number, because the old ones were chosen against San
+     Francisco and this is not San Francisco. Measured in WebKit at 100px,
+     against the system stack:
+
+       Source Sans 3 — x-height 96% · width 101% at 400 · width 98% at 600
+
+     Two consequences, and they pull in opposite directions. The smaller
+     x-height means the same pixel size reads a little smaller, so the root goes
+     from 17px to 17.5px. The narrower fit at heading weight means that costs
+     nothing horizontally — at 620 this face draws "Change the water filter" in
+     the 200px a row gives it up to 20.3px, where San Francisco at 600 ran out
+     at 19.9px and wrapped. So --text-lg goes up as well, and the longest seeded
+     job name stops taking two lines.
+
+     Root is 17.5px, so: xs 14.2px · sm 16.4px · base 17.5px · lg 20.1px ·
+     xl 22.8px.
+
+     Every step is under WCAG's 24px "large text" threshold and no weight below
+     reaches 700, so every text node in the app is held to the full 4.5:1 rather
+     than the relaxed 3:1 — the same deliberate choice the previous scale
+     recorded, kept rather than inherited by luck. `requiredTextRatio` in
+     e2e/support/colour.ts is what decides that, per rendered node, in a real
+     engine.
+
+     ## Weights are not a menu of four any more
+
+     This is the second half of what was wrong, and it is the reason for
+     preferring a variable font. With static cuts a weight is whichever ones
+     someone shipped; with an axis it can be chosen for the size it is set at.
+     Small text needs more weight to hold its colour and large text needs less
+     to avoid looking heavy, so the badge and the field labels are *heavier*
+     than the page titles rather than everything being 600.
+
+     Nothing here reaches 700, which also keeps the contrast floor where the
+     paragraph above says it is. */
+  --text-root: 17.5px;
   --text-xs: 0.8125rem;
   --text-sm: 0.9375rem;
   --text-base: 1rem;
-  --text-lg: 1.125rem;
-  --text-xl: 1.375rem;
+  --text-lg: 1.15rem;
+  --text-xl: 1.3rem;
+
+  --weight-label: 650;
+  --weight-name: 620;
+  --weight-title: 600;
+  --weight-button: 550;
+  --weight-button-strong: 620;
+
+  /* Headings were inheriting the body's 1.5, which is loose for a line that is
+     already the largest thing on screen — a wrapped job name read as two
+     unrelated lines rather than one name. Tightened here so that the wrap,
+     when a long enough name causes one, still reads as a single heading. */
+  --heading-leading: 1.25;
+  --heading-tracking: -0.01em;
+
+  /* The underline under a job's name in the list. A token because it is a
+     property of the face: how far the line clears the descenders depends on
+     where the descenders are. */
+  --underline-offset: 5px;
 
   /* ---- Spacing and shape ----------------------------------------------- */
   --space-1: 0.25rem;
@@ -223,7 +291,20 @@
   /* The constitution requires 44x44 CSS px minimum. */
   --touch-target: 44px;
 
-  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font: 'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+
+  /* Headings and body share a face here, and that was a decision rather than an
+     omission. A serif for headings over a sans for text is the classic way to
+     buy character, and it was built and looked at — it is a second file and
+     roughly three times the bytes, on an app whose whole shell transfers about
+     74 kB. It also makes a louder claim than Principle V's "quiet and durable"
+     wants, on content that is mostly a job name the user typed rather than
+     anything editorial.
+
+     The token exists anyway, pointing at --font, because the split is a live
+     option and the alternative is that every heading rule has to be found and
+     changed to try it. */
+  --font-heading: var(--font);
 }
 
 /* Dark mode is deliberately not implemented yet — a half-audited dark palette

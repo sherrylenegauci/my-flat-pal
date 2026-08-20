@@ -252,11 +252,16 @@ involves no timezone at all.
 
 ### Dependency budget
 
-11 packages, of which 2 reach the user's device.
+11 npm packages, of which 2 ship as code to the user's device — **and one bundled asset that is
+not an npm package and ships anyway**. That third thing is a typeface, and it is recorded here
+because Principle I is about what reaches the phone, not about what `package.json` happens to
+list. This line used to read "11 packages, of which 2 reach the user's device", which stopped
+being true the moment a font was committed.
 
 | Package | Kind | Why |
 |---|---|---|
 | `react`, `react-dom` | Runtime | The constitution's stack. The only code on your phone. |
+| Source Sans 3 (vendored woff2) | Ships | The app's typeface. Not an npm dependency. Justified below. |
 | `typescript`, `vite`, `@vitejs/plugin-react` | Build | The constitution's stack (R1 confirms Vite). |
 | `vite-plugin-pwa` | Build | Manifest, precache, update flow. *Recorded violation.* |
 | `vitest` | Test | Shares Vite's config, so it's a runner rather than a second toolchain. |
@@ -264,6 +269,56 @@ involves no timezone at all.
 | `jsdom` | Test | DOM environment. *Recorded violation.* |
 | `axe-core` | Test | Automated structural accessibility checks. |
 | `@playwright/test` | Test | Real-browser tier. Justified below. |
+
+**On bundling a typeface.** The app shipped on the system font stack — `-apple-system,
+BlinkMacSystemFont, …`, which resolves to San Francisco on the iPhone this is built for. That was
+free in every sense: no bytes, no licence, no build step, and a genuinely good typeface. It was
+turned down for the one thing a platform default cannot fix. Being the platform's own face *is*
+the problem; "generic" was the objection, and no amount of tuning the sizes answers it.
+
+Nothing in the existing stack can solve it either, which is the question Principle I actually
+asks. A typeface is not code and cannot be synthesised from what is already here. The only
+alternatives are the handful of web-safe families every OS has already (the same problem, older)
+and a webfont served from a CDN, which is ruled out below.
+
+**It is vendored, not depended on.** The file is committed at `public/fonts/`. It is not an npm
+dependency, so there is nothing to resolve, audit, upgrade, or pull transitively. `@fontsource-*`
+publishes exactly these files as packages; we took the file and left the package, which is the
+Principle I answer to a dependency whose entire job would be copying one asset into place.
+
+**It is self-hosted because it must work offline.** The constitution requires the service worker
+to cache the app shell so a home-screen launch with no network shows the app. A font fetched from
+`fonts.gstatic.com` at first paint is a font that is not there on a train, and the app would fall
+back to the system stack silently — still legible, so nobody would report it. So: same origin,
+`workbox.globPatterns` extended to cover `woff2`, and a new build test tier
+(`tests/build/typeface-precache.test.ts`) that runs the production build and asserts the generated
+service worker's precache manifest lists the file. That test was red before the config changed:
+Vite was already copying the woff2 into `dist/fonts/` and workbox was already leaving it out.
+
+That tier is new and is the third Vitest project. It costs about two seconds on a suite that ran
+in eight, and it is deliberately one file — a second file there is a second build.
+
+**One file, variable, Latin only.** A variable font carries a continuous weight axis in a single
+request. That is not a nicety here: the complaint that prompted this was two complaints, and the
+second was that the weights and sizes were wrong. A continuous axis is what lets `tokens.css` set
+620 for a job's name and 650 for a badge instead of rounding everything to 600. Latin subset only,
+and no italic — the app sets `font-style: italic` nowhere. The subset is fontsource's own cut of
+the upstream OFL release; no subsetting tool was added to the build.
+
+**Shipped size: 28,740 bytes (28.7 kB).** For scale, measured on this build: the JavaScript is
+219.6 kB raw / 69.3 kB gzipped and the CSS 10.3 kB / 2.7 kB, so the shell transfers roughly 74 kB
+today. woff2 is already compressed, so the file size *is* the transfer size — about a 39% increase
+on a first load, and nothing at all on every load after it, since it is precached and the app is
+opened for a few seconds at a time for years.
+
+**Licence: SIL OFL 1.1.** `public/fonts/OFL-source-sans-3.txt` ships with the font and is served
+from the same origin.
+
+**Rejected**: Inter — the obvious choice, and already in half the apps on the phone, which is the
+original complaint restated in a different typeface. A CDN or a Google Fonts `<link>` — see
+offline, above; it also adds an origin that must be reached before first paint. A separate serif
+for headings — built and looked at rather than dismissed; see the note beside `--font-heading` in
+`tokens.css` for why one face won.
 
 **On adding Playwright.** The constitution permits automated browser tests but does not mandate
 them, and asks that the trigger be the manual checklist growing long enough that people skip it.

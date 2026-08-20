@@ -16,18 +16,22 @@ import type { BundledFace } from '../tests/support/typeface'
  * written out once in `tests/support/typeface.ts`; the short version is that a
  * silent fallback is invisible to every tier below this one.
  *
- * ## Two faces, and why that changes the shape of this file
+ * ## Why the measuring is done on real rendered text
  *
- * This candidate paints headings in Newsreader and everything else in Source
- * Sans 3. The earlier version of this file measured a probe span appended to
- * `document.body`, which inherits `--font` — so it measured the body face, said
- * "the bundled typeface", and covered exactly half of what ships. A Newsreader
- * whose file 404s, whose `@font-face` family is misspelled, or whose name in
- * `--font-heading` does not match it, would have left every heading in the app
- * rendering in Georgia with the whole suite green.
+ * This candidate bundles one face, Source Sans 3, and paints everything in it —
+ * headings included, because `--font-heading` points at `--font`.
  *
- * So the measuring is now done on **text the app actually rendered**, once per
- * face, listed in `PAINTED_TEXT` below. That is a stronger claim than the probe
+ * An earlier version of this file measured a probe span appended to
+ * `document.body`. That was weaker than it read: a probe on `body` shows the
+ * face loaded and that `body` inherits it, which is not the same as anything a
+ * user looks at being painted in it. The sibling candidate that bundles a serif
+ * for headings is where that gap bites hardest — a Newsreader that 404s leaves
+ * every heading in Georgia, looking perfectly reasonable, with the probe green —
+ * and the shape adopted there is kept here because it is the better claim on any
+ * candidate.
+ *
+ * So the measuring is done on **text the app actually rendered**, listed in
+ * `PAINTED_TEXT` below. That is a stronger claim than the probe
  * made even for the body face: a probe on `body` shows that the face loaded and
  * that `body` inherits it, where measuring a real heading shows that the face is
  * what that heading is *painted in*. Those come apart the moment two faces are
@@ -91,10 +95,23 @@ const PAINTED_TEXT: ReadonlyArray<{
   find: (page: Page) => Locator
 }> = [
   {
-    // A heading, reached through `--font-heading`. On this candidate that
-    // points at `--font`, so this is the same face as the row below — but not
-    // the same route to it, and a broken `--font-heading` would show up here
-    // and nowhere else.
+    // A heading. `--font-heading` points at `--font` on this candidate, so this
+    // is the same face as the row below.
+    //
+    // It is **not** a check on the `--font-heading` route, and an earlier
+    // version of this comment claimed it was. Setting that token to something
+    // invalid makes `font-family: var(--font-heading)` invalid at
+    // computed-value time, and an invalid inherited property falls back to
+    // `inherit` — which on this candidate is `--font`, the same face. Measured:
+    // the heading renders at 198.16px either way. So the token could be
+    // misspelled and every heading would still be right, for the wrong reason,
+    // and this test would still pass. It becomes a real check the moment
+    // `--font-heading` names a different family, which is what the sibling
+    // Newsreader candidate does.
+    //
+    // What this entry does check is worth having on its own: that a heading is
+    // painted in the bundled face, so a rule hard-coding some other family onto
+    // `.row__name` would fail here.
     face: BODY_FACE,
     what: 'a job’s name on the schedule list',
     sample: 'Change the water filter',
@@ -156,7 +173,7 @@ async function measurePaintedText(
 
       // `document.fonts` entry by entry, not `document.fonts.check()`.
       //
-      // This started as `check('32px "Newsreader"')`, which reads as "is that
+      // This started as `check('32px "<family>"')`, which reads as "is that
       // face loaded" and is not. It reports "no *matching* face is still
       // unloaded", so a family with **no** `@font-face` at all comes back
       // `true` — measured in both engines, with a family invented on the spot.
@@ -284,7 +301,7 @@ for (const subject of PAINTED_TEXT) {
     ).toBe(true)
 
     // Guard, and the reason the comparison below is not a mirage. Forcing
-    // `font-family: "Newsreader"` on an element does not conjure Newsreader: if
+    // `font-family: "<the bundled family>"` on an element does not conjure it: if
     // no such face is usable the browser quietly paints the run in its default
     // font, and "as painted" could then match "forced to the bundled face" while
     // neither of them is the bundled face. Establishing that the face is real
@@ -428,9 +445,9 @@ test('no stylesheet points a font at another origin', async ({ page }) => {
 
   // Without this the audit would report a clean sweep on a page that declares
   // fewer bundled faces than it ships — including none at all, which is the
-  // situation this whole file exists to prevent. Counted against the list rather
-  // than against zero, because this candidate ships two and an audit that
-  // inspected one of them has not audited the other.
+  // situation this whole file exists to prevent. Counted against the length of
+  // the list rather than against zero, so that a candidate bundling more than
+  // one face cannot pass this having inspected only the first.
   expect(
     audit.fontFacesInspected,
     `the page declares ${audit.fontFacesInspected} @font-face rules, and this candidate bundles ${BUNDLED_FACES.length} faces — so this audit did not inspect all of them`,

@@ -305,11 +305,16 @@ second was that the weights and sizes were wrong. A continuous axis is what lets
 and no italic — the app sets `font-style: italic` nowhere. The subset is fontsource's own cut of
 the upstream OFL release; no subsetting tool was added to the build.
 
-**Shipped size: 28,740 bytes (28.7 kB).** For scale, measured on this build: the JavaScript is
-219.6 kB raw / 69.3 kB gzipped and the CSS 10.3 kB / 2.7 kB, so the shell transfers roughly 74 kB
-today. woff2 is already compressed, so the file size *is* the transfer size — about a 39% increase
-on a first load, and nothing at all on every load after it, since it is precached and the app is
-opened for a few seconds at a time for years.
+**Shipped size: 28,740 bytes.** For scale, measured on the build this change produces rather than
+on the one before it: JavaScript 219,628 bytes raw / 69,089 gzipped, CSS 10,891 / 2,705,
+workbox-window 5,748 / 2,359, and index.html 1,261 / 638 — a shell that transfers **74,791 bytes**
+gzipped. woff2 is already compressed, so the font's file size *is* its transfer size: a **38%**
+increase on a first load, taking it to 103,531 bytes, and nothing at all on every load after,
+since it is precached and the app is opened for a few seconds at a time for years.
+
+(The CSS figure moved with this change — the type tokens and the heading rules added about 600
+bytes raw. It is re-measured here rather than carried over, because the point of this section is
+that its numbers are measured.)
 
 **Licence: SIL OFL 1.1.** `public/fonts/OFL-source-sans-3.txt` ships with the font and is served
 from the same origin.

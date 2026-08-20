@@ -288,6 +288,75 @@ describe('removing one completion from a job’s history', () => {
     ).toBeTruthy()
   })
 
+  /**
+   * Two entries dated the same day, and which one actually goes.
+   *
+   * **The two tests above press both twins and cannot tell them apart**, which
+   * verification found by sabotage after this file first went green. They only
+   * read the dialog's consequence sentence, and that sentence is *identical*
+   * for both twins by design — the schedule does not move whichever one is
+   * removed. So the two tests that look like they cover ties were the two that
+   * could not: rewiring the control to always select the first entry sharing
+   * its row's date left all 294 tests passing, while pressing the lower control
+   * removed the wrong row.
+   *
+   * That is the case this whole feature exists for. Ticking a job off twice in
+   * one day is one of the commonest ways the mistake gets made, and "I removed
+   * one and the wrong one went" is indistinguishable on screen from "it
+   * worked", because the remaining row shows the same date.
+   *
+   * So these two confirm the removal and read storage back, by id. Between them
+   * they pin that each control removes its own row rather than whichever twin
+   * the implementation happens to find first.
+   *
+   * History renders newest-first with `recordedAt` breaking the tie, so the
+   * lately-recorded twin is the upper control and the early one is below it.
+   */
+  const twins = () =>
+    anItem({
+      id: 'itm_boiler',
+      name: 'Boiler service',
+      interval: YEARLY,
+      completions: [
+        aCompletion('2024-05-06', { id: 'cmp_oldest' }),
+        aCompletion('2025-06-05', { id: 'cmp_tied_early', recordedAt: '2025-06-05T12:00:00.000Z' }),
+        aCompletion('2025-06-05', { id: 'cmp_tied_late', recordedAt: '2026-01-10T09:00:00.000Z' }),
+      ],
+    })
+
+  it('removes the upper of two entries dated the same day, when that is the one pressed', async () => {
+    seed([twins()])
+    const { user } = launch()
+    await open(user)
+
+    const controls = await screen.findAllByRole('button', { name: REMOVE_MIDDLE })
+    await user.click(controls[0]!)
+    await user.click(
+      within(screen.getByRole('dialog')).getByRole('button', { name: 'Remove permanently' }),
+    )
+
+    await waitFor(() => expect(screen.getAllByRole('button', { name: REMOVE_MIDDLE })).toHaveLength(1))
+    // The lately-recorded twin was on top, so it is the one that goes.
+    expect(storedIds()).toEqual(['cmp_oldest', 'cmp_tied_early'])
+  })
+
+  it('removes the lower of two entries dated the same day, when that is the one pressed', async () => {
+    seed([twins()])
+    const { user } = launch()
+    await open(user)
+
+    const controls = await screen.findAllByRole('button', { name: REMOVE_MIDDLE })
+    await user.click(controls[1]!)
+    await user.click(
+      within(screen.getByRole('dialog')).getByRole('button', { name: 'Remove permanently' }),
+    )
+
+    await waitFor(() => expect(screen.getAllByRole('button', { name: REMOVE_MIDDLE })).toHaveLength(1))
+    // The other twin, and only it. An implementation that selected the first
+    // entry matching the row's date would take `cmp_tied_late` here instead.
+    expect(storedIds()).toEqual(['cmp_oldest', 'cmp_tied_late'])
+  })
+
   it('removes the entry when it is confirmed, and moves the schedule with it', async () => {
     // The screen and the stored document, both. In the duplicate-job bug the
     // screen was right and storage was wrong, and the user found out on the

@@ -343,6 +343,13 @@ body {
   flex: none;
 }
 
+/* A trap worth naming, found while sabotaging this control's height. `.button`
+   is declared further down this file, so on equal specificity it wins on source
+   order — and its `min-height: var(--touch-target)` beats a `height` set here.
+   Anything that tries to change this control's height from its own rule will be
+   silently ignored. That is the right default for a destructive control on a
+   list (it cannot accidentally be shrunk below 44px), but it is not obvious. */
+
 .detail__empty {
   margin: 0;
   color: var(--text-muted);

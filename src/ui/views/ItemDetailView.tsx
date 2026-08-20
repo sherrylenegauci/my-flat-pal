@@ -166,6 +166,17 @@ export function ItemDetailView({
    * Focus moves here, synchronously, before React commits the removal. The
    * heading is not part of what unmounts, so it still holds focus afterwards,
    * and the dialog's cleanup then sees focus was not lost and leaves it alone.
+   *
+   * **`setRemovingId(null)` is not what closes the dialog, and this comment
+   * used to imply it was.** `removing` above is a lookup into the rendered
+   * history, so once the entry is gone the lookup returns null and the dialog
+   * closes whether this line runs or not — deleting it leaves the whole suite
+   * green, which verification found by sabotage. It is kept because it is what
+   * closes the dialog in the case where the removal is *declined*: another
+   * context having removed the same entry first leaves `mutate` refusing to
+   * write, and nothing else would clear the id. Nothing in the suite
+   * distinguishes that, because it needs a real race; recorded rather than left
+   * reading as load-bearing.
    */
   function handleConfirmRemoval(completionId: string) {
     onRemoveCompletion(completionId)

@@ -379,6 +379,39 @@ export const APP_STATES: AppState[] = [
     },
   },
   {
+    name: 'the confirmation before removing one completion',
+    /**
+     * The other caller of the same dialog (T103), which had no state of its own
+     * until verification pointed out that a view missing from this list is a
+     * view four sweeps do not cover.
+     *
+     * **Worth its own state even though the delete dialog already has one**, for
+     * two reasons that are about this dialog rather than about dialogs. Its
+     * consequence sentence is roughly twice as long — it names the date the
+     * schedule moves to and the status the job will then show — so it is the
+     * case that decides whether `.dialog`'s `max-height` and `overflow-y` are
+     * doing their job at 375px, and the axe scan has never run over this
+     * wording. And the *page behind* it is the history list, whose rows now each
+     * carry a destructive control; that page is `inert` here, which is what
+     * `readControlBoxes` is asked to skip, so this is also where that exclusion
+     * is exercised against a page with many more controls than the delete case
+     * has.
+     *
+     * The newest entry is the one opened, deliberately: removing it is the
+     * branch that moves the due date backwards, which produces the longest of
+     * the three sentences and is the correction the whole feature exists for.
+     */
+    go: async (page) => {
+      await seed(page, JSON.stringify(toDocument(WITH_HISTORY)))
+      await open(page)
+      await page.getByRole('button', { name: 'Service the boiler', exact: true }).click()
+      await page.getByRole('list', { name: 'History' }).waitFor()
+      await page.getByRole('button', { name: 'Remove the completion on 11 May 2025' }).click()
+      await page.getByRole('dialog').waitFor()
+      await page.getByRole('button', { name: 'Remove permanently' }).waitFor()
+    },
+  },
+  {
     name: 'job detail, never done',
     go: async (page) => {
       await seed(page, JSON.stringify(toDocument([{ ...WITH_HISTORY[0]!, history: [] }])))

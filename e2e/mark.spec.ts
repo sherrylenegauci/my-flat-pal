@@ -2,6 +2,13 @@ import { test, expect } from '@playwright/test'
 import { openScheduleList } from './support/app'
 import { contrastRatio, describeColour, parseCssColour } from './support/colour'
 import type { Rgba } from './support/colour'
+// Across the tier boundary on purpose. `tests/support/` holds two things this
+// needs and neither is jsdom-flavoured: a PNG decoder, and the one parser that
+// reads the palette out of `tokens.css`. Copying either here would give the two
+// tiers separate answers to the same question, which is the class of drift this
+// whole change exists to close.
+import { decodePng } from '../tests/support/png'
+import { FLAT_FILL_TOLERANCE, describeToken, readColourToken } from '../tests/support/tokens'
 
 /**
  * The app's mark, in an engine that actually paints it.
@@ -154,6 +161,96 @@ function distinct(colours: Rgba[]): Rgba[] {
   for (const colour of colours) seen.set(describeColour(colour), colour)
   return [...seen.values()]
 }
+
+/**
+ * The mark, as pixels the engine actually painted.
+ *
+ * ## Why reading `fill` was not enough, and how that was found
+ *
+ * Every other assertion in this file reads *paint properties* through
+ * `getComputedStyle`. Independent verification broke that: adding
+ * `opacity: 0` to `.mark__outline` left all six tests in this file green in both
+ * engines, because a hidden element still reports `stroke: rgb(255, 255, 255)`.
+ * The header rendered a bare teal tile with no drawing on it and nothing
+ * noticed. `visibility: hidden` and a zero-alpha stroke hide the same way.
+ *
+ * The file already guarded the two shapes of that bug it had thought of —
+ * `fill: none; stroke: none`, and a zero stroke width — which is what made the
+ * omission an oversight rather than a decision. A screenshot has no such gaps:
+ * whatever is in the image is what a person sees.
+ *
+ * ## It also closes a second hole, and this one is Principle V
+ *
+ * Nothing checked that the header mark uses the *tokens*. Replacing
+ * `.mark__figure`'s `var(--surface)` with a literal `#ffff00` passed
+ * `mark.spec.ts`, `contrast.spec.ts` and the axe sweep together, because
+ * yellow on teal clears the contrast floor and no other check looks at which
+ * colour it is. `tests/assets/icons.test.ts` compares the icons against
+ * `tokens.css`; this makes the header answer the same question.
+ */
+test('the mark is painted, in the app’s two colours', async ({ page }) => {
+  await openScheduleList(page)
+
+  const ground = readColourToken('--accent')
+  const figure = readColourToken('--surface')
+
+  const shot = await page.locator('.mark').screenshot({ type: 'png' })
+  const image = decodePng(shot, 'a screenshot of .mark')
+
+  /**
+   * Only pixels inside the tile are counted, and the reason is a trap this test
+   * fell into on its first run.
+   *
+   * `--surface` is both the mark's own colour *and* the colour of the header it
+   * sits on. The tile has a corner radius, so an element screenshot's bounding
+   * box includes four corners of bare header — about 10% of it, all of them
+   * `--surface`. With the figure deliberately hidden the test still measured a
+   * 10.08% "figure" share and passed, which is the same shape of false pass it
+   * was written to remove.
+   *
+   * A centred circle inscribed in the tile excludes those corners. It contains
+   * the whole mark with room to spare: the mark box is 66% of the tile, so its
+   * furthest corner sits at 0.467 of the side from the centre against a radius
+   * of 0.48.
+   */
+  const radius = Math.min(image.width, image.height) * 0.48
+  const centreX = image.width / 2
+  const centreY = image.height / 2
+
+  const inside = image.pixels.filter((_, index) => {
+    const dx = (index % image.width) + 0.5 - centreX
+    const dy = Math.floor(index / image.width) + 0.5 - centreY
+    return Math.hypot(dx, dy) <= radius
+  })
+
+  const total = inside.length
+  const share = (colour: { r: number; g: number; b: number }) =>
+    inside.filter(
+      (p) =>
+        p.a === 255 &&
+        Math.abs(p.r - colour.r) <= FLAT_FILL_TOLERANCE &&
+        Math.abs(p.g - colour.g) <= FLAT_FILL_TOLERANCE &&
+        Math.abs(p.b - colour.b) <= FLAT_FILL_TOLERANCE,
+    ).length / total
+
+  const groundShare = share(ground)
+  const figureShare = share(figure)
+
+  // Floors rather than exact counts, for the reason `tests/assets/icons.test.ts`
+  // gives at length: the precise coverage is a function of the drawing, which is
+  // free to change, and pinning it would make this a test of the current shapes.
+  // What is being asked is the crude question — is the mark there, in the right
+  // two colours.
+  expect(
+    { ground: groundShare >= 0.4, figure: figureShare >= 0.03 },
+    `the mark is not painted in the app's colours. Of the ${total} pixels inside the tile, ` +
+      `${(groundShare * 100).toFixed(1)}% are --accent (${describeToken(ground)}) and ` +
+      `${(figureShare * 100).toFixed(1)}% are --surface (${describeToken(figure)}), both ` +
+      'read from src/ui/tokens.css. A figure share near zero means the mark is ' +
+      'hidden or drawn in the ground colour; a ground share near zero means the ' +
+      'tile is not the accent.',
+  ).toEqual({ ground: true, figure: true })
+})
 
 test('the mark is on the screen, with a size', async ({ page }) => {
   await openScheduleList(page)

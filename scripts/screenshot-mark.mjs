@@ -22,9 +22,23 @@
  *
  * Needs a dev server already running. Start one on a port of your own —
  * Sherrylene may well have `npm run dev` open on 5173 looking at the app.
+ *
+ * ## The contact sheet's own chrome carries colour literals, on purpose
+ *
+ * Principle V says a *feature* must not define a colour outside `tokens.css`.
+ * The sheet below is not a feature; it is a darkroom, and its greys exist to
+ * stand in for a home-screen wallpaper and a caption — things the app does not
+ * have tokens for and should not grow them for. Judging the mark against the
+ * app's own palette would also be the wrong test: an icon has to hold up
+ * against whatever wallpaper someone happens to use.
+ *
+ * The one colour that *is* read from the tokens is the page behind it,
+ * `--surface-sunken`, because that is the app's own surface and the header shot
+ * sits on it. Said here because "no colour was introduced" is a claim this
+ * change makes elsewhere, and it is true of the app and not of this file.
  */
 
-import { chromium } from 'playwright'
+import { chromium } from '@playwright/test'
 import { readFileSync, mkdirSync, writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
@@ -39,7 +53,7 @@ if (outDir === undefined) {
 }
 mkdirSync(outDir, { recursive: true })
 
-const { readToken } = await import(join(here, 'mark-svg.mjs'))
+const { readToken } = await import(join(here, 'mark-svg.ts'))
 const tokens = join(root, 'src/ui/tokens.css')
 const sunken = readToken(tokens, '--surface-sunken')
 

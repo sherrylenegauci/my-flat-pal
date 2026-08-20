@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { decodePng, describePixel, pixelAt } from '../support/png'
 import type { DecodedPng, Pixel } from '../support/png'
+import { FLAT_FILL_TOLERANCE, readColourToken } from '../support/tokens'
+import type { Rgb } from '../support/tokens'
 
 /**
  * The home-screen icons, read as pixels and compared against the palette.
@@ -30,65 +32,32 @@ import type { DecodedPng, Pixel } from '../support/png'
  * `tests/support/png.ts`, and `readToken` in `scripts/mark-svg.mjs`, which reads
  * the same two names when it generates these files.
  *
- * ## What this tier cannot say
+ * ## What this file does NOT check, and which file does
  *
- * Nothing about whether the mark is *legible* at 48px on a home screen, whether
- * it reads as a flat rather than as a smudge, or how it looks beside the other
- * icons on the springboard. Those are judgements about a rendered image on a
- * real device and they belong on the manual checklist in plan.md. What is here
- * is what pixels can settle: the palette, and the maskable safe zone.
+ * **The drawing.** Every assertion here is about colour and coverage: four
+ * corner pixels, a ground share, a figure share, and a radius for the maskable
+ * file. None is about shape, position or centring. Independent verification
+ * demonstrated the size of that hole — replacing `icon-192.png` with a white
+ * square in a corner and `icon-512.png` with the old generic house, both in the
+ * correct palette, left the whole suite green at 328 of 328.
+ *
+ * `tests/assets/icon-geometry.test.ts` closes it by redrawing each icon from
+ * `src/ui/mark.ts` and comparing pixels. The two files are kept apart because
+ * they fail for different reasons and a reader should be able to tell which:
+ * this one says "the palette moved and the icons did not", the other says "these
+ * are not the mark".
+ *
+ * ## What neither can say
+ *
+ * Whether the mark is *legible* at 48px on a home screen, whether it reads as a
+ * flat rather than as a smudge, or how it looks beside the other icons on a
+ * springboard. Those are judgements about a rendered image on a real device and
+ * they belong on the manual checklist in plan.md.
  */
 
 /** The repo root, derived from this file rather than from the working directory. */
 const PROJECT_ROOT = decodeURIComponent(new URL('../../', import.meta.url).pathname)
-const TOKENS = `${PROJECT_ROOT}src/ui/tokens.css`
 const ICON_DIR = `${PROJECT_ROOT}public/icons/`
-
-interface Rgb {
-  r: number
-  g: number
-  b: number
-}
-
-/**
- * One custom property out of `tokens.css`, as an RGB triple.
- *
- * Throws on anything it cannot read. The regex anchors on the colon, which is
- * what keeps `--surface` from matching `--surface-sunken`.
- */
-function readColourToken(name: string): Rgb {
-  const css = readFileSync(TOKENS, 'utf8')
-  const match = new RegExp(`^\\s*${name}:\\s*(#[0-9a-fA-F]{3,8})\\s*;`, 'm').exec(css)
-  const hex = match?.[1]
-
-  if (hex === undefined) {
-    throw new Error(
-      `Could not find ${name} in ${TOKENS}. Refusing to fall back to a default — ` +
-        'an icon audited against a guessed colour is not audited.',
-    )
-  }
-
-  const digits =
-    hex.length === 4
-      ? [...hex.slice(1)].map((d) => d + d).join('')
-      : hex.length === 7
-        ? hex.slice(1)
-        : null
-
-  if (digits === null) {
-    throw new Error(
-      `${name} is "${hex}", which carries an alpha channel or an unsupported length. ` +
-        'An icon ground has to be opaque — a translucent one shows whatever the ' +
-        'launcher puts behind it — so this refuses rather than dropping the alpha.',
-    )
-  }
-
-  return {
-    r: Number.parseInt(digits.slice(0, 2), 16),
-    g: Number.parseInt(digits.slice(2, 4), 16),
-    b: Number.parseInt(digits.slice(4, 6), 16),
-  }
-}
 
 /** The tile the mark sits on. */
 const GROUND = readColourToken('--accent')
@@ -127,19 +96,10 @@ function matches(pixel: Pixel, colour: Rgb, tolerance: number): boolean {
 const EXACT = 0
 
 /**
- * One unit per channel, for counting the *figure*.
- *
- * Not for antialiasing — an antialiased edge pixel is a blend of ground and
- * figure and sits tens of units from either, so it is excluded from the count at
- * any sane tolerance, which is correct: the question is how much solid figure
- * was painted, not how soft its edges are. This is for a rasteriser rounding a
- * flat fill by a unit, which some do when they composite through a premultiplied
- * buffer.
- *
- * It cannot rescue a wrong palette. The icons this file was written against
- * paint their figure in `#f4f4f2`, which is 11 to 13 units from `--surface`.
+ * Slack for counting the *figure*, shared with `e2e/mark.spec.ts` so the two
+ * tiers ask the same question. See `tests/support/tokens.ts` for why it is not
+ * an antialiasing allowance and what it cannot rescue.
  */
-const FLAT_FILL_ROUNDING = 1
 
 interface Icon {
   file: string
@@ -175,8 +135,15 @@ function load(icon: Icon): DecodedPng {
  * there at all?** A blank tile, a mark scaled to a dot, or a figure accidentally
  * drawn in the ground colour all produce a perfectly uniform icon that satisfies
  * "the ground is `--accent`" on its own. 1% is far below anything a legible mark
- * produces — the three icons this was written against sit at 13.6%, 13.4% and
- * 6.8% — and far above anything an accident produces.
+ * produces and far above anything an accident produces. Measured on the three
+ * icons this branch ships: **19.42%**, **20.21%** and **11.12%**.
+ *
+ * (Those three figures were wrong when first written — they said 13.6%, 13.4%
+ * and 6.8%, which were measurements of some other files. Corrected after
+ * independent verification forced the test to report. Nothing depended on them,
+ * but this is a repository whose constitution was amended because `tokens.css`
+ * once carried twelve estimates described as measured, so a stale number used
+ * to justify a threshold gets fixed rather than shrugged at.)
  */
 const MIN_FIGURE_SHARE = 0.01
 
@@ -232,7 +199,7 @@ for (const icon of ICONS) {
       const png = load(icon)
 
       const figurePixels = png.pixels.filter((pixel) =>
-        matches(pixel, FIGURE, FLAT_FILL_ROUNDING),
+        matches(pixel, FIGURE, FLAT_FILL_TOLERANCE),
       ).length
       const share = figurePixels / png.pixels.length
 

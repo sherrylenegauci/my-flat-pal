@@ -28,7 +28,7 @@
  * rather than a test failure.
  */
 
-import { chromium } from 'playwright'
+import { chromium } from '@playwright/test'
 import { writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
@@ -37,7 +37,7 @@ const here = dirname(fileURLToPath(import.meta.url))
 const root = join(here, '..')
 
 const mark = await import(join(root, 'src/ui/mark.ts'))
-const { readToken, iconSvg } = await import(join(here, 'mark-svg.mjs'))
+const { readToken, iconSvg } = await import(join(here, 'mark-svg.ts'))
 
 const tokens = join(root, 'src/ui/tokens.css')
 const ground = readToken(tokens, '--accent')

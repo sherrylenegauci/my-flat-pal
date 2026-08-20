@@ -1,19 +1,29 @@
+import { readFileSync } from 'node:fs'
+import type * as Mark from '../src/ui/mark'
+
 /**
- * Build the mark as an SVG document string, from the one geometry.
+ * Build the mark as SVG, from the one geometry.
  *
- * Shared by `generate-icons.mjs` (which rasterises it to the three PNGs) and
- * `screenshot-mark.mjs` (which lays the results out for review). Neither of them
- * holds a copy of a coordinate or a colour: the shapes come from
- * `src/ui/mark.ts` and the two colours are read out of `src/ui/tokens.css` by
- * name, because Principle V puts colour in that file and nowhere else.
+ * Shared by three callers: `generate-icons.mjs`, which rasterises it into
+ * `public/icons/*.png`; `screenshot-mark.mjs`, which lays the results out for
+ * review; and `tests/assets/icon-geometry.test.ts`, which redraws the icons and
+ * compares them with the committed files. None of them holds a copy of a
+ * coordinate or a colour: the shapes come from `src/ui/mark.ts` and the two
+ * colours are read out of `src/ui/tokens.css` by name, because Principle V puts
+ * colour in that file and nowhere else.
  *
- * `src/ui/mark.ts` is TypeScript and this is plain ESM. Node 24 strips the types
- * on import, so there is no build step and, more to the point, no second copy of
- * the numbers — which is the whole reason the icons were allowed to drift two
- * palettes behind the app in the first place.
+ * **TypeScript rather than plain ESM, so the test can import it.** Node 24
+ * strips the types on import, so the two `.mjs` scripts load this file directly
+ * with no build step; TypeScript reads the same file, so the test that checks
+ * the generator uses the generator's own code rather than a reimplementation of
+ * it. A reimplementation is exactly how a test comes to agree with a bug.
  */
 
-import { readFileSync } from 'node:fs'
+/** The subset of `src/ui/mark.ts` these functions need. */
+type MarkModule = Pick<
+  typeof Mark,
+  'MARK_BOX' | 'MARK_SHAPES' | 'MARK_STROKE' | 'MARK_LINECAP' | 'MARK_LINEJOIN'
+>
 
 /**
  * Read one custom property out of `tokens.css`.
@@ -23,7 +33,7 @@ import { readFileSync } from 'node:fs'
  * silently generate an icon in a colour the app does not use, which is exactly
  * the bug being fixed.
  */
-export function readToken(tokensPath, name) {
+export function readToken(tokensPath: string, name: string): string {
   const css = readFileSync(tokensPath, 'utf8')
   const match = new RegExp(`^\\s*${name}:\\s*(#[0-9a-fA-F]{3,8})\\s*;`, 'm').exec(css)
   if (match === null || match[1] === undefined) {
@@ -42,7 +52,12 @@ export function readToken(tokensPath, name) {
  * the same for every surface — see `MARK_SCALE` in `src/ui/mark.ts` for why the
  * maskable icon's is so much smaller.
  */
-export function figureMarkup(mark, size, fraction, colour) {
+export function figureMarkup(
+  mark: MarkModule,
+  size: number,
+  fraction: number,
+  colour: string,
+): string {
   const scale = (size * fraction) / mark.MARK_BOX
   const offset = (size - size * fraction) / 2
 
@@ -56,6 +71,13 @@ export function figureMarkup(mark, size, fraction, colour) {
   return `<g transform="translate(${offset} ${offset}) scale(${scale})">${paths}</g>`
 }
 
+export interface IconOptions {
+  size: number
+  fraction: number
+  ground: string
+  figure: string
+}
+
 /**
  * A complete icon document: full-bleed ground, mark centred on it.
  *
@@ -63,7 +85,7 @@ export function figureMarkup(mark, size, fraction, colour) {
  * home-screen icon themselves, and a second radius inside theirs reads as a
  * drawing mistake rather than as a style.
  */
-export function iconSvg(mark, { size, fraction, ground, figure }) {
+export function iconSvg(mark: MarkModule, { size, fraction, ground, figure }: IconOptions): string {
   return (
     `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" ` +
     `viewBox="0 0 ${size} ${size}">` +

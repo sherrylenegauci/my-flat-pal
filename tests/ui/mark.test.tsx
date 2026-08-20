@@ -2,7 +2,6 @@ import { StrictMode } from 'react'
 import { describe, it, expect, beforeEach } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { computeAccessibleName } from 'dom-accessibility-api'
 import { App } from '../../src/ui/App'
 import { expectNoViolations } from './axe-helper'
 import { YEARLY, anItem, seed } from './seed'
@@ -73,6 +72,24 @@ const APP_NAME = 'my flat pal'
 
 const appHeading = () => screen.getByRole('heading', { level: 1 })
 
+/**
+ * The `h1`, found by the name it must announce.
+ *
+ * Testing Library's `name` option takes the accessible name computed the way a
+ * screen reader computes it, and a string matches it **whole** — so this throws
+ * unless the heading announces exactly these words and no others. That is the
+ * assertion; the return value is only used to prove it is the same element as
+ * `appHeading()`.
+ *
+ * Deliberately the library's own role query rather than `computeAccessibleName`
+ * from `dom-accessibility-api` directly. That package is on disk — Testing
+ * Library depends on it and runs every `getByRole({ name })` through it — but it
+ * is nowhere in `package.json`, so importing it directly relies on a hoisting
+ * accident rather than on a promise. Principle I: this uses the public interface
+ * of a dependency we do declare, which reaches the same computation.
+ */
+const headingNamed = (name: string) => screen.getByRole('heading', { level: 1, name })
+
 /** The `<header>` landmark, found the way assistive technology finds it. */
 const header = () => screen.getByRole('banner')
 
@@ -82,11 +99,11 @@ describe('the app’s name in the header', () => {
     launch()
     await screen.findByRole('heading', { name: 'Boiler service', level: 3 })
 
-    // Exact equality rather than a substring, because both failure modes this
-    // is guarding against add words rather than remove them: a labelled mark
-    // makes the name "my flat pal my flat pal", and a mark whose `<title>` says
-    // something else makes it "Flat plan my flat pal".
-    expect(computeAccessibleName(appHeading())).toBe(APP_NAME)
+    // Whole-string rather than a substring, because both failure modes this is
+    // guarding against add words rather than remove them: a labelled mark makes
+    // the name "my flat pal my flat pal", and a mark whose `<title>` describes
+    // the drawing makes it "A block of flats my flat pal".
+    expect(headingNamed(APP_NAME)).toBe(appHeading())
   })
 
   it('says the same thing on a job’s detail view, where Back shares the header', async () => {
@@ -102,7 +119,7 @@ describe('the app’s name in the header', () => {
     // `aria-labelledby` pointing at the wrong node, a stray `role="img"` on a
     // wrapper — would show up first.
     expect(within(header()).getByRole('button', { name: /back/i })).toBeTruthy()
-    expect(computeAccessibleName(appHeading())).toBe(APP_NAME)
+    expect(headingNamed(APP_NAME)).toBe(appHeading())
   })
 
   it('is not read twice', async () => {
@@ -114,7 +131,7 @@ describe('the app’s name in the header', () => {
     // with a different cause, and because this is the one a reader recognises:
     // "my flat pal my flat pal" is what you hear when a decorative mark is given
     // the wordmark as its label.
-    expect(computeAccessibleName(appHeading())).not.toMatch(/my flat pal.*my flat pal/i)
+    expect(screen.queryByRole('heading', { level: 1, name: /my flat pal.*my flat pal/i })).toBeNull()
   })
 })
 

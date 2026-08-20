@@ -21,12 +21,19 @@ import { MARK_BOX, MARK_LINECAP, MARK_LINEJOIN, MARK_SCALE, MARK_SHAPES, MARK_ST
  * `aria-hidden="true"`, and no `<title>`, no `role`, no label. The `h1` it sits
  * inside already says "my flat pal"; a mark that repeats it makes a screen
  * reader announce the app's name twice, and one that describes itself puts "A
- * flat, from above" in front of the name. Both were tried and both are what
- * `tests/ui/mark.test.tsx` fails on.
+ * block of flats" in front of the name. Both were tried and both are what
+ * `tests/ui/mark.test.tsx` fails on — and **axe passes the first of them**, so
+ * that file is the only thing standing between the app and a heading that says
+ * its own name twice.
  *
- * `focusable="false"` is not decoration either: an `<svg>` is focusable by
+ * `focusable="false"` guards a different thing: an `<svg>` is focusable by
  * default in some engines, and a focusable element inside an `aria-hidden`
- * subtree is the `aria-hidden-focus` violation axe reports.
+ * subtree is what axe reports as `aria-hidden-focus`. **Nothing here observes
+ * that**, and this comment used to imply otherwise. Removing the attribute
+ * leaves the axe sweeps green in jsdom and in both real engines — the engines
+ * that made `<svg>` focusable were IE and legacy Edge, neither of which is in
+ * the matrix. Kept because it costs a word and the failure it guards against
+ * would be silent; recorded as unverified rather than left reading as proven.
  *
  * ## Where the colours are, and are not
  *

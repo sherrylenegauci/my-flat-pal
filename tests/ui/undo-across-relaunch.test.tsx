@@ -157,8 +157,11 @@ async function addAJob(
 
   await user.clear(screen.getByLabelText(/name/i))
   await user.type(screen.getByLabelText(/name/i), fields.name)
-  await user.clear(screen.getByLabelText(/how often/i))
-  await user.type(screen.getByLabelText(/how often/i), fields.count)
+  // The interval count box, by its visible label "Every" (T115). Not
+  // `/how often/i`: the legend is borrowed back through `aria-labelledby`, so
+  // that regex matches this input under both wordings and can never go red.
+  await user.clear(screen.getByLabelText(/^every$/i))
+  await user.type(screen.getByLabelText(/^every$/i), fields.count)
   await user.selectOptions(screen.getByLabelText(/period|unit/i), fields.unit)
   if (fields.lastDone !== undefined) {
     await user.type(screen.getByLabelText(/last done/i), fields.lastDone)

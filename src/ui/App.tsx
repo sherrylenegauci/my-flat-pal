@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { Mark } from './components/Mark'
 import { StorageNotice } from './components/StorageNotice'
 import { UndoNotice } from './components/UndoNotice'
 import { ScheduleView } from './views/ScheduleView'
@@ -9,6 +10,7 @@ import { useNavigation } from './navigation'
 import { useSchedule } from './useSchedule'
 import type { NewItemInput } from './useSchedule'
 import './tokens.css'
+import './fonts.css'
 import './focus.css'
 import './app.css'
 
@@ -113,6 +115,22 @@ export function App() {
   const editing =
     editId === null ? undefined : schedule.views.find((view) => view.item.id === editId)
 
+  /**
+   * Whether the schedule list is what `<main>` is actually showing.
+   *
+   * Derived from the same four conditions the render below branches on, rather
+   * than from the route name, because the two can disagree: the fall-throughs
+   * above mean a `detail` or `edit` route whose job has gone — deleted in
+   * another window — renders the list while the route still says otherwise.
+   * Asking `nav.view.name === 'schedule'` left the storage warning off a screen
+   * that was, to the user, the schedule list.
+   *
+   * An empty schedule counts. `ScheduleView` draws the empty state itself, and
+   * a first run is precisely the launch the warning exists for.
+   */
+  const showingScheduleList =
+    !schedule.readOnly && nav.view.name !== 'new' && editing === undefined && detail === undefined
+
   return (
     <div className="app">
       <header className="app__header">
@@ -121,13 +139,51 @@ export function App() {
             <span aria-hidden="true">‹</span> Back
           </button>
         )}
+        {/* The mark sits *inside* the heading, not beside it.
+
+            Two reasons, and the second is the one that matters. Visually it
+            keeps the mark glued to the words at every width, including the
+            detail view where Back also shares this row. And in the accessibility
+            tree it changes nothing at all: the mark is `aria-hidden`, so the
+            heading's accessible name is computed from its text alone and is
+            still exactly "my flat pal". A sibling would have been equally silent
+            but would have had to be positioned against the heading rather than
+            with it. */}
         <h1 className="app__title" ref={headingRef} tabIndex={-1}>
+          <Mark />
           my flat pal
         </h1>
       </header>
 
       <div className="app__notices">
-        <StorageNotice />
+        {/* The storage warning belongs where the user lands, and nowhere else.
+            It is a first-run message about whether this device has promised to
+            keep their records, and it sat above `<main>` on every view — at
+            375px, roughly the top third of the detail view, both forms and the
+            delete confirmation, repeated at someone who is part-way through
+            filling one in. Saying it again is not saying it more clearly.
+
+            On the list only, therefore — and on the list as rendered rather
+            than as routed, which is why the condition is derived above instead
+            of asked of `nav`. A read-only session is excluded because it
+            replaces that view entirely with a different message about the same
+            records, and puts a "Got it" button on a screen whose whole contract
+            is that there is nothing to press (FR-010a).
+
+            It unmounts on the way out and mounts again on the way back, so the
+            persistence question is asked again each time. That is deliberate
+            rather than tolerated: the answer can change, and on iOS installing
+            the app to the home screen is one of the things that earns a grant,
+            so a user who was refused on their first visit is not held to that
+            answer for the life of the session. Neither engine prompts for it.
+            Dismissal is untouched — it is recorded in localStorage, so it
+            survives the unmount, the relaunch and this.
+
+            The other three notices in this region are unchanged. Read-only and
+            corrupt-data are about the data the app just tried to read, and the
+            undo offer must follow the user off the list, because marking a job
+            done from the list is what raises it. */}
+        {showingScheduleList && <StorageNotice />}
         {schedule.readOnly && (
           <div role="alert" className="storage-notice">
             <p>

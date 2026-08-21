@@ -252,11 +252,16 @@ involves no timezone at all.
 
 ### Dependency budget
 
-11 packages, of which 2 reach the user's device.
+11 npm packages, of which 2 ship as code to the user's device — **and one bundled asset that is
+not an npm package and ships anyway**. That third thing is a typeface, and it is recorded here
+because Principle I is about what reaches the phone, not about what `package.json` happens to
+list. This line used to read "11 packages, of which 2 reach the user's device", which stopped
+being true the moment a font was committed.
 
 | Package | Kind | Why |
 |---|---|---|
 | `react`, `react-dom` | Runtime | The constitution's stack. The only code on your phone. |
+| Source Sans 3 (vendored woff2) | Ships | The app's typeface. Not an npm dependency. Justified below. |
 | `typescript`, `vite`, `@vitejs/plugin-react` | Build | The constitution's stack (R1 confirms Vite). |
 | `vite-plugin-pwa` | Build | Manifest, precache, update flow. *Recorded violation.* |
 | `vitest` | Test | Shares Vite's config, so it's a runner rather than a second toolchain. |
@@ -264,6 +269,63 @@ involves no timezone at all.
 | `jsdom` | Test | DOM environment. *Recorded violation.* |
 | `axe-core` | Test | Automated structural accessibility checks. |
 | `@playwright/test` | Test | Real-browser tier. Justified below. |
+
+**On bundling a typeface.** The app shipped on the system font stack — `-apple-system,
+BlinkMacSystemFont, …`, which resolves to San Francisco on the iPhone this is built for. That was
+free in every sense: no bytes, no licence, no build step, and a genuinely good typeface. It was
+turned down for the one thing a platform default cannot fix. Being the platform's own face *is*
+the problem; "generic" was the objection, and no amount of tuning the sizes answers it.
+
+Nothing in the existing stack can solve it either, which is the question Principle I actually
+asks. A typeface is not code and cannot be synthesised from what is already here. The only
+alternatives are the handful of web-safe families every OS has already (the same problem, older)
+and a webfont served from a CDN, which is ruled out below.
+
+**It is vendored, not depended on.** The file is committed at `public/fonts/`. It is not an npm
+dependency, so there is nothing to resolve, audit, upgrade, or pull transitively. `@fontsource-*`
+publishes exactly these files as packages; we took the file and left the package, which is the
+Principle I answer to a dependency whose entire job would be copying one asset into place.
+
+**It is self-hosted because it must work offline.** The constitution requires the service worker
+to cache the app shell so a home-screen launch with no network shows the app. A font fetched from
+`fonts.gstatic.com` at first paint is a font that is not there on a train, and the app would fall
+back to the system stack silently — still legible, so nobody would report it. So: same origin,
+`workbox.globPatterns` extended to cover `woff2`, and a new build test tier
+(`tests/build/typeface-precache.test.ts`) that runs the production build and asserts the generated
+service worker's precache manifest lists the file. That test was red before the config changed:
+Vite was already copying the woff2 into `dist/fonts/` and workbox was already leaving it out.
+
+That tier is new and is the third Vitest project. It costs about two seconds on a suite that ran
+in eight, and it is deliberately one file — a second file there is a second build.
+
+**One file, variable, Latin only.** A variable font carries a continuous weight axis in a single
+request. That is not a nicety here: the complaint that prompted this was two complaints, and the
+second was that the weights and sizes were wrong. A continuous axis is what lets `tokens.css` set
+620 for a job's name and 650 for a badge instead of rounding everything to 600. Latin subset only,
+and no italic — the app sets `font-style: italic` nowhere. The subset is fontsource's own cut of
+the upstream OFL release; no subsetting tool was added to the build.
+
+**Shipped size: 28,740 bytes.** For scale, measured on the build this change produces rather than
+on the one before it: JavaScript 219,628 bytes raw / 69,089 gzipped, CSS 10,891 / 2,705,
+workbox-window 5,748 / 2,359, and index.html 1,261 / 638 — a shell that transfers **74,791 bytes**
+gzipped. woff2 is already compressed, so the font's file size *is* its transfer size: a **38%**
+increase on a first load, taking it to 103,531 bytes, and nothing at all on every load after,
+since it is precached and the app is opened for a few seconds at a time for years.
+
+(The CSS figure moved with this change — the type tokens and the heading rules added about 600
+bytes raw. It is re-measured here rather than carried over, because the point of this section is
+that its numbers are measured.)
+
+**Licence: SIL OFL 1.1.** `public/fonts/OFL-source-sans-3.txt` ships with the font and is served
+from the same origin.
+
+**Rejected**: Inter — the obvious choice, and already in half the apps on the phone, which is the
+original complaint restated in a different typeface. A CDN or a Google Fonts `<link>` — see
+offline, above; it also adds an origin that must be reached before first paint. A separate serif
+for headings — built as a third candidate rather than dismissed, and turned down on size on
+2026-08-20: Newsreader over this same body face is 86,824 bytes and takes a first load to 161,647,
+more than doubling it, to buy character rather than function. The reasoning is beside
+`--font-heading` in `tokens.css`, which is where anyone tempted to try it again will be standing.
 
 **On adding Playwright.** The constitution permits automated browser tests but does not mandate
 them, and asks that the trigger be the manual checklist growing long enough that people skip it.
@@ -283,6 +345,32 @@ update path is testable in principle but genuinely fiddly; T076 and T077 are tim
 named device rather than a CI runner; T078 is the real-iPhone-and-Android gate, and no headless
 browser can verify a home-screen install. Those stay manual, and Phase 6 should say so plainly
 rather than let a green suite imply cover it does not give.
+
+**Playwright now has a second job, and it is not a test.** `scripts/generate-icons.mjs` uses it to
+rasterise the app's mark into `public/icons/*.png`, and `scripts/screenshot-mark.mjs` uses it to
+photograph candidate marks for review. Recorded here because it changes what a dependency is *for*,
+which is the thing this section exists to keep honest — but it adds **no package**. The alternative
+was an image library (`sharp`, `resvg`, `canvas`) for one call site, which is exactly the shape
+Principle I's three-call-site rule exists to make expensive, and a browser is the one thing already
+in this repository that knows how to turn an SVG into a PNG.
+
+**A fourth Vitest project: `assets`.** Node, no DOM, reads `public/` from disk. It is separate from
+the `build` project above because that one runs a full production build and a second file there is a
+second build; nothing about an icon needs one, since `vite build` copies `public/` verbatim.
+
+It exists because of a defect with no other home. The three icon PNGs were a white house outline on
+`rgb(26, 26, 23)` — a warm near-black that appears nowhere in `tokens.css` — drawn in the app's
+*first* palette and left untouched through two complete design passes. Nothing caught it because no
+stylesheet reaches a PNG and **no tier had ever opened one**. It is the same silent drift that left
+the manifest's `theme_color` two palettes stale, and it is the drift T112 is still open about.
+
+`tests/assets/icons.test.ts` reads the generated pixels and compares them against the tokens the
+generator read, so a palette change that is not followed by re-running the generator turns the suite
+red. Decoding a PNG in that test needed `zlib`, which Node ships, plus a chunk walk and five
+scanline filters — about ninety lines in `tests/support/png.ts`, against a dependency. It refuses on
+anything it does not support rather than returning zeroes, for the same reason `e2e/support/colour.ts`
+throws: a decoder that guessed would turn a colour assertion into a check that passes without
+checking.
 
 > **Superseded in part, 2026-08-12 (Constitution v1.5.0, Principle IV).** The router
 > rejection below held *while the app had one feature and three screens*. It stopped holding

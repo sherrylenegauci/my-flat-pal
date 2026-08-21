@@ -94,11 +94,22 @@ check what, and the specific things this environment cannot check at all. Give i
 IDs, the requirements behind them, and any defect the tests exist to prevent — it works
 better from *why* a test matters than from a restatement of the task line.
 
-**`behaviour-verification` checks the result.** Run it once the story is implemented and
-before you report back. It verifies independently against the acceptance scenarios and
-does not fix things — it tells you what holds, what does not, and what is merely claimed.
-Treat what it finds as work, not as commentary: if it says a criterion is unverified, that
-is a gap in the story, not a difference of opinion.
+**`behaviour-verification` checks the result — once per story, not once per run.** It
+verifies independently against a story's acceptance scenarios, so a batch of tasks that
+does not complete a story has nothing for it to verify against. Run it when the last task
+in a user story is done, before reporting that story complete. It does not fix things — it
+tells you what holds, what does not, and what is merely claimed. Treat what it finds as
+work, not as commentary: if it says a criterion is unverified, that is a gap in the story,
+not a difference of opinion.
+
+**Do not run it for a fix, a copy change, a refactor or a design pass**, and say so in your
+report rather than running it anyway. It costs roughly ten minutes and it earns that on a
+story; on a two-line change it is ceremony. If a prompt asks you to run it on something that
+is not a story, push back — the prompt is probably wrong, and this instruction wins.
+
+Its cost is why this rule exists. It found the undo defect that deleted three years of
+history, and the read-only fix that fired on the wrong condition — but a full run on every
+batch of tasks made a fifty-minute job out of a twenty-minute one.
 
 **What stays yours.** Implementation, wiring, refactoring, keeping `tasks.md` truthful,
 and every judgement about scope. Delegation does not move responsibility — you read what

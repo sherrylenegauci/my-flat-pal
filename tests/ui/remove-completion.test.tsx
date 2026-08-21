@@ -420,7 +420,14 @@ describe('removing one completion from a job’s history', () => {
     const dialog = await askToRemove(user, REMOVE_MIDDLE)
     await user.click(within(dialog).getByRole('button', { name: 'Remove permanently' }))
 
-    expect(await screen.findByText('Last done 1 January 2020')).toBeTruthy()
+    // The design pass merged "last done" into the interval sentence, so it now
+    // reads "Every year · last done 1 January 2020" and is no longer its own
+    // element. Matching the substring keeps this test about what it is about —
+    // that removing the newest completion moves the schedule back to the one
+    // before it — rather than about how that sentence is punctuated.
+    expect(
+      (await screen.findByText(/last done 1 January 2020/i)).textContent,
+    ).toMatch(/last done 1 January 2020/i)
     expect(storedIds()).toEqual(['cmp_backdated'])
   })
 

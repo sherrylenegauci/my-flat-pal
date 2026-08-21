@@ -5,6 +5,11 @@ node_modules/
 dist/
 .vite/
 
+# Build output produced by the build test tier (tests/build/), kept out of
+# dist/ so running the suite cannot overwrite a real build. See the note in
+# tests/build/typeface-precache.test.ts.
+dist-test/
+
 # Real-browser tier output: reports, traces, screenshots
 playwright-report/
 test-results/
@@ -20,3 +25,6 @@ blob-report/
 
 # OS
 .DS_Store
+
+# Agent worktrees — transient, never committed
+.claude/worktrees/

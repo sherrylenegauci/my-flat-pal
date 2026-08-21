@@ -54,7 +54,28 @@ async function openTheEditForm(user: ReturnType<typeof userEvent.setup>, job = '
 }
 
 const nameField = () => screen.getByLabelText(/name/i) as HTMLInputElement
-const countField = () => screen.getByLabelText(/how often/i) as HTMLInputElement
+
+/**
+ * The interval count box, found by its visible label — "Every" (T115).
+ *
+ * Anchored on `^every$` rather than the old `/how often/i`, and that is
+ * deliberate. The fieldset's legend still asks "How often does it need doing?"
+ * and the box borrows it via `aria-labelledby`, so `/how often/i` goes on
+ * matching this input either way — it cannot tell the two wordings apart and so
+ * cannot be observed failing. `^every$` can.
+ *
+ * The assertion is here rather than at each of the seven call sites below
+ * because the risk is that the query silently starts resolving to the `<select>`
+ * next to it, or to the legend. Proving it once, where the lookup lives, is what
+ * makes every `countField()` below mean the number box.
+ */
+const countField = () => {
+  const field = screen.getByLabelText(/^every$/i) as HTMLInputElement
+  expect(field.tagName).toBe('INPUT')
+  expect(field.type).toBe('number')
+  return field
+}
+
 const unitField = () => screen.getByLabelText(/period/i) as HTMLSelectElement
 
 const storedJob = () => load().document.items[0]

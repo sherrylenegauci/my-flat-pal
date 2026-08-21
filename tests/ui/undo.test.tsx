@@ -164,10 +164,10 @@ describe('undoing a tick-off', () => {
     const { user } = launch()
 
     await user.click(await screen.findByRole('button', { name: 'Boiler service' }))
-    const field = await screen.findByLabelText(/date it was done/i)
+    const field = await screen.findByLabelText('Add a date you did it')
     await user.clear(field)
     await user.type(field, '2020-01-01')
-    await user.click(screen.getByRole('button', { name: /record it/i }))
+    await user.click(screen.getByRole('button', { name: 'Add' }))
     expect(stored()?.completions).toHaveLength(2)
 
     await user.click(await screen.findByRole('button', { name: /undo/i }))

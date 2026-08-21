@@ -4,7 +4,7 @@ import { classifyStatus, completionsNewestFirst, nextDueOn, removeCompletion } f
 import type { CalendarDate, ItemView } from '../../domain/types'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { StatusBadge, STATUS_LABELS } from '../components/StatusBadge'
-import { formatDisplayDate } from '../format'
+import { formatDisplayDate, formatInterval } from '../format'
 
 /**
  * One job, in full (T059): when it was last done, when it is next due, and
@@ -58,7 +58,7 @@ export function ItemDetailView({
     event.preventDefault()
 
     if (completedOn === '') {
-      setError('Choose the date it was done.')
+      setError('Add the date you did it.')
       return
     }
     if (completedOn > today) {
@@ -191,44 +191,68 @@ export function ItemDetailView({
         <StatusBadge status={view.status} />
       </div>
 
+      {/* How often, and when it was last done: one sentence, because they are
+          one thought. A job never done gets the interval alone — no dot left
+          hanging, and no due date invented from a service that never happened
+          (FR-004a).
+
+          The dot is `aria-hidden` for the same reason the back control's chevron
+          is: it is a visual separator, and whether VoiceOver announces U+00B7 as
+          "middle dot" or passes over it depends on a punctuation setting the app
+          does not control. Hiding it removes the question. The spaces sit in the
+          visible text either side, so the accessible name does not run the two
+          halves together. Whether the line still reads as one sentence out loud
+          is a real-device question, and it is named in T078. */}
       <p className="detail__meta">
-        Every {view.item.interval.count} {view.item.interval.unit}
-        {view.item.interval.count === 1 ? '' : 's'}
+        {formatInterval(view.item.interval)}
+        {view.lastCompletedOn !== null && (
+          <>
+            {' '}
+            <span aria-hidden="true">·</span> last done{' '}
+            {formatDisplayDate(view.lastCompletedOn)}
+          </>
+        )}
       </p>
 
-      {/* No due date is shown for a job that has never been done: the app does
-          not invent one from a service that never happened (FR-004a). */}
-      {view.lastCompletedOn !== null && (
-        <p className="detail__fact">Last done {formatDisplayDate(view.lastCompletedOn)}</p>
-      )}
       {view.nextDueOn !== null && (
         <p className="detail__fact">Next due {formatDisplayDate(view.nextDueOn)}</p>
       )}
 
-      <form className="detail__record" onSubmit={handleSubmit} noValidate>
-        <h3 className="detail__subtitle">Record it as done</h3>
+      {/* One action, said once.
 
+          This used to carry a heading ("Record it as done") above a label
+          ("Date it was done") above a button ("Record it") — three phrasings of
+          the same idea stacked down the screen. The label explains and the
+          button acts, which is the ordinary division of labour between the two;
+          the heading was a section title for a single field.
+
+          The label has to survive being read with no visual context, because a
+          screen-reader user meets the date field on its own and "Add" alone
+          would tell them nothing about what they are adding. That is why the
+          explaining lives in the label rather than in the button. */}
+      <form className="detail__record" onSubmit={handleSubmit} noValidate>
         <div className="form__field">
-          <label htmlFor={`${ids}-date`}>Date it was done</label>
-          <input
-            id={`${ids}-date`}
-            type="date"
-            value={completedOn}
-            max={today}
-            onChange={(e) => setCompletedOn(e.target.value)}
-            aria-invalid={error ? 'true' : undefined}
-            aria-describedby={error ? `${ids}-error` : undefined}
-          />
+          <label htmlFor={`${ids}-date`}>Add a date you did it</label>
+          <div className="detail__record-row">
+            <input
+              id={`${ids}-date`}
+              type="date"
+              value={completedOn}
+              max={today}
+              onChange={(e) => setCompletedOn(e.target.value)}
+              aria-invalid={error ? 'true' : undefined}
+              aria-describedby={error ? `${ids}-error` : undefined}
+            />
+            <button type="submit" className="button button--primary">
+              Add
+            </button>
+          </div>
           {error && (
             <p className="form__error" id={`${ids}-error`} role="alert">
               {error}
             </p>
           )}
         </div>
-
-        <button type="submit" className="button button--primary">
-          Record it
-        </button>
       </form>
 
       {/* `tabIndex={-1}` so a removal can put focus here, the same way the app

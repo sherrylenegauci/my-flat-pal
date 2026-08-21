@@ -12,8 +12,8 @@ export default defineConfig({
       registerType: 'prompt',
       includeAssets: ['icons/*.png'],
       manifest: {
-        name: 'my-flat-pal',
-        short_name: 'Flat Pal',
+        name: 'my flat pal',
+        short_name: 'my flat pal',
         description: 'Keep track of the upkeep your flat needs.',
         // --surface and --surface-sunken from src/ui/tokens.css: the header the
         // status bar meets, and the page behind the launch splash. Both were

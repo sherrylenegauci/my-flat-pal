@@ -1,0 +1,49 @@
+/**
+ * The bundled typeface.
+ *
+ * Source Sans 3, SIL OFL 1.1. The licence ships beside the file, at
+ * `/fonts/OFL-source-sans-3.txt`, and is served from this origin like
+ * everything else here.
+ *
+ * ## Self-hosted, and that is not a preference
+ *
+ * The file lives in `public/fonts/`, so Vite copies it to the build root
+ * untouched and the browser fetches it from this app's own origin. There is no
+ * CDN link and no `@import`, because this is an installed PWA: the constitution
+ * requires the service worker to cache the app shell so a home-screen launch
+ * with no network shows the app, and a font fetched from `fonts.gstatic.com` at
+ * first paint is a font that is not there on a train. The app would fall back
+ * silently and still look fine, which is the worst kind of failure.
+ *
+ * `workbox.globPatterns` in `vite.config.ts` therefore includes `woff2`, and
+ * `tests/build/typeface-precache.test.ts` asserts the generated service worker
+ * actually lists this file. It did not, before this change: the woff2 was
+ * copied into `dist/` and left out of the manifest.
+ *
+ * ## One file, one axis
+ *
+ * A variable font, so a single request carries every weight from 200 to 900
+ * continuously. That is what lets `tokens.css` set 620 and 650 rather than
+ * rounding to whichever static cuts someone shipped — see the type section
+ * there for why the weights needed that freedom.
+ *
+ * The Latin subset only, and no italic: the app sets `font-style: italic`
+ * nowhere, so shipping one would be bytes for glyphs that are never painted.
+ * The subset is fontsource's own cut of the upstream OFL release; no subsetting
+ * tool was added to the build.
+ *
+ * `swap` rather than `block` or `optional`. On the very first load the system
+ * stack paints while this downloads and then swaps, which is a visible reflow
+ * once; on every load after that it is precached and resolves immediately.
+ * `optional` would mean a slow first load silently gets the fallback forever,
+ * and `block` would mean invisible text — neither is a better trade for an app
+ * you open to find out whether something is overdue.
+ */
+
+@font-face {
+  font-family: 'Source Sans 3';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 200 900;
+  src: url('/fonts/source-sans-3-latin-var.woff2') format('woff2');
+}

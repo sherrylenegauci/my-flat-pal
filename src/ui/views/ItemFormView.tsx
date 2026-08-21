@@ -21,7 +21,7 @@ import type { NewItemInput } from '../useSchedule'
  * **Why editing has no "last done" field.** FR-009 covers the name and the
  * interval. A completion is immutable once saved (spec, Key Entities), so this
  * field cannot mean "correct the date" — it could only append another
- * completion, which is what the detail view's "Record it as done" already does,
+ * completion, which is what the detail view's "Add a date you did it" already does,
  * or silently rewrite history, which nothing in the spec permits.
  *
  * **An open contradiction, not a decision taken here.** FR-007b says a wrong
@@ -122,24 +122,45 @@ export function ItemFormView({
         )}
       </div>
 
+      {/* T115 — the question is asked once. The legend asks it; the field says
+          "Every". It previously read "How often does it need doing?" and then,
+          one line below, "How often — every".
+
+          **Why the input borrows the legend back through `aria-labelledby`.** A
+          `<legend>` names the fieldset's *group*, not the controls inside it —
+          so with the label alone shortened, this input's accessible name
+          computes to a bare "Every", which is thinner than the self-contained
+          "How often — every" it replaced. Whether a screen reader reads the
+          group's name before the field is the assistive technology's own
+          decision, and on iOS it is not something this repo can establish; the
+          explicit reference makes the name correct without depending on it.
+
+          The cost, recorded because it is a real one: where the group name *is*
+          announced, the question is heard twice — once for the group, once in
+          the field's name. Which of the two reads better on a phone is a
+          VoiceOver question, not a jsdom one. */}
       <fieldset className="form__field form__field--inline">
-        <legend>How often does it need doing?</legend>
-        <label htmlFor={`${ids}-count`}>How often — every</label>
+        <legend id={`${ids}-interval`}>How often does it need doing?</legend>
+        <label id={`${ids}-count-label`} htmlFor={`${ids}-count`}>
+          Every
+        </label>
         <input
           id={`${ids}-count`}
           type="number"
           inputMode="numeric"
           min={1}
           value={count}
+          aria-labelledby={`${ids}-interval ${ids}-count-label`}
           onChange={(e) => setCount(e.target.value)}
           {...field('count')}
         />
-        {/* The label stays in the DOM but not on screen. "How often — every 1 years"
-            already reads as a sentence, so a visible "Period" adds nothing for a sighted
-            user — and as a fourth item in a three-column grid it wrapped the dropdown
-            onto its own row, stranding it from the label naming it. A screen reader
-            still announces it, because a bare dropdown of day/week/month/year out of
-            context does not say what it sets. */}
+        {/* The label stays in the DOM but not on screen. The row already reads
+            as a sentence — "Every 1 years" — so a visible "Period" adds nothing
+            for a sighted user, and as a fourth item in a three-column grid it
+            wrapped the dropdown onto its own row, stranding it from the label
+            naming it. A screen reader still announces it, because a bare
+            dropdown of day/week/month/year out of context does not say what it
+            sets. */}
         <label className="visually-hidden" htmlFor={`${ids}-unit`}>
           Period
         </label>

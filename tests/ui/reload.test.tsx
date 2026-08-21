@@ -26,8 +26,11 @@ describe('coming back later', () => {
     const first = render(<App />)
     await user.click(await screen.findByRole('button', { name: /add/i }))
     await user.type(screen.getByLabelText(/name/i), 'Boiler service')
-    await user.clear(screen.getByLabelText(/how often/i))
-    await user.type(screen.getByLabelText(/how often/i), '1')
+    // The interval count box, by its visible label "Every" (T115). Not
+    // `/how often/i`: the legend is borrowed back through `aria-labelledby`, so
+    // that regex matches this input under both wordings and can never go red.
+    await user.clear(screen.getByLabelText(/^every$/i))
+    await user.type(screen.getByLabelText(/^every$/i), '1')
     await user.selectOptions(screen.getByLabelText(/period|unit/i), 'year')
     await user.type(screen.getByLabelText(/last done/i), '2026-06-14')
     await user.click(screen.getByRole('button', { name: /save|add/i }))
@@ -47,8 +50,11 @@ describe('coming back later', () => {
     const first = render(<App />)
     await user.click(await screen.findByRole('button', { name: /add/i }))
     await user.type(screen.getByLabelText(/name/i), 'Old boiler')
-    await user.clear(screen.getByLabelText(/how often/i))
-    await user.type(screen.getByLabelText(/how often/i), '1')
+    // The interval count box, by its visible label "Every" (T115). Not
+    // `/how often/i`: the legend is borrowed back through `aria-labelledby`, so
+    // that regex matches this input under both wordings and can never go red.
+    await user.clear(screen.getByLabelText(/^every$/i))
+    await user.type(screen.getByLabelText(/^every$/i), '1')
     await user.selectOptions(screen.getByLabelText(/period|unit/i), 'year')
     await user.type(screen.getByLabelText(/last done/i), '2024-05-01')
     await user.click(screen.getByRole('button', { name: /save|add/i }))

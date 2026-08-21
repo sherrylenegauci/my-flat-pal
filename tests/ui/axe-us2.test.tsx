@@ -58,8 +58,8 @@ describe('accessibility', () => {
     const { container } = render(<App />)
 
     await user.click(await screen.findByRole('button', { name: 'Boiler service' }))
-    await user.type(screen.getByLabelText(/date it was done/i), '2027-01-01')
-    await user.click(screen.getByRole('button', { name: /record it/i }))
+    await user.type(screen.getByLabelText('Add a date you did it'), '2027-01-01')
+    await user.click(screen.getByRole('button', { name: 'Add' }))
     await screen.findByText(/in the future/i)
 
     await expectNoViolations(container)

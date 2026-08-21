@@ -6,14 +6,20 @@
  * automated suite guards this — T073 verifies it in a real browser.
  *
  * **Ratios below are computed, not estimated.** An earlier revision recorded
- * `--focus-ring on --accent → 3.6:1 ✅`. The real figure is 2.69:1, which fails
+ * `--focus-ring on --accent → 3.6:1 ✅`. The real figure was 2.69:1, which fails
  * the 3:1 non-text minimum — a fabricated number that happened to hide a real
  * defect. Recompute with the formula in WCAG 2.1 SC 1.4.11 before changing any
  * colour here.
+ *
+ * Every figure below has now been recomputed twice, once per design pass, for
+ * the same reason each time: every surface named in them moved. The ring itself
+ * moved with the second one — a near-black with a warm cast is the wrong
+ * near-black on a cool page — but only in hue, and the reason it needs a white
+ * companion is unchanged.
  */
 
 :root {
-  --focus-ring: #14140f;
+  --focus-ring: #0b0f14;
   /* Sits between the element and the dark ring, so the indicator stays visible
      on dark fills where the dark ring alone does not. */
   --focus-ring-inner: #ffffff;
@@ -23,13 +29,20 @@
 
 /*
  * Two-tone, because one colour cannot clear 3:1 against both a white page and a
- * dark blue button:
+ * deep teal button:
  *
- *   --focus-ring  on --surface        18.47:1  ✅
- *   --focus-ring  on --surface-sunken 16.78:1  ✅
- *   --focus-ring  on --overdue-wash   16.62:1  ✅
- *   --focus-ring  on --accent          2.69:1  ❌  ← why the inner ring exists
- *   #ffffff       on --accent          6.88:1  ✅
+ *   --focus-ring  on --surface        19.22:1  ✅
+ *   --focus-ring  on --surface-sunken 16.18:1  ✅
+ *   --focus-ring  on --notice-wash    16.40:1  ✅
+ *   --focus-ring  on --accent          2.61:1  ❌  ← why the inner ring exists
+ *   --focus-ring  on --danger          2.94:1  ❌  ← and here too, by a hair
+ *   #ffffff       on --accent          7.35:1  ✅
+ *   #ffffff       on --danger          6.54:1  ✅
+ *
+ * --danger at 2.94:1 is the one worth naming. It is a near miss rather than a
+ * clear fail, and a near miss is exactly the kind of number that gets rounded
+ * up by whoever is in a hurry. It was measured, it is under 3:1, and the white
+ * inner ring is what carries the indicator on that button.
  *
  * The white ring hugs the element and the dark ring sits outside it, so
  * whichever surface the indicator lands on, one of the two contrasts.
@@ -55,4 +68,20 @@
   :focus-visible {
     transition: outline-offset 120ms ease-out;
   }
+}
+
+/* The shell moves focus to the page heading on mount and after navigating, so a
+   screen-reader user lands at the top of the new view rather than wherever the
+   old one left them. Chromium counts that programmatic focus as `:focus-visible`
+   and draws the full ring — a heavy slab around the title on first load, which
+   nobody asked for and no user action caused.
+   
+   Safe to suppress because `tabindex="-1"` is exactly the marker for "focusable
+   by script, never by Tab": no keyboard user can reach these, so no keyboard user
+   loses an indicator. The screen-reader announcement, which is the actual point
+   of moving focus there, is unaffected. */
+[tabindex='-1']:focus,
+[tabindex='-1']:focus-visible {
+  outline: none;
+  box-shadow: none;
 }

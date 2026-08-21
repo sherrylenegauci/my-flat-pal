@@ -51,10 +51,14 @@ async function openDetail(user: ReturnType<typeof userEvent.setup>, name: string
 }
 
 async function record(user: ReturnType<typeof userEvent.setup>, date: string) {
-  const field = screen.getByLabelText(/date it was done/i)
+  // Found by its label and its name, both of which changed with the copy: the
+  // field now says "Add a date you did it" and the button just says "Add". The
+  // exact name rather than /add/i, which on other views also matches "Add job"
+  // and "Add your first job".
+  const field = screen.getByLabelText('Add a date you did it')
   await user.clear(field)
   await user.type(field, date)
-  await user.click(screen.getByRole('button', { name: /record it/i }))
+  await user.click(screen.getByRole('button', { name: 'Add' }))
 }
 
 const historyEntries = () =>

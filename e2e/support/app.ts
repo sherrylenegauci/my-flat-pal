@@ -312,7 +312,16 @@ export const APP_STATES: AppState[] = [
       await seed(page, null)
       await open(page)
       await page.getByRole('button', { name: 'Add your first job' }).click()
-      await page.getByLabel('How often — every').fill('0')
+      // The interval count box, by its visible label (T116).
+      //
+      // `exact` keeps this pinned to the label rather than to the question. The
+      // input borrows the fieldset's legend through `aria-labelledby`, so
+      // Playwright has two label candidates for it — and it matches if *either*
+      // one does, which means a loose "Every" is not ambiguous today: measured
+      // in both engines, it resolves to this one element. The anchor is for
+      // later. It is what stops a reworded legend from quietly satisfying this
+      // lookup, and it matches how the tier below is anchored.
+      await page.getByLabel('Every', { exact: true }).fill('0')
       await page.getByRole('button', { name: 'Save job' }).click()
       // Both errors, so the sweeps see error text in two different layouts:
       // a stacked field and the inline interval grid.

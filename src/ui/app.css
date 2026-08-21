@@ -18,7 +18,7 @@ body {
   background: var(--surface-sunken);
   color: var(--text);
   font-family: var(--font);
-  font-size: 17px;
+  font-size: var(--text-root);
   line-height: 1.5;
   /* Stops iOS inflating text in ways that break the 375px layout. */
   -webkit-text-size-adjust: 100%;
@@ -51,10 +51,73 @@ body {
   z-index: 2;
 }
 
+/* The app's own name. One step up from body text and slightly tightened, so it
+   reads as a masthead rather than as another line of interface.
+
+   `flex` so the mark and the words sit on one baseline-ish row with a token gap
+   between them. The mark is the heading's first child (see App.tsx), so without
+   this the SVG would sit in the text flow and drag the line height about. */
 .app__title {
   margin: 0;
-  font-size: 1.0625rem;
-  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-heading);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-name);
+  line-height: var(--heading-leading);
+  letter-spacing: var(--heading-tracking);
+}
+
+/* ---- The mark --------------------------------------------------------------
+
+   The app's own drawing, and the only place in the app painted with `fill` and
+   `stroke` rather than `color` and `background`.
+
+   **Both colours come from the tokens and neither is new.** The tile is
+   `--accent`, the app's single accent, which is what makes this the same object
+   as the home-screen icon rather than a second piece of branding. The mark on it
+   is `--surface`, the same white the cards are.
+
+   **Measured, not estimated.** #ffffff on --accent is **7.35:1**, already
+   recorded in tokens.css for the button label that uses the same pair. WCAG
+   1.4.11 asks 3:1 of a non-text interface component, so there is a wide margin —
+   and it is not taken on trust: `e2e/mark.spec.ts` reads the `fill` and `stroke`
+   the browser resolved for every shape in the mark, in Chromium and in WebKit,
+   and computes the ratio with the same arithmetic as every other ratio in this
+   project.
+
+   Whether a decorative mark is an interface component under 1.4.11 at all is
+   arguable — it carries no information the heading beside it does not. The
+   ratio is held to anyway, because the argument would have to be made again
+   every time the palette moves, and 7.35:1 costs nothing.
+
+   `flex: none` because the header is a flex row: without it the mark is a flex
+   item that will shrink before the text does, and a squashed mark is worse than
+   a wrapped title. */
+.mark {
+  display: block;
+  flex: none;
+}
+
+.mark__ground {
+  fill: var(--accent);
+}
+
+/* The colour lives on the group, so `.mark__outline` and `.mark__solid` only
+   have to say which channel paints. That also keeps the two in step: a mark
+   whose strokes and fills could drift apart is a mark with two colours in it. */
+.mark__figure {
+  fill: var(--surface);
+  stroke: var(--surface);
+}
+
+.mark__outline {
+  fill: none;
+}
+
+.mark__solid {
+  stroke: none;
 }
 
 .app__back {
@@ -70,9 +133,12 @@ body {
 
   background: none;
   border: none;
-  color: var(--accent-text);
+  /* --accent, not a lighter text variant of it: one accent value carries every
+     interactive thing in the app, and it clears 4.5:1 as text on both surfaces
+     (7.35:1 on --surface, 6.19:1 on --surface-sunken). */
+  color: var(--accent);
   font: inherit;
-  font-size: 1rem;
+  font-size: var(--text-base);
   cursor: pointer;
 }
 
@@ -84,11 +150,22 @@ body {
   display: none;
 }
 
+/* Notices wear the same shape a row does: 1px all round and 4px down the left,
+   in the accent rather than in any status hue. Both of them are the app talking
+   about itself — storage that may not persist, a tick that can still be taken
+   back — rather than about a job, so borrowing a status colour would say
+   something untrue about what they are.
+
+   They keep a tint where the status pills lost theirs. That is not an oversight
+   in a palette that otherwise replaced wash with edge: an undo offer is live for
+   ten seconds on an app with no backup, and quietening it to match a design
+   direction would cost the user something real. */
 .storage-notice {
   margin: var(--space-3) var(--space-4) 0;
   padding: var(--space-3) var(--space-4);
-  background: var(--unknown-wash);
-  border: 1px solid var(--unknown-edge);
+  background: var(--notice-wash);
+  border: 1px solid var(--accent);
+  border-left-width: 4px;
   border-radius: var(--radius);
   color: var(--text);
 }
@@ -102,9 +179,10 @@ body {
   padding: 0 var(--space-4);
   background: var(--surface);
   border: 1px solid var(--border-strong);
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
   color: var(--text);
   font: inherit;
+  font-weight: var(--weight-button);
   cursor: pointer;
 }
 
@@ -121,8 +199,9 @@ body {
   flex-wrap: wrap;
   margin: var(--space-3) var(--space-4) 0;
   padding: var(--space-3) var(--space-4);
-  background: var(--unknown-wash);
-  border: 1px solid var(--unknown-edge);
+  background: var(--notice-wash);
+  border: 1px solid var(--accent);
+  border-left-width: 4px;
   border-radius: var(--radius);
   color: var(--text);
 }
@@ -130,7 +209,7 @@ body {
 .undo-notice__text {
   flex: 1 1 12rem;
   margin: 0;
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
 }
 
 .undo-notice__action {
@@ -163,10 +242,14 @@ body {
   margin-bottom: var(--space-4);
 }
 
+/* "3 needing attention" is a signpost over the list, not a headline. Kept
+   small, muted and slightly tracked so it labels the jobs below without
+   competing with any of their names. */
 .schedule__title {
   margin: 0;
-  font-size: 0.9375rem;
-  font-weight: 600;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-label);
+  letter-spacing: 0.01em;
   color: var(--text-muted);
 }
 
@@ -176,39 +259,63 @@ body {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-3);
 }
 
+/* A card, not a table cell. The extra padding and the gap above are most of
+   what stops the list reading as a spreadsheet; the shadow does the rest, by
+   lifting the card off the page instead of ruling a line around it.
+
+   No gradient, no image — `e2e/colour-independence.spec.ts` fails if a row
+   contains any background image, because a stylesheet that flattens colour
+   cannot claim to have flattened one. */
 .row {
   background: var(--surface);
   border: 1px solid var(--border);
   border-left-width: 4px;
   border-radius: var(--radius);
-  padding: var(--space-3) var(--space-4);
+  box-shadow: var(--shadow-card);
+  padding: var(--space-3) var(--space-4) var(--space-4);
 }
 
+/* The left edge is unchanged in structure — 4px, same place — and stronger in
+   colour. "Scheduled" used to take the card's own hairline, which made it read
+   as a row missing its edge rather than as a row with nothing to do; it now has
+   a grey of its own at 3.85:1, quiet but present. */
 .row--overdue { border-left-color: var(--overdue-edge); }
 .row--due { border-left-color: var(--due-edge); }
 .row--never-done { border-left-color: var(--unknown-edge); }
-.row--not-due { border-left-color: var(--border); }
+.row--not-due { border-left-color: var(--neutral-edge); }
 
+/* Centred rather than baseline-aligned: the status is now a pill with its own
+   padding, and a baseline drops it to the bottom of a 44px tall name button. */
 .row__main {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
 }
 
+/* First stop for the eye. A full step above body text, and the only thing in
+   the row set in --text at the name weight — the status is smaller, the date
+   smaller and lighter still. That ordering is the whole of T101.
+
+   The leading is tighter than the body's 1.5. A name long enough to wrap used
+   to read as two separate lines; at --heading-leading the two stay one name. */
 .row__name {
   margin: 0;
-  font-size: 1rem;
-  font-weight: 600;
+  font-family: var(--font-heading);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-name);
+  line-height: var(--heading-leading);
+  letter-spacing: var(--heading-tracking);
 }
 
+/* Third stop: when, in the quietest thing the row says. */
 .row__meta {
   margin: var(--space-1) 0 0;
   color: var(--text-muted);
-  font-size: 0.875rem;
+  font-size: var(--text-xs);
 }
 
 /* The job's name is the control that opens it. Styled to keep looking like the
@@ -230,9 +337,17 @@ body {
   color: var(--text);
   font: inherit;
   text-align: left;
+  /* Underlined because it is the only thing saying this name opens the job — the
+     row has no chevron and no other affordance. Kept thin and offset rather than
+     removed: three names stacked down the page read as link soup at the default
+     weight, but with no underline at all the control is invisible until tapped,
+     which is the same mistake the interval dropdown made. --border-strong is
+     7.02:1 on the card, so it clears WCAG 1.4.11's 3:1 for a control's only
+     visual indicator. */
   text-decoration: underline;
   text-decoration-color: var(--border-strong);
-  text-underline-offset: 4px;
+  text-decoration-thickness: 1px;
+  text-underline-offset: var(--underline-offset);
   cursor: pointer;
 }
 
@@ -242,46 +357,93 @@ body {
   margin-top: var(--space-2);
 }
 
+/* Second stop for the eye: smaller than the name, but given a shape so it is
+   findable at a glance down a column of rows.
+
+   **Outlined, not washed.** The warm palette put a pale tint of each hue behind
+   the word; a tint is a soft device and softness is what this rework is
+   removing. A 1px edge and a tight radius say the same thing — "this is a
+   label, here are its bounds" — with definition instead of a wash, and it
+   leaves the word sitting on the card rather than on a colour of its own.
+
+   The border is reinforcement and nothing more. The word is the signal — an
+   outlined chip with no text would say nothing to a user who cannot separate
+   these hues, which is what `e2e/colour-independence.spec.ts` exists to keep
+   true. The fill is left to the surface underneath and is never an image, for
+   the same reason.
+
+   **Not uppercased**, though tracked capitals are the obvious crisp treatment
+   for a label this size. `innerText` in both engines returns text as rendered,
+   `text-transform` included, and `e2e/colour-independence.spec.ts` matches the
+   status words case-sensitively against innerText — so uppercasing here would
+   turn that spec red for a purely visual change. The word stays as written. */
 .badge {
-  font-size: 0.8125rem;
-  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1875rem 0.4375rem;
+  border: 1px solid;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-label);
+  letter-spacing: 0.01em;
   white-space: nowrap;
 }
 
-.badge--overdue { color: var(--overdue-text); }
-.badge--due { color: var(--due-text); }
-.badge--never-done { color: var(--unknown-text); }
-.badge--not-due { color: var(--text-muted); }
+.badge--overdue { color: var(--overdue-text); border-color: var(--overdue-edge); }
+.badge--due { color: var(--due-text); border-color: var(--due-edge); }
+.badge--never-done { color: var(--unknown-text); border-color: var(--unknown-edge); }
+.badge--not-due { color: var(--text-muted); border-color: var(--neutral-edge); }
 
 /* ---- Job detail -------------------------------------------------------- */
 
 .detail__head {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
 }
 
+/* The same ladder as a row, one rung higher: this page is about one job, so its
+   name is the largest thing on it. */
 .detail__title {
   margin: 0;
-  font-size: 1.25rem;
+  font-family: var(--font-heading);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-title);
+  line-height: var(--heading-leading);
+  letter-spacing: var(--heading-tracking);
 }
 
+/* How often, and when it was last done — one line, muted, under the name.
+   "Next due" keeps a line of its own at body size below it, because that is the
+   thing someone opens a job to find out; these two are the context for it. */
 .detail__meta {
-  margin: var(--space-1) 0 var(--space-4);
+  margin: var(--space-1) 0 var(--space-2);
   color: var(--text-muted);
-  font-size: 0.875rem;
+  font-size: var(--text-xs);
 }
 
 .detail__fact {
   margin: 0 0 var(--space-2);
+  font-size: var(--text-base);
 }
 
+/* "History" is a real h3, and it was losing to the field labels near it —
+   smaller, lighter and muted, beside a label set in full --text. A heading that
+   reads as less important than the label below it is precisely the
+   competing-for-attention problem T101 exists to fix, so it is now a weight
+   above its section's body and no longer muted. The field labels moved down a
+   step to meet it; see .form__field.
+
+   There used to be a second one of these, "Record it as done", heading a single
+   date field whose own label said the same thing. It is gone rather than
+   restyled. */
 .detail__subtitle {
   margin: var(--space-5) 0 var(--space-3);
-  font-size: 0.9375rem;
-  font-weight: 600;
-  color: var(--text-muted);
+  font-family: var(--font-heading);
+  font-size: var(--text-base);
+  font-weight: var(--weight-name);
+  color: var(--text);
 }
 
 .detail__record {
@@ -294,14 +456,34 @@ body {
   border-top: 1px solid var(--border);
 }
 
-/* The field is full width; its button is not, so it does not read as a second
-   page-wide action competing with the one in the header. */
 .detail__record .form__field {
   width: 100%;
 }
 
-.detail__record .detail__subtitle {
-  margin: 0;
+/* The field and its button share a row, under the label that explains both.
+   Stacked, the button read as a second page-wide action; beside the field it
+   reads as what finishes it.
+
+   The input flexes and the button does not, so the button keeps its text at any
+   width and the date field absorbs what is left. `min-width: 0` because a flex
+   item will not shrink below its intrinsic width without it, and an
+   `input[type=date]` reports a wide one — on a 375px screen that is how the row
+   overflows. Both keep the 44px minimum height they had stacked; whether they
+   actually clear it side by side is measured by e2e/layout.spec.ts in a real
+   engine, which is the only place it can be. */
+.detail__record-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.detail__record-row input[type='date'] {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.detail__record-row .button {
+  flex: 0 0 auto;
 }
 
 .detail__history {
@@ -313,11 +495,13 @@ body {
   gap: var(--space-2);
 }
 
+/* Plain lines, not cards. A card is a container for something with parts — a
+   row on the list has a name, a status and a date, and the card is what holds
+   them together. A history entry is one date. Giving it a surface, a border, a
+   radius and a shadow spent four pieces of visual machinery on a single string
+   and made the history the heaviest thing on the page. */
 .detail__history li {
-  padding: var(--space-3) var(--space-4);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  padding: var(--space-1) 0;
 }
 
 .detail__empty {
@@ -327,7 +511,7 @@ body {
 
 /* The corrections, kept at the bottom and away from the primary action.
 
-   "Record it" is what someone opens a job to do; editing and deleting are
+   Adding a date is what someone opens a job to do; editing and deleting are
    repairs. Putting them last also puts the destructive one furthest from the
    thumb's resting position on a one-handed 375px screen, and last in the Tab
    order, so neither is the thing you hit by accident. */
@@ -358,7 +542,11 @@ body {
      .app's own insets — otherwise the card can sit under the notch. */
   padding: calc(var(--space-4) + env(safe-area-inset-top)) calc(var(--space-4) + env(safe-area-inset-right))
     calc(var(--space-4) + env(safe-area-inset-bottom)) calc(var(--space-4) + env(safe-area-inset-left));
-  background: rgba(26, 26, 23, 0.6);
+  /* --text's own hue at 60%, so the dimmed page cools with the palette rather
+     than staying warm behind a cool one. Written out because --text is a hex
+     token and cannot be given an alpha without restating it; keep this and
+     --text (#0e141b) in step by hand. */
+  background: rgba(14, 20, 27, 0.6);
 }
 
 .dialog {
@@ -369,12 +557,16 @@ body {
   padding: var(--space-5) var(--space-4);
   background: var(--surface);
   border-radius: var(--radius);
-  box-shadow: 0 8px 24px rgba(26, 26, 23, 0.3);
+  box-shadow: 0 8px 24px rgba(14, 20, 27, 0.3);
 }
 
 .dialog__question {
   margin: 0 0 var(--space-3);
-  font-size: 1.125rem;
+  font-family: var(--font-heading);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-name);
+  line-height: var(--heading-leading);
+  letter-spacing: var(--heading-tracking);
 }
 
 /* --text rather than --text-muted: this sentence says the history is about to
@@ -401,7 +593,14 @@ body {
   padding: var(--space-5) 0;
 }
 
-.empty__title { margin: 0 0 var(--space-3); font-size: 1.25rem; }
+.empty__title {
+  margin: 0 0 var(--space-3);
+  font-family: var(--font-heading);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-title);
+  line-height: var(--heading-leading);
+  letter-spacing: var(--heading-tracking);
+}
 .empty__body { margin: 0 0 var(--space-5); color: var(--text-muted); }
 
 /* ---- Buttons ----------------------------------------------------------- */
@@ -410,11 +609,12 @@ body {
   min-height: var(--touch-target);
   padding: 0 var(--space-4);
   border: 1px solid var(--border-strong);
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
   background: var(--surface);
   color: var(--text);
   font: inherit;
-  font-weight: 500;
+  font-size: var(--text-base);
+  font-weight: var(--weight-button);
   cursor: pointer;
 }
 
@@ -422,30 +622,43 @@ body {
   background: var(--accent);
   border-color: var(--accent);
   color: #fff;
+  font-weight: var(--weight-button-strong);
 }
 
 .button--primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
 
 /* The destructive confirmation in ConfirmDialog, and nothing else yet.
-   #ffffff on --danger (#a3231b) → 7.46:1 ✅ AA body — computed with the same
-   arithmetic e2e/support/colour.ts uses, not estimated. `--danger` is an
-   existing token; no new colour was introduced, which is what keeps
-   e2e/contrast.spec.ts's per-view measurement from having to relitigate the
-   palette while T100's design refresh is still outstanding. */
+   #ffffff on --danger (#b3261e) → 6.54:1 ✅ AA body — computed with the same
+   arithmetic e2e/support/colour.ts uses, not estimated. Three palettes, three
+   recomputations: 7.46:1 on the original #a3231b, 7.67:1 on the warm #9b2a18,
+   6.54:1 now. The number moves with the token every time, by hand, because
+   nothing computes it for us at build time. */
 .button--danger {
   background: var(--danger);
   border-color: var(--danger);
   color: #fff;
+  font-weight: var(--weight-button-strong);
 }
 
 /* ---- Form -------------------------------------------------------------- */
 
 .form { display: flex; flex-direction: column; gap: var(--space-4); }
-.form__title { margin: 0; font-size: 1.25rem; }
+.form__title {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-title);
+  line-height: var(--heading-leading);
+  letter-spacing: var(--heading-tracking);
+}
 
 .form__field { display: flex; flex-direction: column; gap: var(--space-2); border: none; padding: 0; margin: 0; }
-.form__field legend { padding: 0; font-weight: 500; }
-.form__field label { font-weight: 500; }
+/* A step below body text and a weight above it: a label names the control under
+   it, and at the same size and weight as the value it labels the two compete.
+   The inputs themselves stay at 17px — shrinking what the user types would be
+   solving the wrong problem. */
+.form__field legend { padding: 0; font-size: var(--text-sm); font-weight: var(--weight-label); }
+.form__field label { font-size: var(--text-sm); font-weight: var(--weight-label); }
 
 /* Available to any label that must be announced but not shown. The clip-path pair is
    the standard technique: it keeps the element in the accessibility tree, where
@@ -467,9 +680,13 @@ body {
    9rem wide at 375px, which clipped "months" under the chevron. The "Period"
    label is visually hidden rather than laid out — as a fourth item it wrapped
    onto its own row and took the dropdown with it, stranding it from its label. */
-.form__field--inline { display: grid; grid-template-columns: 5rem 1fr; align-items: center; gap: var(--space-2); }
+/* The visible label is now one short word ("Every"), so it sits inline again
+   rather than taking a row of its own. It had that row when it read "How often —
+   every", which was too wide to share with the count and the unit at 375px. On its
+   own row a one-word label reads as orphaned, which is worse than the wrapping it
+   was protecting against. */
+.form__field--inline { display: grid; grid-template-columns: auto 4.5rem 1fr; align-items: center; gap: var(--space-2); }
 .form__field--inline legend { grid-column: 1 / -1; }
-.form__field--inline > label:not(.visually-hidden) { grid-column: 1 / -1; }
 .form__field--inline .form__error { grid-column: 1 / -1; }
 
 input[type='text'],
@@ -479,7 +696,7 @@ select {
   min-height: var(--touch-target);
   padding: 0 var(--space-3);
   border: 1px solid var(--border-strong);
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
   background: var(--surface);
   color: var(--text);
   font: inherit;
@@ -502,10 +719,11 @@ select {
   -webkit-appearance: none;
 
   /* The arrow, drawn rather than inherited, since opting out of native rendering removes
-     the one Safari was drawing. #1a1a17 is --text; a data URI cannot read a custom
-     property, so these two must be kept in step by hand. It sits at 17.44:1 on --surface,
-     well past the 3:1 WCAG 1.4.11 asks of a graphic that carries meaning. */
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='10' viewBox='0 0 16 10'%3E%3Cpath d='M1.5 1.5L8 8l6.5-6.5' fill='none' stroke='%231a1a17' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+     the one Safari was drawing. #0e141b is --text; a data URI cannot read a custom
+     property, so these two must be kept in step by hand — both design passes moved
+     --text and this had to move with it each time. It sits at 18.51:1 on --surface, well
+     past the 3:1 WCAG 1.4.11 asks of a graphic that carries meaning. */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='10' viewBox='0 0 16 10'%3E%3Cpath d='M1.5 1.5L8 8l6.5-6.5' fill='none' stroke='%230e141b' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right var(--space-3) center;
 
@@ -515,5 +733,9 @@ select {
 
 [aria-invalid='true'] { border-color: var(--danger); border-width: 2px; }
 
-.form__error { margin: 0; color: var(--overdue-text); font-size: 0.875rem; }
+/* --text-sm rather than the smallest step: this is the sentence that tells
+   someone why their job did not save, and it is not a caption.
+   --overdue-text on --surface-sunken → 5.50:1 ✅ AA body (the form sits on the
+   page, not on a card). */
+.form__error { margin: 0; color: var(--overdue-text); font-size: var(--text-sm); }
 .form__actions { display: flex; gap: var(--space-3); }

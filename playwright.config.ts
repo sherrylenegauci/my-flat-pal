@@ -33,16 +33,36 @@ import { defineConfig, devices } from '@playwright/test'
  * the specs pin the clock (see e2e/support/app.ts); a floating timezone would
  * make the seeded statuses depend on where the machine happens to be.
  */
-const PORT = 5173
-
 /**
  * Declared here rather than pulled in with `@types/node`.
  *
- * Principle I: a whole type package for one environment variable is not a
+ * Principle I: a whole type package for two environment variables is not a
  * dependency this file can justify, and `npx tsc --noEmit` has to stay clean.
- * Three uses, all of them `CI`.
+ * Four uses: three `CI`, one `PLAYWRIGHT_PORT`.
  */
 declare const process: { env: Record<string, string | undefined> }
+
+/**
+ * ## Why this port is overridable, and why that is a correctness fix
+ *
+ * `reuseExistingServer` is on outside CI, which is right for the ordinary case:
+ * a dev server you already have open makes the suite start instantly. Combined
+ * with a hard-coded port it is also a trap, and it was sprung. This repository
+ * is worked on in git worktrees — several checkouts of different branches, side
+ * by side — and `vite` in any of them binds 5173. Whichever one got there first
+ * then serves *every* browser run started from *any* of them.
+ *
+ * The failure is silent and it points the wrong way. A run can go green against
+ * a checkout that does not contain the change under test, or red against one
+ * that does not contain the fix; both were observed here within a few minutes,
+ * on a mark that was on the page in this worktree and absent from the one
+ * actually being served. Nothing in the output says which checkout answered.
+ *
+ * So: `PLAYWRIGHT_PORT=5199 npx playwright test` when anything else might be
+ * listening. The default is unchanged, because for a single checkout reuse is a
+ * real convenience and there is nothing to collide with.
+ */
+const PORT = Number(process.env['PLAYWRIGHT_PORT'] ?? 5173)
 
 export default defineConfig({
   testDir: './e2e',

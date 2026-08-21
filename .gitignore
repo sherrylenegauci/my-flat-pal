@@ -25,3 +25,6 @@ blob-report/
 
 # OS
 .DS_Store
+
+# Agent worktrees — transient, never committed
+.claude/worktrees/

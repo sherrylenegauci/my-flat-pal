@@ -52,14 +52,72 @@ body {
 }
 
 /* The app's own name. One step up from body text and slightly tightened, so it
-   reads as a masthead rather than as another line of interface. */
+   reads as a masthead rather than as another line of interface.
+
+   `flex` so the mark and the words sit on one baseline-ish row with a token gap
+   between them. The mark is the heading's first child (see App.tsx), so without
+   this the SVG would sit in the text flow and drag the line height about. */
 .app__title {
   margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   font-family: var(--font-heading);
   font-size: var(--text-lg);
   font-weight: var(--weight-name);
   line-height: var(--heading-leading);
   letter-spacing: var(--heading-tracking);
+}
+
+/* ---- The mark --------------------------------------------------------------
+
+   The app's own drawing, and the only place in the app painted with `fill` and
+   `stroke` rather than `color` and `background`.
+
+   **Both colours come from the tokens and neither is new.** The tile is
+   `--accent`, the app's single accent, which is what makes this the same object
+   as the home-screen icon rather than a second piece of branding. The mark on it
+   is `--surface`, the same white the cards are.
+
+   **Measured, not estimated.** #ffffff on --accent is **7.35:1**, already
+   recorded in tokens.css for the button label that uses the same pair. WCAG
+   1.4.11 asks 3:1 of a non-text interface component, so there is a wide margin —
+   and it is not taken on trust: `e2e/mark.spec.ts` reads the `fill` and `stroke`
+   the browser resolved for every shape in the mark, in Chromium and in WebKit,
+   and computes the ratio with the same arithmetic as every other ratio in this
+   project.
+
+   Whether a decorative mark is an interface component under 1.4.11 at all is
+   arguable — it carries no information the heading beside it does not. The
+   ratio is held to anyway, because the argument would have to be made again
+   every time the palette moves, and 7.35:1 costs nothing.
+
+   `flex: none` because the header is a flex row: without it the mark is a flex
+   item that will shrink before the text does, and a squashed mark is worse than
+   a wrapped title. */
+.mark {
+  display: block;
+  flex: none;
+}
+
+.mark__ground {
+  fill: var(--accent);
+}
+
+/* The colour lives on the group, so `.mark__outline` and `.mark__solid` only
+   have to say which channel paints. That also keeps the two in step: a mark
+   whose strokes and fills could drift apart is a mark with two colours in it. */
+.mark__figure {
+  fill: var(--surface);
+  stroke: var(--surface);
+}
+
+.mark__outline {
+  fill: none;
+}
+
+.mark__solid {
+  stroke: none;
 }
 
 .app__back {

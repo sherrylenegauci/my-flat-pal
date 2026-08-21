@@ -346,6 +346,32 @@ named device rather than a CI runner; T078 is the real-iPhone-and-Android gate, 
 browser can verify a home-screen install. Those stay manual, and Phase 6 should say so plainly
 rather than let a green suite imply cover it does not give.
 
+**Playwright now has a second job, and it is not a test.** `scripts/generate-icons.mjs` uses it to
+rasterise the app's mark into `public/icons/*.png`, and `scripts/screenshot-mark.mjs` uses it to
+photograph candidate marks for review. Recorded here because it changes what a dependency is *for*,
+which is the thing this section exists to keep honest — but it adds **no package**. The alternative
+was an image library (`sharp`, `resvg`, `canvas`) for one call site, which is exactly the shape
+Principle I's three-call-site rule exists to make expensive, and a browser is the one thing already
+in this repository that knows how to turn an SVG into a PNG.
+
+**A fourth Vitest project: `assets`.** Node, no DOM, reads `public/` from disk. It is separate from
+the `build` project above because that one runs a full production build and a second file there is a
+second build; nothing about an icon needs one, since `vite build` copies `public/` verbatim.
+
+It exists because of a defect with no other home. The three icon PNGs were a white house outline on
+`rgb(26, 26, 23)` — a warm near-black that appears nowhere in `tokens.css` — drawn in the app's
+*first* palette and left untouched through two complete design passes. Nothing caught it because no
+stylesheet reaches a PNG and **no tier had ever opened one**. It is the same silent drift that left
+the manifest's `theme_color` two palettes stale, and it is the drift T112 is still open about.
+
+`tests/assets/icons.test.ts` reads the generated pixels and compares them against the tokens the
+generator read, so a palette change that is not followed by re-running the generator turns the suite
+red. Decoding a PNG in that test needed `zlib`, which Node ships, plus a chunk walk and five
+scanline filters — about ninety lines in `tests/support/png.ts`, against a dependency. It refuses on
+anything it does not support rather than returning zeroes, for the same reason `e2e/support/colour.ts`
+throws: a decoder that guessed would turn a colour assertion into a check that passes without
+checking.
+
 > **Superseded in part, 2026-08-12 (Constitution v1.5.0, Principle IV).** The router
 > rejection below held *while the app had one feature and three screens*. It stopped holding
 > the moment a second feature was contemplated, and nothing here recorded the condition — so

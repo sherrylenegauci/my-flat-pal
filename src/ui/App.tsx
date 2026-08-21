@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { Mark } from './components/Mark'
 import { StorageNotice } from './components/StorageNotice'
 import { UndoNotice } from './components/UndoNotice'
 import { ScheduleView } from './views/ScheduleView'
@@ -138,7 +139,18 @@ export function App() {
             <span aria-hidden="true">‹</span> Back
           </button>
         )}
+        {/* The mark sits *inside* the heading, not beside it.
+
+            Two reasons, and the second is the one that matters. Visually it
+            keeps the mark glued to the words at every width, including the
+            detail view where Back also shares this row. And in the accessibility
+            tree it changes nothing at all: the mark is `aria-hidden`, so the
+            heading's accessible name is computed from its text alone and is
+            still exactly "my flat pal". A sibling would have been equally silent
+            but would have had to be positioned against the heading rather than
+            with it. */}
         <h1 className="app__title" ref={headingRef} tabIndex={-1}>
+          <Mark />
           my flat pal
         </h1>
       </header>

@@ -762,6 +762,10 @@ npm run preview -- --host    # note the network URL, open it on your phone, inst
   list cancels the tap, and what a long press does are all unchecked. A card-sized target also makes
   an accidental open cheaper to trigger than a name-sized one was. And with the underline gone,
   check that a sighted user can still tell the card does something
+- [ ] **The focus ring hugs the job's name while the tap target is the whole card.** Nothing
+  asserts either way whether that mismatch reads as correct — the ring is on the words because the
+  words are the control, but the thing a finger hits is much larger. Look at it with a keyboard and
+  with VoiceOver's focus cursor
 - [ ] **The period dropdown says "year" at 1 and "years" otherwise, and it changes under the user.**
   Settled for a closed `select`; on iOS it is a wheel picker, and whether VoiceOver re-announces an
   option whose text has just changed is a device question. Change the count with the picker open and

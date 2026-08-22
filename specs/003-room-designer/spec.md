@@ -60,8 +60,8 @@ shown at the size described rather than at some default.
    the units I entered them in.
 3. **Given** I am describing a room, **When** I enter a measurement that cannot be real — zero,
    negative, or absurd — **Then** it is refused with a reason, and nothing is saved.
-4. **Given** a room I have described, **When** I change a measurement, **Then** the room and
-   everything in it stay consistent with the new size.
+4. **Given** a room I have described, **When** I make it smaller than something in it, **Then** it
+   saves, and I am told which objects no longer fit — nothing is moved, resized or removed for me.
 
 ---
 
@@ -144,6 +144,18 @@ the description, and confirm someone who never opens it is unaffected.
 - **FR-004**: Users MUST be able to move and remove objects, and to change a room's dimensions.
 - **FR-005**: The system MUST NOT allow an object to be positioned outside the room that contains
   it, and MUST say so rather than silently correcting or silently accepting it.
+- **FR-004a**: Shrinking a room MUST be allowed even when objects in it no longer fit. The system
+  MUST warn, naming what no longer fits, and MUST NOT silently move, resize or remove anything.
+
+  **Why not refuse it, and why not fix it.** A shrink is almost always a correction — the room was
+  measured as 4 metres and is really 3.6 — so refusing it forces the user to dismantle a layout to
+  record a fact. And the objects must not scale with the room: a sofa is two metres long whichever
+  number was typed, and shrinking it alongside the room would mean everything always fits, which
+  destroys the one question this feature exists to answer.
+
+  An object that no longer fits is therefore a **legitimate stored state**, and storage MUST accept
+  it. Refusing to load a document because one sofa is stranded would take the user's rooms, their
+  jobs and their whole history with it.
 - **FR-005b**: An object MUST fit the room in **all three dimensions**, height included. An object
   taller than the room's ceiling MUST be refused with a reason, as one wider than its walls is.
   Height takes no part in whether two objects *collide* (plan.md § D4) — furniture sits on the

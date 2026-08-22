@@ -54,7 +54,23 @@ safe-area clearance go to the browser tier; whether it is operable without touch
 
 ### Recorded violations
 
-**None.**
+**Two, both against Principle III (Test-First, NON-NEGOTIABLE), both incurred after the
+implementation phase closed.** Declared here rather than left for a reader to notice that a
+ticked task has no test behind it.
+
+1. **T024 — the safe-area fix has no test at all.** The bar not reaching the bottom edge of an
+   iPhone 14 was found by looking at the phone, and fixed straight away. Nothing guards it, and
+   the reason is not haste: a headless engine resolves `env(safe-area-inset-bottom)` to `0`, so
+   the negative margin and the padding that cancel each other are both zero and any assertion
+   about them passes whatever the rule says. It is the same class of claim as SC-005 and it
+   belongs to the device checklist (T022), which is where it is recorded. **Anyone changing
+   `.tab-bar`'s bottom edge should expect no test to stop them.**
+2. **T025 — the icons were drawn before `tests/ui/tab-icon.test.tsx` existed.** Test-first would
+   have written the guard first. It was written after, and then sabotage-proved four ways —
+   removing `aria-hidden`, adding a `<title>`, drawing no icon, and putting a colour literal in
+   the geometry each turn it red and nothing else — so the test is known not to be vacuous. That
+   is the strength test-first buys, arrived at backwards; it is not the ordering the constitution
+   requires, and calling it equivalent would be the dilution Governance forbids.
 
 ---
 
@@ -121,6 +137,18 @@ The cost is that the bottom edge on a notched phone is exactly where the home in
 `env(safe-area-inset-bottom)` is already used by the shell (001, T041), so the mechanism exists — but
 whether it *looks* right, and whether a thumb can reach a 44px target that sits above an inset,
 is a device question and is on the checklist rather than assumed.
+
+**The device answered the first half, and the answer was no (T024).** The bar was first pinned with
+`bottom: env(safe-area-inset-bottom)`, on the reasoning that a bar must not sit over the home
+indicator. On an iPhone 14 it floated, with a strip of the list showing underneath it. The reasoning
+was half right: what must not sit over the indicator is the *tappable* part, while the background is
+expected to run to the edge — which is what every native iOS bar does, and what makes the bar read as
+part of the phone rather than as a panel resting on it. The bar now cancels the app's bottom inset
+for itself with a negative margin and pays it back as padding, so the background extends the whole
+way down and the 44px targets stay above the indicator. `app.css` carries the reasoning.
+
+The second half — whether a thumb comfortably reaches a target sitting that high — is still open,
+still a device question, and still T022.
 
 ### D5 — `playwright-bdd` is rejected, and the journey is written as a plain Playwright spec
 

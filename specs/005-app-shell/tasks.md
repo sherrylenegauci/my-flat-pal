@@ -63,7 +63,7 @@ unreachable until this exists.
 
 - [X] T010 [US1] Build `src/ui/components/TabBar.tsx` — the only new component
 - [X] T011 [US1] Render it from `src/ui/App.tsx`, routing on area as well as view name
-- [X] T012 [US1] Lay it out in `src/ui/app.css`, pinned to the bottom edge with `env(safe-area-inset-bottom)` (plan.md § D4). Colours from `tokens.css`; Principle V allows no local colour
+- [X] T012 [US1] Lay it out in `src/ui/app.css`, pinned to the bottom edge with `env(safe-area-inset-bottom)` (plan.md § D4) — **superseded by T024, which found this floats above the home indicator on a real phone**. Colours from `tokens.css`; Principle V allows no local colour
 
 **Checkpoint**: with one area the app looks exactly as it does today. With two, you can move between them.
 
@@ -139,7 +139,7 @@ question that lives only in a report is a question nobody finds.
 
 A fourth is recorded where it will be met rather than here: with two areas the tab bar appears on the
 read-only screen, and `tests/ui/read-only.test.tsx` asserts that screen has no buttons at all
-(FR-010a). A tab navigates rather than writes, so the assertion probably wants re-stating rather than
+(001's FR-010a — 005 has no FR-010a of its own). A tab navigates rather than writes, so the assertion probably wants re-stating rather than
 the bar hiding — but that is a decision, and it is written beside the assertion it breaks.
 
 ---

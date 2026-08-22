@@ -257,14 +257,28 @@ body {
    it has about 44px of headroom before a fourth job drops below the fold, and
    every pixel here comes out of that. See T019.
 
-   `bottom: env(safe-area-inset-bottom)`: `.app` already reserves the inset
-   (001, T041), and a bar stuck at `bottom: 0` would sit over the home indicator
-   — which is the one place on this screen a bar must not be. Whether it *looks*
-   right there, and whether a thumb reaches a 44px target sitting above an
-   inset, is not answerable here. It is on the device checklist (T022). */
+   **Reaching the bottom edge of the phone.** `.app` reserves the bottom safe
+   area (001, T041), so a bar laid out inside it stops short of the screen's
+   edge and leaves a strip of page showing beneath — which is what an iPhone 14
+   showed. It was written as `bottom: env(safe-area-inset-bottom)` on the
+   reasoning that a bar must not sit over the home indicator; the reasoning was
+   half right. What must not sit over the indicator is the *tappable* part. The
+   bar's *background* is expected to run to the edge, which is what every native
+   iOS tab bar does and what makes the bar read as part of the phone rather
+   than as a panel floating above it.
+
+   So the bar cancels the app's bottom inset for itself with a negative margin
+   and pays it back as padding: the background extends the whole way down, and
+   the 44px targets stay above the indicator, untouched. Self-contained — the
+   no-bar case, which still wants the app's inset, is not affected.
+
+   Whether a thumb comfortably reaches a target sitting that high is still a
+   device question, and still T022. */
 .tab-bar {
   position: sticky;
-  bottom: env(safe-area-inset-bottom);
+  bottom: 0;
+  margin-bottom: calc(-1 * env(safe-area-inset-bottom));
+  padding-bottom: env(safe-area-inset-bottom);
   z-index: 2;
   display: flex;
   background: var(--surface);
@@ -276,8 +290,12 @@ body {
   /* Principle II's floor, and the whole height of the bar. */
   min-height: 44px;
   display: flex;
+  /* Icon over label. The two together come to 41px, so the 44px floor is still
+     what sets the height and the bar did not grow when the icons arrived. */
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 2px;
   padding: 3px var(--space-2) 0;
   border: 0;
   /* Zero-width here, three pixels when current: the indicator is the *width*
@@ -316,6 +334,32 @@ body {
   border-top-width: 3px;
   font-weight: var(--weight-button-strong);
   color: var(--accent);
+}
+
+/* The icons.
+
+   `currentColor` throughout, so an icon cannot fall out of step with the label
+   beside it — the current tab's accent, the rest muted, all from the one rule
+   above. It is also why nothing here names a colour, which Principle V requires.
+
+   `stroke-width` and the caps are set on the element by `TabBar.tsx` rather than
+   here, because they are geometry: the same numbers have to reach any other
+   consumer of these shapes, and no stylesheet reaches a PNG. That is the split
+   `mark.ts` established. */
+.tab-bar__icon {
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+
+.tab-bar__icon-outline {
+  fill: none;
+  stroke: currentColor;
+}
+
+.tab-bar__icon-solid {
+  fill: currentColor;
+  stroke: none;
 }
 
 /* An area the app has no screens for. Reachable only from a test today — see

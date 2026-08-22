@@ -269,6 +269,21 @@ describe('a session holding data from a newer build', () => {
     // The state's whole contract, in one line, and the same one
     // `e2e/support/app.ts` asserts through `noControlsBecause`. Written out as
     // the labels rather than a count, so a failure names what appeared.
+    //
+    // **This line collides with 005 the day rooms exists, and that is a
+    // decision rather than a bug to fix on sight.** Feature 005's FR-001 says
+    // the app's areas are reachable from every screen, and its tab bar is a row
+    // of buttons — so with two areas they appear here, and this assertion goes
+    // red. It was found by running T021's sabotage, which renders the bar with
+    // one area and turns exactly this test and T008 red.
+    //
+    // The two requirements are not really in conflict: FR-010a forbids a
+    // control that *appears to change something and does not*, and a tab
+    // changes nothing about the document — it navigates, and navigating is
+    // still legitimate on a screen that cannot be written to. But "zero
+    // buttons" was the cheapest way to state the contract when navigation was
+    // the header alone, and whoever builds rooms has to re-state it as "nothing
+    // that would write", here and in `noControlsBecause`.
     expect(screen.queryAllByRole('button').map(name)).toEqual([])
   })
 

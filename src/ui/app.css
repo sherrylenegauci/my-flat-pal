@@ -226,6 +226,99 @@ body {
   color: var(--text-muted);
 }
 
+/* ---- The areas, along the bottom edge ----------------------------------
+
+   005 / FR-001. Only ever drawn when there is more than one area — `TabBar`
+   returns nothing below two, so with maintenance alone none of this applies and
+   the app looks exactly as it did.
+
+   **Sticky rather than fixed.** Sticky keeps the bar at the bottom of the
+   screen on a long list *and* keeps it in the flex column, so it takes its own
+   45px out of `.app__main` instead of being laid over it. FR-009 says the
+   structure must not obscure content, and in-flow is what makes that true by
+   construction rather than by remembering to pad something.
+
+   **45px, and that is the floor rather than a choice.** 44px is the touch
+   target Principle II requires, plus the hairline that separates the bar from
+   the content above it. There is no vertical padding, because the list beneath
+   it has about 44px of headroom before a fourth job drops below the fold, and
+   every pixel here comes out of that. See T019.
+
+   `bottom: env(safe-area-inset-bottom)`: `.app` already reserves the inset
+   (001, T041), and a bar stuck at `bottom: 0` would sit over the home indicator
+   — which is the one place on this screen a bar must not be. Whether it *looks*
+   right there, and whether a thumb reaches a 44px target sitting above an
+   inset, is not answerable here. It is on the device checklist (T022). */
+.tab-bar {
+  position: sticky;
+  bottom: env(safe-area-inset-bottom);
+  z-index: 2;
+  display: flex;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+}
+
+.tab-bar__tab {
+  flex: 1 1 0;
+  /* Principle II's floor, and the whole height of the bar. */
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px var(--space-2) 0;
+  border: 0;
+  /* Zero-width here, three pixels when current: the indicator is the *width*
+     changing, not the colour appearing. See the rule below. */
+  border-top: 0 solid var(--accent);
+  background: none;
+  font-family: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-button);
+  line-height: 1.2;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+/* Which area you are in, said three ways, and two of them survive colour being
+   taken away (FR-004).
+
+   Weight, an indicator edge, and colour. The edge is a *border whose width
+   changes* rather than a coloured border that is always there: the check that
+   proves this claim flattens every colour in the page to one pair, which turns
+   a transparent border black along with everything else — so an indicator drawn
+   in colour alone would be invisible to the very test meant to catch it. The
+   3px is paid for by the 3px of padding every other tab carries, so the labels
+   do not move as the marking does.
+
+   `--accent` on `--surface` is 7.35:1 and `--text-muted` on `--surface` is
+   7.58:1, both already recorded in tokens.css. Neither is new; Principle V
+   allows no local colour. Those figures are what the tokens claim, and
+   `e2e/rendering/contrast.spec.ts` is what measures them in a real engine — on
+   a bar it cannot see until rooms exists.
+
+   Keyed off `aria-current`, not off a class, so what a sighted user sees and
+   what a screen reader announces cannot drift apart. */
+.tab-bar__tab[aria-current='page'] {
+  padding-top: 0;
+  border-top-width: 3px;
+  font-weight: var(--weight-button-strong);
+  color: var(--accent);
+}
+
+/* An area the app has no screens for. Reachable only from a test today — see
+   the note in App.tsx — and replaced by the real rooms area in 003. */
+.area-stub__title {
+  margin: 0 0 var(--space-2);
+  font-family: var(--font-heading);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-title);
+}
+
+.area-stub__body {
+  margin: 0;
+  color: var(--text-muted);
+}
+
 /* ---- Schedule ---------------------------------------------------------- */
 
 .app__main {

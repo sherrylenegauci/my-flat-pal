@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { migrate } from '../../src/storage/migrate'
 import { SCHEMA_VERSION } from '../../src/storage/schema'
 import v1Fixture from './fixtures/v1.json'
+import v2Fixture from './fixtures/v2.json'
 
 /**
  * T027 — the migration chain.
@@ -17,9 +18,18 @@ import v1Fixture from './fixtures/v1.json'
  * phones.
  */
 describe('migrate', () => {
+  /**
+   * This test used to run against the v1 fixture, because v1 was current. Once
+   * `SCHEMA_VERSION` became 2 that premise stopped being true — the v1 fixture
+   * is now a document that *does* get changed, which is the whole point of
+   * `migrate-v2.test.ts`. It is retargeted at the v2 fixture rather than
+   * weakened: the thing it was always testing is that the chain does nothing to
+   * a document already at the current version, and that is still checked, now
+   * against a document that carries rooms and objects as well as jobs.
+   */
   it('leaves a current-version document unchanged', () => {
-    const result = migrate(v1Fixture)
-    expect(result).toEqual(v1Fixture)
+    const result = migrate(v2Fixture)
+    expect(result).toEqual(v2Fixture)
   })
 
   it('brings the document to the current schema version', () => {

@@ -28,8 +28,12 @@ passed. Each names the sabotage that must break it.
 
 ## Phase 1: Setup
 
-- [ ] T001 Choose the 3D rendering library and record it in `plan.md` § D2 as a Principle I violation, with the shipped size measured rather than quoted from documentation. Do not install it yet — Phase 3 is the first task that needs it, and an unused dependency in `package.json` is a claim the code does not support
+- [X] T001 Choose the 3D rendering library and record it in `plan.md` § D2 as a Principle I violation, with the shipped size measured rather than quoted from documentation. Do not install it yet — Phase 3 is the first task that needs it, and an unused dependency in `package.json` is a claim the code does not support
+  - **`three`, used imperatively from one component.** Measured by building each candidate with Vite 6 from a realistic entry, React external: `three` tree-shaken 176 kB gzip, `three` + `@react-three/fiber` 409 kB, `@babylonjs/core` 576 kB, against 71 kB gzip for the whole app today. Full record, including why r3f's 233 kB premium is structural rather than incidental, in plan.md § D2. Nothing installed; `three` arrives at T026, which re-measures the real chunk in place
 - [ ] T002 Add a `rooms` Vitest project to `vite.config.ts` for `tests/domain/rooms/**`, matching how `build` and `assets` were added, so room arithmetic runs in the node environment with no DOM
+  - **Not done, and should not be — the task is unnecessary.** Its stated goal is already met: the existing `domain` project includes `tests/domain/**/*.test.ts`, which matches `tests/domain/rooms/` today, in node with no DOM. A `rooms` project would need identical settings, so it adds a name and nothing else
+  - **And it would actively hurt.** Vitest projects collect files independently, so a file matching two projects runs under both. Verified 2026-08-22 on Vitest 3.2.7 with a throwaway config: one test file, two overlapping projects, reported as `|domain| thing.test.ts` and `|rooms| thing.test.ts` — two files, two tests, one on disk. Avoiding that means narrowing the `domain` glob to exclude rooms, which is work spent to arrive back where we started
+  - `assets` and `build` are not the precedent this reads as. They exist because they need *different* settings: `assets` runs node where `browser-ish` runs jsdom, and `build` needs a 120-second timeout and no RTL setup file. Room arithmetic needs none of that. It is domain logic and it belongs in the domain project
 
 ---
 

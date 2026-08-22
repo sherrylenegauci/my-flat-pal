@@ -91,6 +91,10 @@ every test survive it.
 
 **Violation**: one 3D rendering library, at one call site.
 
+**The engine is `three`** (three.js), used directly and imperatively from a single React component.
+**Not** `@react-three/fiber`, and **not** Babylon.js. Recorded 2026-08-22 by T001, with the sizes
+below measured rather than quoted.
+
 **Why**: WebGL by hand means writing shaders, a camera, a scene graph and pointer-to-3D-space
 maths. That is not "no dependency", it is "write the dependency", and worse for a project whose
 whole posture is to stay small.
@@ -99,8 +103,68 @@ whole posture is to stay small.
 entirely and is a genuinely smaller feature — but the spec asks to *see the room*, and a floor plan
 is not that.
 
-**The cost, recorded honestly**: the app ships about 300 kB today. A renderer is several times that.
-Which is why:
+#### The cost, measured
+
+Each candidate was built with Vite 6 and esbuild minification from an entry that does what the room
+view will actually do — a scene, a perspective camera, a WebGL renderer, box geometry, a standard
+material, ambient and directional light, and orbit controls — not a hello-world. `react` and
+`react-dom` are marked external, so these are the **marginal** bytes this feature adds to a bundle
+that already has React in it. Gzip is level 9; brotli is the default quality. Versions: `three`
+0.185.1, `@react-three/fiber` 9.7.0, `@babylonjs/core` 9.22.1.
+
+| Candidate | raw | gzip | brotli |
+|---|---|---|---|
+| **`three`, tree-shaken, imperative** | 835 kB | **176 kB** | 137 kB |
+| `three` + `@react-three/fiber` | 1917 kB | 409 kB | 311 kB |
+| `@babylonjs/core`, tree-shaken | 2741 kB | 576 kB | 443 kB |
+| *(for scale)* the whole app today | 223 kB | 71 kB | 61 kB |
+
+**So the engine is roughly two and a half times the entire application, gzipped.** That is the
+number this decision is really about, and it is why [D3](#d3--the-3d-layer-loads-only-when-a-room-is-opened)
+is not optional.
+
+Two supporting measurements, because they are the reasons for the choice rather than decoration:
+
+- `three` imported wholesale (`import * as THREE`) is **267 kB gzip**, against 168 kB for the
+  tree-shaken subset without orbit controls. Tree-shaking three is worth about 100 kB gzip, and it
+  only works if the import list stays explicit.
+- Orbit controls cost about **8 kB gzip** (176 against 168). Camera movement is acceptance scenario
+  US3-2, so it is paid for.
+
+#### Why not `@react-three/fiber`
+
+It is the pleasanter API by a distance — a scene as JSX, which is how the rest of this app is
+written — and it costs **233 kB gzip more than three alone**, more than three whole copies of the
+current app.
+
+That cost is structural rather than incidental, so it will not improve: r3f imports three as a
+namespace, which defeats the tree-shaking above, and it bundles a second React reconciler.
+
+What it buys is reconciliation — diffing a declarative tree against a live scene graph. That earns
+its keep across many components with independent state. Here there is **one** component, rendering
+a plain data structure that [D1](#d1--the-room-is-a-model-3d-is-a-view-of-it) already says is the
+source of truth, into a scene rebuilt when that structure changes. A handful of rooms and perhaps
+twenty boxes each. Reconciling that is not a problem we have.
+
+The honest cost of refusing it: the room view will hold imperative setup and teardown inside a
+React component, which is a known place for bugs — a renderer not disposed, a listener not removed,
+an animation loop still running after unmount. That is one component's worth of care, written once,
+and it is a smaller thing to get right than 233 kB is to send to a phone.
+
+#### Why not Babylon.js
+
+Largest of the three, and its strengths are all things this feature excludes: physics, a PBR
+material pipeline, asset import, WebGPU. The spec rules out photorealism, materials and imported
+models, so we would be paying 400 kB gzip over three for capability the spec forbids using.
+
+#### What this decision is not
+
+It is not irreversible, and D1 is what keeps it that way: the model and every test over it survive
+an engine swap, because nothing outside `Room3DView.tsx` knows an engine exists. **Nothing is
+installed yet** — T001 is a decision, and an unused dependency in `package.json` is a claim the
+code does not support. `three` arrives at T026, which is the first task that needs it, and T026
+re-measures the real chunk in place. These numbers are library builds; the shipped chunk is this
+plus the view code, and shared-module deduplication may move it a little either way.
 
 ### D3 — The 3D layer loads only when a room is opened
 

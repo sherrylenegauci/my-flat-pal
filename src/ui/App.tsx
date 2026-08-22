@@ -6,7 +6,9 @@ import { ScheduleView } from './views/ScheduleView'
 import { ItemDetailView } from './views/ItemDetailView'
 import { ItemFormView } from './views/ItemFormView'
 import { ReadOnlyView } from './views/ReadOnlyView'
-import { useNavigation } from './navigation'
+import { TabBar } from './components/TabBar'
+import { AREAS, useNavigation } from './navigation'
+import type { Area } from './navigation'
 import { useSchedule } from './useSchedule'
 import type { NewItemInput } from './useSchedule'
 import './tokens.css'
@@ -24,8 +26,8 @@ import './app.css'
  *     installed iOS app has no back button and its edge-swipe is unreliable
  *     (verified, T011).
  */
-export function App() {
-  const nav = useNavigation()
+export function App({ areas = AREAS }: { areas?: readonly Area[] } = {}) {
+  const nav = useNavigation(areas)
   const schedule = useSchedule()
   const headingRef = useRef<HTMLHeadingElement>(null)
 
@@ -269,6 +271,8 @@ export function App() {
           />
         )}
       </main>
+
+      <TabBar areas={areas} current={nav.area} onSelect={nav.switchTo} />
     </div>
   )
 }

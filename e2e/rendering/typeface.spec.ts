@@ -1,8 +1,8 @@
 import { test, expect } from '@playwright/test'
 import type { Locator, Page } from '@playwright/test'
-import { openScheduleList } from './support/app'
-import { BODY_FACE, BUNDLED_FACES } from '../tests/support/typeface'
-import type { BundledFace } from '../tests/support/typeface'
+import { openScheduleList } from '../support/app'
+import { BODY_FACE, BUNDLED_FACES } from '../../tests/support/typeface'
+import type { BundledFace } from '../../tests/support/typeface'
 
 /**
  * The bundled typefaces, in a real engine.

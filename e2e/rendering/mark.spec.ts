@@ -1,14 +1,14 @@
 import { test, expect } from '@playwright/test'
-import { openScheduleList } from './support/app'
-import { contrastRatio, describeColour, parseCssColour } from './support/colour'
-import type { Rgba } from './support/colour'
+import { openScheduleList } from '../support/app'
+import { contrastRatio, describeColour, parseCssColour } from '../support/colour'
+import type { Rgba } from '../support/colour'
 // Across the tier boundary on purpose. `tests/support/` holds two things this
 // needs and neither is jsdom-flavoured: a PNG decoder, and the one parser that
 // reads the palette out of `tokens.css`. Copying either here would give the two
 // tiers separate answers to the same question, which is the class of drift this
 // whole change exists to close.
-import { decodePng } from '../tests/support/png'
-import { FLAT_FILL_TOLERANCE, describeToken, readColourToken } from '../tests/support/tokens'
+import { decodePng } from '../../tests/support/png'
+import { FLAT_FILL_TOLERANCE, describeToken, readColourToken } from '../../tests/support/tokens'
 
 /**
  * The app's mark, in an engine that actually paints it.

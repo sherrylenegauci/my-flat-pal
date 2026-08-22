@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
-import { APP_STATES } from './support/app'
-import { readTextSamples } from './support/probe'
-import type { BackgroundLayer } from './support/probe'
+import { APP_STATES } from '../support/app'
+import { readTextSamples } from '../support/probe'
+import type { BackgroundLayer } from '../support/probe'
 import {
   composite,
   contrastRatio,
@@ -9,8 +9,8 @@ import {
   flattenBackground,
   parseCssColour,
   requiredTextRatio,
-} from './support/colour'
-import type { Rgba } from './support/colour'
+} from '../support/colour'
+import type { Rgba } from '../support/colour'
 
 /**
  * T089 (first half) — text contrast per view. Takes over the manual T074.

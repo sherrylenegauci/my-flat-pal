@@ -64,6 +64,47 @@ declare const process: { env: Record<string, string | undefined> }
  */
 const PORT = Number(process.env['PLAYWRIGHT_PORT'] ?? 5173)
 
+/**
+ * ## Why the journeys get a server of their own (T002)
+ *
+ * The two halves of this tier are separate Playwright projects — see the
+ * `projects` list — and they are given separate ports rather than sharing one.
+ *
+ * The reason is the trap described directly above, made worse. `reuseExistingServer`
+ * plus a fixed port already meant "whoever bound it first answers everything";
+ * with two projects it also means a journeys run and a rendering run started
+ * from different checkouts silently share a server, and neither says so. A
+ * second port does not make the trap impossible — two journeys runs still
+ * collide — but it removes the case where the two halves of one tier interfere
+ * with each other, and it is overridable for the rest.
+ *
+ * Both servers boot on every run, including a run filtered to one project:
+ * Playwright starts every entry in `webServer` regardless. That costs a few
+ * seconds and is the price of the isolation.
+ */
+const JOURNEY_PORT = Number(process.env['PLAYWRIGHT_JOURNEY_PORT'] ?? 5174)
+
+/**
+ * A phone, in each engine. Shared by both halves of the tier so that a journey
+ * and a rendering sweep are looking at the same device.
+ */
+const CHROMIUM_PHONE = {
+  ...devices['Desktop Chrome'],
+  viewport: { width: 375, height: 812 },
+  isMobile: true,
+  hasTouch: true,
+  deviceScaleFactor: 3,
+}
+
+const WEBKIT_PHONE = {
+  ...devices['Desktop Safari'],
+  viewport: { width: 375, height: 812 },
+  // `isMobile` is deliberately not set for WebKit: Playwright's WebKit
+  // does not support it, and setting it throws at context creation.
+  hasTouch: true,
+  deviceScaleFactor: 3,
+}
+
 export default defineConfig({
   testDir: './e2e',
   // Named so a failure reads as a browser-tier failure rather than a unit one.
@@ -82,27 +123,35 @@ export default defineConfig({
     locale: 'en-GB',
   },
 
+  /**
+   * ## Rendering and journeys are separate projects, in separate directories
+   *
+   * Constitution v1.6.1: this tier covers journeys *and* rendering, they are not
+   * the same thing, and they MUST be distinguishable — because for most of this
+   * project's life the tier was eight files of rendering sweeps and nothing
+   * could add a job in a real browser, while the tier read as covered.
+   *
+   * So: `e2e/rendering/` measures what a page looks like — contrast, focus
+   * rings, box sizes, fonts. `e2e/journeys/` drives what a person does. A
+   * `--project=journeys-webkit` run says exactly how much of the second kind
+   * exists, which a mixed directory never did.
+   *
+   * Both halves run in both engines. WebKit is not optional — the target device
+   * is an iPhone, where every browser is WebKit — and Chromium is kept because a
+   * difference between the two is itself information.
+   */
   projects: [
+    { name: 'chromium', testDir: './e2e/rendering', use: CHROMIUM_PHONE },
+    { name: 'webkit', testDir: './e2e/rendering', use: WEBKIT_PHONE },
     {
-      name: 'chromium',
-      use: {
-        ...devices['Desktop Chrome'],
-        viewport: { width: 375, height: 812 },
-        isMobile: true,
-        hasTouch: true,
-        deviceScaleFactor: 3,
-      },
+      name: 'journeys-chromium',
+      testDir: './e2e/journeys',
+      use: { ...CHROMIUM_PHONE, baseURL: `http://localhost:${JOURNEY_PORT}` },
     },
     {
-      name: 'webkit',
-      use: {
-        ...devices['Desktop Safari'],
-        viewport: { width: 375, height: 812 },
-        // `isMobile` is deliberately not set for WebKit: Playwright's WebKit
-        // does not support it, and setting it throws at context creation.
-        hasTouch: true,
-        deviceScaleFactor: 3,
-      },
+      name: 'journeys-webkit',
+      testDir: './e2e/journeys',
+      use: { ...WEBKIT_PHONE, baseURL: `http://localhost:${JOURNEY_PORT}` },
     },
   ],
 
@@ -117,10 +166,18 @@ export default defineConfig({
    * vite-plugin-pwa registers no service worker in dev (devOptions are off), so
    * nothing here is served from a cache and there is no stale-worker flake.
    */
-  webServer: {
-    command: `npx vite --port ${PORT} --strictPort`,
-    url: `http://localhost:${PORT}`,
-    reuseExistingServer: !process.env['CI'],
-    timeout: 60_000,
-  },
+  webServer: [
+    {
+      command: `npx vite --port ${PORT} --strictPort`,
+      url: `http://localhost:${PORT}`,
+      reuseExistingServer: !process.env['CI'],
+      timeout: 60_000,
+    },
+    {
+      command: `npx vite --port ${JOURNEY_PORT} --strictPort`,
+      url: `http://localhost:${JOURNEY_PORT}`,
+      reuseExistingServer: !process.env['CI'],
+      timeout: 60_000,
+    },
+  ],
 })

@@ -26,7 +26,8 @@ The short version:
 
 **Language / stack**: unchanged — TypeScript 5.x, React 19, Vite 6.
 
-**Dependencies**: **none added.** See [D1](#d1--still-no-router-and-this-time-with-the-count).
+**Dependencies**: **none added.** No router ([D1](#d1--still-no-router-and-this-time-with-the-count)); no
+`playwright-bdd` ([D5](#d5--playwright-bdd-is-rejected-and-the-journey-is-written-as-a-plain-playwright-spec)).
 
 **Storage**: none. The set of areas is what the app is, not what a user has, and the current area is
 not persisted — the spec says a relaunch opens at the first screen anyway (Edge Cases).
@@ -120,6 +121,62 @@ The cost is that the bottom edge on a notched phone is exactly where the home in
 `env(safe-area-inset-bottom)` is already used by the shell (001, T041), so the mechanism exists — but
 whether it *looks* right, and whether a thumb can reach a 44px target that sits above an inset,
 is a device question and is on the checklist rather than assumed.
+
+### D5 — `playwright-bdd` is rejected, and the journey is written as a plain Playwright spec
+
+Constitution v1.7.0 records `playwright-bdd` as the tool for journey tests **and says in the same
+breath that recording it does not discharge Principle I** — the plan that introduces it owes the
+argument, and a plan that finds the cost not worth paying must say so. This is that plan, and it
+says so.
+
+**What it would cost, measured rather than estimated.** `playwright-bdd@9.2.0` is 1.2 MB unpacked on
+its own. Installed into a project that already has `@playwright/test`, it adds **36 packages and
+about 23 MB** to `node_modules` (measured in a clean probe: 42 MB total, of which
+`playwright`, `playwright-core` and `@playwright/test` are ~19 MB and already present here).
+`@cucumber/*` is 10 MB of that across nine packages, and drags in `class-transformer`,
+`reflect-metadata`, `luxon`, `regexp-tree` and `source-map-support`.
+
+**What it would not cost.** Nothing ships to a user. It is a devDependency and never enters the
+bundle, so the 220 kB the app sends to a phone is untouched. That half of the objection is void and
+is recorded as void so nobody re-raises it.
+
+**The three real costs.**
+
+1. **A build step.** `bddgen` must run before `playwright test`, writing generated spec files into
+   `.features-gen/`, and it is those generated files Playwright executes. A generation that did not
+   re-run executes the previous version of the scenarios — a green run against a scenario that no
+   longer exists. That is the same shape of silent-wrong-answer as the `reuseExistingServer` port
+   trap this repository was already bitten by.
+2. **Failures point at generated paths**, not at the line someone wrote. Every other test in this
+   project fails at its source.
+3. **A third test vocabulary** — Vitest, Playwright, and Gherkin — in a project maintained by one
+   person, to express, today, exactly **one** journey. Principle I's three-call-site rule is not
+   met, and it is not close.
+
+**The argument that changed the conclusion.** The constitution's own rationale for the rule is that
+"a feature file that names its scenario turns a specification change into a failing test". **That is
+not true of `playwright-bdd`, or of any tool available here.** Nothing links `spec.md` to a
+`.feature` file: when an acceptance scenario changes, a human copies the change into the test, or
+the test goes stale silently — exactly as with a plain spec. What Gherkin genuinely buys is a shared
+vocabulary and reusable step definitions *across many scenarios*, and that value scales with the
+number of scenarios. There is one.
+
+**What is done instead, and it satisfies the MUST the tool was chosen to satisfy.** The journey is a
+plain Playwright spec whose test title names the acceptance scenario it covers (`US1/AC3`, and so
+on), with Playwright's own `test.step()` carrying the Given / When / Then. Steps appear in the HTML
+report and the trace exactly as Gherkin steps would; the scenario link is a string in a title rather
+than a file the tool parses, so it is greppable but not machine-checked. That weakness is stated in
+the spec file itself rather than left to be discovered — and it is the *same* weakness
+`playwright-bdd` would have had, at no cost.
+
+**What would change this.** Journey scenarios existing across more than one feature with steps that
+genuinely repeat — roughly ten scenarios or three features — or anyone other than the maintainer
+being expected to read or write them. At that point reusable step definitions start paying for the
+generation step, and this decision should be re-taken with the same measurements.
+
+**This overrules a tool Sherrylene chose by name.** The constitution explicitly provides for that
+outcome, but the choice was hers and this decision is one command away from being reversed. It is
+flagged rather than buried.
 
 ---
 

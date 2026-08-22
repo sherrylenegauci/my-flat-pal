@@ -144,6 +144,11 @@ the description, and confirm someone who never opens it is unaffected.
 - **FR-004**: Users MUST be able to move and remove objects, and to change a room's dimensions.
 - **FR-005**: The system MUST NOT allow an object to be positioned outside the room that contains
   it, and MUST say so rather than silently correcting or silently accepting it.
+- **FR-005b**: An object MUST fit the room in **all three dimensions**, height included. An object
+  taller than the room's ceiling MUST be refused with a reason, as one wider than its walls is.
+  Height takes no part in whether two objects *collide* (plan.md § D4) — furniture sits on the
+  floor and a shelf above a desk is not a collision — but it does decide whether an object fits in
+  the room at all. Those are different questions and the spec previously answered only one.
 - **FR-005a**: The system MUST NOT allow two objects to occupy the same space, and MUST say so.
   Real furniture cannot overlap, and a room plan that permits it cannot answer the question the
   feature exists for — whether the thing fits.

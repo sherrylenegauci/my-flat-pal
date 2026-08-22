@@ -63,6 +63,8 @@ arithmetic over it.
 
 ### Tests for User Story 1 (MANDATORY) ⚠️
 
+- [ ] T034 **Make `fitsInRoom` check height** (FR-005b, added 2026-08-22). The foundation checks width and depth only, and every object in `tests/domain/rooms/fits.test.ts` is 800 mm tall in a 2400 mm room, so both readings pass and no test decides it. An object taller than the ceiling must be refused. **Sabotage to prove it**: leave height out of the check and confirm the new test goes red — the existing seventeen will not
+
 - [ ] T011 [P] [US1] **(FR-001, FR-002)** Failing tests in `tests/ui/room-form.test.tsx`: a room saves with a name and three measurements; a measurement of zero, a negative, or one absurdly large is refused with a reason and nothing is saved; the units entered are the units shown
 - [ ] T012 [P] [US1] **(FR-004)** Failing tests in `tests/ui/room-list.test.tsx`: rooms are listed with their measurements; the empty state says what the screen is for rather than showing nothing
 

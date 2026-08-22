@@ -754,6 +754,21 @@ npm run preview -- --host    # note the network URL, open it on your phone, inst
   which row they are on, or which one went. Same-day duplicates are one of the ways the mistake gets
   made in the first place, so this is not a rare shape. Open, and it needs a decision about what the
   name carries when dates collide
+- [ ] **A whole job card is one tap target, and only a thumb can say whether that is right.** The
+  name's hit area is stretched over the card so the name no longer needs an underline. `e2e/row-tap.spec.ts`
+  establishes which control receives a *pointer* event in both engines — including that Mark done
+  still records a completion rather than opening the job — but a finger is not a pointer:
+  `touch-action`, a tap highlight that now flashes across the whole card, whether a drag down the
+  list cancels the tap, and what a long press does are all unchecked. A card-sized target also makes
+  an accidental open cheaper to trigger than a name-sized one was. And with the underline gone,
+  check that a sighted user can still tell the card does something
+- [ ] **The period dropdown says "year" at 1 and "years" otherwise, and it changes under the user.**
+  Settled for a closed `select`; on iOS it is a wheel picker, and whether VoiceOver re-announces an
+  option whose text has just changed is a device question. Change the count with the picker open and
+  with VoiceOver running
+- [ ] **The "Last done" field is sized by the engine (`fit-content`), and iOS Safari is not the
+  WebKit the browser tier runs.** Check "dd/mm/yyyy" and the calendar icon are not clipped, and that
+  the narrower control is still comfortable to hit
 - [ ] **The `storage` event actually crosses contexts on iOS** — open the installed app and the
   same site in Safari, tick a job off in one, and check the other notices. This is not a nicety:
   the compare-and-swap, the reload-on-external-change, and the whole refused-undo path built for

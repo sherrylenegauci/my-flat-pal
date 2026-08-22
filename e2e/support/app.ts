@@ -197,6 +197,30 @@ async function open(page: Page): Promise<void> {
  * text-sized button inside a heading, and the interval dropdown measured 44px
  * in jsdom and 25px in WebKit — the tier below cannot tell you whether a
  * control is big enough to hit, because it lays nothing out.
+ *
+ * ## 005's tab bar is deliberately not in this list, and that is a gap
+ *
+ * T020 asked for the shell to be added here so the four sweeps would cover the
+ * bar. There is nothing to add. FR-008 hides the structure while only one area
+ * exists, the app ships with one until 003 builds rooms, so **every state below
+ * renders the same app it did before 005 and none of them contains a bar**. A
+ * state added for it would be one of these under a new name, reporting a pass
+ * for a component that was never on the page.
+ *
+ * What that leaves unchecked, plainly: the bar's contrast, its focus ring, its
+ * place in the Tab order, whether it overflows 375px, and the axe scan in
+ * `e2e/rendering/accessibility.spec.ts` have **no browser-tier coverage at
+ * all**. Two things do. Its height and its 44x44 touch target are measured by
+ * `e2e/rendering/above-the-fold.spec.ts`, which puts the bar's markup into the
+ * real page and lets `app.css` size it, because SC-002 could not be left
+ * unguarded through the one feature most likely to break it. And its roles,
+ * names and ARIA are scanned in jsdom by `tests/ui/axe-shell.test.tsx`, which
+ * exists because every other axe test renders `<App />` with the default one
+ * area and therefore has never seen a tab bar.
+ *
+ * **This is 003's first job.** Adding rooms turns the bar on, and the state to
+ * add here is the app with two areas — at which point these sweeps cover it and
+ * that spec starts measuring the bar as rendered rather than as injected.
  */
 export interface AppState {
   name: string

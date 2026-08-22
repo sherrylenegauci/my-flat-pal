@@ -6,7 +6,9 @@ import { ScheduleView } from './views/ScheduleView'
 import { ItemDetailView } from './views/ItemDetailView'
 import { ItemFormView } from './views/ItemFormView'
 import { ReadOnlyView } from './views/ReadOnlyView'
-import { useNavigation } from './navigation'
+import { TabBar } from './components/TabBar'
+import { AREAS, MAINTENANCE, useNavigation } from './navigation'
+import type { Area } from './navigation'
 import { useSchedule } from './useSchedule'
 import type { NewItemInput } from './useSchedule'
 import './tokens.css'
@@ -24,17 +26,42 @@ import './app.css'
  *     installed iOS app has no back button and its edge-swipe is unreliable
  *     (verified, T011).
  */
-export function App() {
-  const nav = useNavigation()
+export function App({ areas = AREAS }: { areas?: readonly Area[] } = {}) {
+  const nav = useNavigation(areas)
   const schedule = useSchedule()
   const headingRef = useRef<HTMLHeadingElement>(null)
+  const mainRef = useRef<HTMLElement>(null)
 
-  // Moving focus after a view change keeps a keyboard or screen-reader user
-  // oriented. Without it focus falls to <body> and they are silently returned
-  // to the top of the document with no idea anything happened.
+  /**
+   * Where focus goes when the screen changes, which is two rules rather than
+   * one.
+   *
+   * Moving focus at all keeps a keyboard or screen-reader user oriented: without
+   * it focus falls to `<body>` and they are silently returned to the top of the
+   * document with no idea anything happened. That was 001's lesson and it is
+   * unchanged.
+   *
+   * What 005 adds is that going *sideways* is not going up. A view change within
+   * an area puts focus on the app's own heading, as it always has. Switching
+   * area puts it on the region showing that area instead (FR-006) — the app's
+   * name is above the areas and common to all of them, so landing there says
+   * nothing about where the user now is, and it is the same "top of the
+   * document" outcome the rule exists to avoid.
+   *
+   * The previous area is held in a ref because the two rules have to be told
+   * apart *inside* one effect. As two effects, whichever was declared second
+   * would silently win whenever a switch changed both, which is every switch.
+   */
+  const previousArea = useRef(nav.area)
   useEffect(() => {
+    if (previousArea.current !== nav.area) {
+      previousArea.current = nav.area
+      mainRef.current?.focus()
+      return
+    }
+
     headingRef.current?.focus()
-  }, [nav.view.name])
+  }, [nav.view.name, nav.area])
 
   function handleSave(input: NewItemInput) {
     schedule.addItem(input)
@@ -128,8 +155,15 @@ export function App() {
    * An empty schedule counts. `ScheduleView` draws the empty state itself, and
    * a first run is precisely the launch the warning exists for.
    */
+  const currentArea = areas.find((area) => area.id === nav.area) ?? MAINTENANCE
+  const inMaintenance = currentArea.id === 'maintenance'
+
   const showingScheduleList =
-    !schedule.readOnly && nav.view.name !== 'new' && editing === undefined && detail === undefined
+    inMaintenance &&
+    !schedule.readOnly &&
+    nav.view.name !== 'new' &&
+    editing === undefined &&
+    detail === undefined
 
   return (
     <div className="app">
@@ -227,12 +261,28 @@ export function App() {
         )}
       </div>
 
-      <main className="app__main">
-        {/* Read-only comes first, and it replaces the view rather than
+      {/* `tabIndex={-1}` so this region can be given focus on an area switch and
+          still be unreachable by Tab. It is excluded from the browser tier's
+          touch-target and focus sweeps for the same reason a `-1` tabindex
+          excludes anything: it is not a control. */}
+      <main className="app__main" ref={mainRef} tabIndex={-1}>
+        {/* The area comes before everything else, because every branch below is
+            maintenance's. An area with no screens yet is reachable only from a
+            test today: `AREAS` holds one entry, so `nav.area` is always
+            maintenance in the app as shipped. It is written rather than left to
+            throw because it is what makes the shell testable with two areas
+            before rooms exists — and 003 replaces it with the real thing.
+
+            Read-only comes next, and it replaces the view rather than
             decorating it. Every other branch below draws a control that would
             write, and FR-010a says a control that appears usable but silently
             does nothing must not be shown. */}
-        {schedule.readOnly ? (
+        {!inMaintenance ? (
+          <div className="area-stub">
+            <h2 className="area-stub__title">{currentArea.label}</h2>
+            <p className="area-stub__body">This part of the app isn’t built yet.</p>
+          </div>
+        ) : schedule.readOnly ? (
           <ReadOnlyView />
         ) : nav.view.name === 'new' ? (
           <ItemFormView key="new" today={schedule.today} onSave={handleSave} onCancel={nav.back} />
@@ -269,6 +319,8 @@ export function App() {
           />
         )}
       </main>
+
+      <TabBar areas={areas} current={nav.area} onSelect={nav.switchTo} />
     </div>
   )
 }

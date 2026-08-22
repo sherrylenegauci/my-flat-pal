@@ -1,9 +1,9 @@
 import { test, expect } from '@playwright/test'
 import type { Page } from '@playwright/test'
-import { TODAY, openScheduleList } from './support/app'
-import { STORAGE_KEY } from '../src/storage/schema'
-import type { StoredDocument } from '../src/storage/schema'
-import type { Completion } from '../src/domain/types'
+import { TODAY, openScheduleList } from '../support/app'
+import { STORAGE_KEY } from '../../src/storage/schema'
+import type { StoredDocument } from '../../src/storage/schema'
+import type { Completion } from '../../src/domain/types'
 
 /**
  * Where a tap on a job card actually lands.

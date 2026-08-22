@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
-import { APP_STATES, hasControlsToSweep } from './support/app'
-import { INTERACTIVE_SELECTOR, readControlBoxes, readOverflow } from './support/probe'
+import { APP_STATES, hasControlsToSweep } from '../support/app'
+import { INTERACTIVE_SELECTOR, readControlBoxes, readOverflow } from '../support/probe'
 
 /**
  * T087 — layout at 375px. Takes over the manual T071.

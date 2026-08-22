@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
-import { SEEDED_STATUSES, openScheduleList } from './support/app'
-import { readRows } from './support/probe'
+import { SEEDED_STATUSES, openScheduleList } from '../support/app'
+import { readRows } from '../support/probe'
 
 /**
  * T089 (second half) — status without colour. Takes over the manual T072.

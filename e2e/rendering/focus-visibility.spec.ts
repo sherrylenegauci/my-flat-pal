@@ -1,20 +1,20 @@
 import { test, expect } from '@playwright/test'
-import { APP_STATES, hasControlsToSweep } from './support/app'
+import { APP_STATES, hasControlsToSweep } from '../support/app'
 import {
   INTERACTIVE_SELECTOR,
   focusNthControl,
   readControlBoxes,
   readFocusIndicator,
-} from './support/probe'
-import type { FocusBackgroundLayer, FocusReading, Rect } from './support/probe'
+} from '../support/probe'
+import type { FocusBackgroundLayer, FocusReading, Rect } from '../support/probe'
 import {
   composite,
   contrastRatio,
   describeColour,
   flattenBackground,
   parseCssColour,
-} from './support/colour'
-import type { Rgba } from './support/colour'
+} from '../support/colour'
+import type { Rgba } from '../support/colour'
 
 /**
  * T088 — the focus indicator, measured. Takes over the manual T073.

@@ -276,6 +276,9 @@ body {
   border-radius: var(--radius);
   box-shadow: var(--shadow-card);
   padding: var(--space-3) var(--space-4) var(--space-4);
+  /* The containing block for `.row__open::after`, which is what makes the whole
+     card open the job. Nothing else depends on it. */
+  position: relative;
 }
 
 /* The left edge is unchanged in structure — 4px, same place — and stronger in
@@ -318,10 +321,15 @@ body {
   font-size: var(--text-xs);
 }
 
-/* The job's name is the control that opens it. Styled to keep looking like the
-   heading it is, with an underline as the only hint that it does something —
-   colouring it like a link would compete with the status word beside it, which
-   is the thing the list exists to make obvious.
+/* The job's name is the control that opens it, and it looks like the heading it
+   is: no underline, no link colour, nothing competing with the status word
+   beside it.
+
+   **The underline is gone because the whole card is now the hit area.** It was
+   there as the only thing saying the name did something, and it was the wrong
+   answer to that: a name long enough to wrap read as two links, and three names
+   down the page read as link soup. The affordance is now the card — the thing a
+   thumb was reaching for anyway.
 
    The 44px minimum is not decoration: Principle II's floor applies to every
    touch target, and text-sized buttons are the usual way a layout falls under
@@ -337,24 +345,53 @@ body {
   color: var(--text);
   font: inherit;
   text-align: left;
-  /* Underlined because it is the only thing saying this name opens the job — the
-     row has no chevron and no other affordance. Kept thin and offset rather than
-     removed: three names stacked down the page read as link soup at the default
-     weight, but with no underline at all the control is invisible until tapped,
-     which is the same mistake the interval dropdown made. --border-strong is
-     7.02:1 on the card, so it clears WCAG 1.4.11's 3:1 for a control's only
-     visual indicator. */
-  text-decoration: underline;
-  text-decoration-color: var(--border-strong);
-  text-decoration-thickness: 1px;
-  text-underline-offset: var(--underline-offset);
   cursor: pointer;
+}
+
+/* The name's hit area, stretched over the whole card.
+
+   **Why a pseudo-element and not a card-shaped button.** The card also holds
+   "Mark done", and a button inside a button is invalid HTML that assistive
+   technology reads unpredictably. So the name stays the one control, with its
+   own accessible name and its own place in the focus order, and only its
+   *pointer* target grows. Nothing about the accessibility tree changes.
+
+   The focus ring stays on the text, where the eye expects it: an outline is
+   drawn on the element's own box and a positioned pseudo-element does not move
+   it.
+
+   `.row` is the containing block, so this covers the card's padding box. It
+   deliberately does not cover the border, which is where the status edge is. */
+.row__open::after {
+  content: '';
+  position: absolute;
+  inset: 0;
 }
 
 .row__actions {
   display: flex;
   justify-content: flex-end;
   margin-top: var(--space-2);
+}
+
+/* Raised above the name's hit area, so tapping "Mark done" records a completion
+   instead of opening the job.
+
+   **This is the load-bearing declaration in the whole change, and the failure it
+   prevents is silent**: with the overlay on top, a tap here would open the job,
+   nothing would look wrong, and the completion the user thought they recorded
+   would not exist. `e2e/row-tap.spec.ts` clicks the button's centre by
+   coordinate and asserts a new completion in storage, which is the only tier
+   that can see it — jsdom does no hit-testing, so a click there reaches whatever
+   element it is aimed at whatever is painted over it.
+
+   The *button* is raised rather than `.row__actions`, and the difference is
+   visible to a user: the actions row spans the card, so raising it would leave a
+   dead strip beside the button that opened nothing. That strip is the second
+   point `row-tap.spec.ts` taps. */
+.row__done {
+  position: relative;
+  z-index: 1;
 }
 
 /* Second stop for the eye: smaller than the name, but given a shape so it is
@@ -729,6 +766,33 @@ select {
   color: var(--text);
   font: inherit;
   width: 100%;
+}
+
+/* A date field holds "dd/mm/yyyy" and a calendar icon, so it is sized to that
+   and not to the form. Full width it was 355px on a 390px iPhone — the same
+   width as the Name box, which takes a job's whole name — and read as a control
+   waiting for something much longer than a date.
+
+   **`fit-content`, not a number.** The intrinsic width of `input[type=date]` is
+   drawn by the engine and differs between them: 118px in WebKit against 164px in
+   Chromium, measured. `fit-content` asks each engine for its own answer, which
+   also means it cannot clip on a platform whose control is wider than the one
+   this was measured on — and iOS Safari is not the WebKit the browser tier runs.
+
+   `width` rather than `align-self`, so this does not depend on `.form__field`
+   being a flex container: a stretched flex item ignores `width: auto`, but a
+   definite width turns the stretch off.
+
+   **Scoped to `.form`, which is the add/edit form and nothing else.** The detail
+   view's date field sits in `.detail__record-row` beside the Add button and
+   *must* go on stretching to fill it; that form is `.detail__record`, so it is
+   not matched here. Both halves are measured in `e2e/layout.spec.ts`, because a
+   scoping change has two ways to be wrong and jsdom can see neither.
+
+   The 44px minimum height comes from the rule above and is untouched: Principle
+   II's floor is a MUST, and a narrower field must not become a shorter one. */
+.form .form__field input[type='date'] {
+  width: fit-content;
 }
 
 /* Safari refuses `min-height` on a natively-rendered dropdown — its own stylesheet wins,

@@ -303,11 +303,6 @@
   --heading-leading: 1.25;
   --heading-tracking: -0.01em;
 
-  /* The underline under a job's name in the list. A token because it is a
-     property of the face: how far the line clears the descenders depends on
-     where the descenders are. */
-  --underline-offset: 5px;
-
   /* ---- Spacing and shape ----------------------------------------------- */
   --space-1: 0.25rem;
   --space-2: 0.5rem;

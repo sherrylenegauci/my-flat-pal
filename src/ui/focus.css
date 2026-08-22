@@ -18,11 +18,17 @@
  * companion is unchanged.
  */
 
+/* **The two colours are not declared here any more.** --focus-ring and
+   --focus-ring-inner live in tokens.css with the rest of the palette, because
+   Principle V puts every colour in one file and this one had been declaring its
+   own since before that was written. Nothing about the ring changed: the values
+   moved, and the reasoning below moved with neither, because this is where
+   someone changing the ring will be reading.
+
+   The geometry stayed. A width and an offset are this component's dimensions,
+   not the spacing scale, and they are the two numbers most likely to be adjusted
+   by whoever is looking at the ring rather than at the palette. */
 :root {
-  --focus-ring: #0b0f14;
-  /* Sits between the element and the dark ring, so the indicator stays visible
-     on dark fills where the dark ring alone does not. */
-  --focus-ring-inner: #ffffff;
   --focus-ring-offset: 2px;
   --focus-ring-width: 3px;
 }
@@ -36,8 +42,8 @@
  *   --focus-ring  on --notice-wash    16.40:1  ✅
  *   --focus-ring  on --accent          2.61:1  ❌  ← why the inner ring exists
  *   --focus-ring  on --danger          2.94:1  ❌  ← and here too, by a hair
- *   #ffffff       on --accent          7.35:1  ✅
- *   #ffffff       on --danger          6.54:1  ✅
+ *   --focus-ring-inner on --accent     7.35:1  ✅
+ *   --focus-ring-inner on --danger     6.54:1  ✅
  *
  * --danger at 2.94:1 is the one worth naming. It is a near miss rather than a
  * clear fail, and a near miss is exactly the kind of number that gets rounded

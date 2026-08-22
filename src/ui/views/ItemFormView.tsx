@@ -30,12 +30,29 @@ import type { NewItemInput } from '../useSchedule'
  * history would do it, and that is T103 — unbuilt. Reported rather than
  * resolved: widening FR-009 is Sherrylene's call.
  */
-const UNITS: { value: IntervalUnit; label: string }[] = [
-  { value: 'day', label: 'days' },
-  { value: 'week', label: 'weeks' },
-  { value: 'month', label: 'months' },
-  { value: 'year', label: 'years' },
-]
+/**
+ * The four periods. Only `value` is data — the label is display, and it moves
+ * with the count beside it (T115).
+ *
+ * **The count decides, never the unit**, which is `formatInterval`'s rule in
+ * `../format.ts` and is why this reads `count === 1` rather than switching on
+ * the unit. Keying off the unit reads correctly on the annual job that prompts
+ * the change and turns a quarterly filter into a monthly one.
+ *
+ * `Number(count)` rather than the raw string because the count is form state
+ * and is therefore text: "1" is singular, "01" is singular, "" and "3" and
+ * anything unparseable are plural. Plural is the right answer for zero in
+ * English and the safe answer for a half-typed number, and the count is
+ * validated on submit anyway.
+ *
+ * Every unit here pluralises by adding an s, so this is a suffix and not a
+ * lookup table — the same decision, for the same reason, as `formatInterval`.
+ */
+const UNITS: IntervalUnit[] = ['day', 'week', 'month', 'year']
+
+function periodLabel(unit: IntervalUnit, count: string): string {
+  return Number(count) === 1 ? unit : `${unit}s`
+}
 
 interface Errors {
   name?: string
@@ -155,7 +172,7 @@ export function ItemFormView({
           {...field('count')}
         />
         {/* The label stays in the DOM but not on screen. The row already reads
-            as a sentence — "Every 1 years" — so a visible "Period" adds nothing
+            as a sentence — "Every 1 year" — so a visible "Period" adds nothing
             for a sighted user, and as a fourth item in a three-column grid it
             wrapped the dropdown onto its own row, stranding it from the label
             naming it. A screen reader still announces it, because a bare
@@ -170,8 +187,8 @@ export function ItemFormView({
           onChange={(e) => setUnit(e.target.value as IntervalUnit)}
         >
           {UNITS.map((u) => (
-            <option key={u.value} value={u.value}>
-              {u.label}
+            <option key={u} value={u}>
+              {periodLabel(u, count)}
             </option>
           ))}
         </select>

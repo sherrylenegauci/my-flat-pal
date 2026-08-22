@@ -21,6 +21,12 @@ declare module 'node:fs' {
   export function readFileSync(path: string, encoding: 'utf8'): string
   /** Without an encoding, Node returns a Buffer, which is a `Uint8Array`. */
   export function readFileSync(path: string): Uint8Array
+  /**
+   * Entry names only, which is the overload the palette guard uses: it has to
+   * discover the stylesheets rather than be told them, or a new one arrives
+   * unguarded and nothing says so.
+   */
+  export function readdirSync(path: string): string[]
 }
 
 declare module 'node:zlib' {

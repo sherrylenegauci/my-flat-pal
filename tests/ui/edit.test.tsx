@@ -301,6 +301,11 @@ describe('correcting a job', () => {
     // ...while back in the list the other two are untouched, each still on the
     // schedule its own interval gives it.
     await user.click(screen.getByRole('button', { name: 'Back' }))
+
+    // Wait for the schedule to be back on screen before reading it. `back()`
+    // goes through `history.back()`, whose `popstate` jsdom delivers on a later
+    // turn than the click — see the note in `navigation.test.tsx`.
+    await screen.findByRole('heading', { name: /needing attention|Nothing recorded yet/ })
     expect(whenDue('Smoke alarms')).toBe('Was 1 July 2026')
     expect(whenDue('Water filter')).toBe('Next 1 September 2026')
     expect(whenDue('Boiler service and flue check')).toBe('Next 1 June 2028')

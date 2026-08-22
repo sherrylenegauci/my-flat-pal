@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 2,
+  "revision": 4,
+  "items": [
+    {
+      "id": "itm_fixture001",
+      "name": "Boiler service",
+      "interval": { "count": 1, "unit": "year" },
+      "createdAt": "2026-01-15",
+      "completions": [
+        {
+          "id": "cmp_fixture001",
+          "completedOn": "2026-06-14",
+          "recordedAt": "2026-06-14T09:21:44.512Z"
+        }
+      ]
+    },
+    {
+      "id": "itm_fixture002",
+      "name": "Smoke alarm test",
+      "interval": { "count": 3, "unit": "month" },
+      "createdAt": "2026-01-15",
+      "completions": []
+    }
+  ],
+  "rooms": [
+    {
+      "id": "rm_fixture001",
+      "name": "Living room",
+      "widthMm": 4200,
+      "depthMm": 3600,
+      "heightMm": 2400,
+      "objects": [
+        {
+          "id": "obj_fixture001",
+          "pieceId": "sofa",
+          "name": "Sofa",
+          "widthMm": 2000,
+          "depthMm": 900,
+          "heightMm": 800,
+          "xMm": 0,
+          "yMm": 0
+        },
+        {
+          "id": "obj_fixture002",
+          "pieceId": "wardrobe",
+          "name": "Wardrobe",
+          "widthMm": 1000,
+          "depthMm": 600,
+          "heightMm": 2100,
+          "xMm": 2200,
+          "yMm": 0
+        }
+      ]
+    },
+    {
+      "id": "rm_fixture002",
+      "name": "Bedroom",
+      "widthMm": 3000,
+      "depthMm": 3000,
+      "heightMm": 2400,
+      "objects": []
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { load, save, STORAGE_KEY } from '../../src/storage/repository'
-import { emptyDocument } from '../../src/storage/schema'
+import { emptyDocument, SCHEMA_VERSION } from '../../src/storage/schema'
 import type { StoredDocument } from '../../src/storage/schema'
 
 /**
@@ -67,8 +67,20 @@ describe('save', () => {
   })
 
   it('stamps the current schema version', () => {
-    save(aDocument())
-    expect(load().document.schemaVersion).toBe(1)
+    // This used to assert a literal 1, and read as a test of `save` while
+    // actually pinning the constant. Raising the version to 2 for the room
+    // designer is what exposed that.
+    //
+    // It now hands `save` an out-of-date document and reads the raw JSON back,
+    // which is the thing the name always claimed: `save` writes the version
+    // this build understands, whatever the caller passed. Going through
+    // `load()` could not show that, because `migrate` would stamp the version
+    // on the way out regardless of what was on disk.
+    save({ ...aDocument(), schemaVersion: SCHEMA_VERSION - 1 })
+
+    const written = JSON.parse(localStorage.getItem(STORAGE_KEY) as string) as StoredDocument
+
+    expect(written.schemaVersion).toBe(SCHEMA_VERSION)
   })
 
   it('replaces the whole document rather than merging', () => {

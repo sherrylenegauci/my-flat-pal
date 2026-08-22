@@ -69,7 +69,13 @@ describe('in-app back control', () => {
     await user.click(screen.getByRole('button', { name: 'Open detail' }))
     await user.click(screen.getByRole('button', { name: 'Back' }))
 
-    expect(screen.getByText('view: schedule')).toBeTruthy()
+    // `findBy`, not `getBy`. `nav.back()` calls `history.back()`, and jsdom
+    // delivers `popstate` on a later turn of the event loop than the click
+    // `userEvent` awaits — so a synchronous assertion here is a race that
+    // happens to be won on a fast module graph and lost on a slower one. It was
+    // lost for the first time when the room work was merged in, which changed
+    // nothing in `src/ui` and only made the suite bigger.
+    expect(await screen.findByText('view: schedule')).toBeTruthy()
   })
 })
 
@@ -141,6 +147,7 @@ describe('navigating between views', () => {
     expect(screen.getByText('view: new')).toBeTruthy()
 
     await user.click(screen.getByRole('button', { name: 'Back' }))
-    expect(screen.getByText('view: detail')).toBeTruthy()
+    // Async for the same reason as above — `popstate` arrives after the click.
+    expect(await screen.findByText('view: detail')).toBeTruthy()
   })
 })

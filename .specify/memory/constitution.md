@@ -1,7 +1,31 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version change: 1.5.0 → 1.6.0
+Version change: 1.6.0 → 1.6.1
+Bump rationale: PATCH — a clarification to the Testing Strategy, not a new rule.
+The three tiers are unchanged and nothing is added to what a change must satisfy.
+
+Clarified:
+- Testing Strategy — the real-browser tier covers journeys AND rendering, and those
+  are not the same thing. A contrast or font check asserts about rendering; adding a
+  job and reloading asserts about a journey. Both belong in a browser, neither
+  substitutes for the other, and they must be distinguishable.
+
+Why: for most of this project's life the browser tier had eight spec files, seven of
+which were rendering sweeps, and nothing could add a job in a real browser. It was
+recorded twice as a known gap (issues #96 and #97) and stayed open, because a tier
+full of sweeps reads as covered. Recorded 2026-08-22 after Sherrylene reviewed the
+tier and said the same thing.
+
+BDD is deliberately NOT recorded here. Sherrylene has asked for it and it is task
+T125, but Playwright has no first-party BDD framework and `playwright-bdd` is a
+dependency plus a build step, so it belongs in the plan that introduces it under
+Principle I — not in governance ahead of that decision.
+
+Templates requiring updates:
+- ✅ none — this clarifies an existing section and adds no gate.
+
+Prior: 1.5.0 → 1.6.0
 Bump rationale: MINOR — Technology Constraints materially expanded with a planned
 major feature and the constraints binding on it. No principle removed or redefined.
 
@@ -275,6 +299,18 @@ tier that applies to it is satisfied.
 | **Behaviour** | What a user can do and see — through roles, labels, and visible text | jsdom + Testing Library | MANDATORY |
 | **Real browser** | Contrast, focus visibility, installed behaviour, safe areas, platform gestures | A real browser and a real phone | MANDATORY, currently **manual** |
 
+**The real-browser tier is for journeys and for rendering, and those are not the same
+thing.** A check that measures contrast, a font, an icon or a focus ring is asserting about
+*rendering*; a check that adds a job, ticks it off and reloads is asserting about a *journey*.
+Both belong in a real browser and neither substitutes for the other. They MUST be
+distinguishable — by directory, name or project — because a tier full of rendering sweeps
+looks covered while no user journey has ever run in a browser at all.
+
+**Rationale**: that is not hypothetical. For most of this project's life the browser tier had
+eight spec files, seven of which were rendering sweeps, and nothing could add a job in a real
+browser. It was recorded twice as a known gap and stayed open, because the tier read as
+covered.
+
 - The domain tier MUST NOT touch React, storage, or the clock. Passing dates in as
   parameters is what makes date-dependent rules testable without fake timers.
 - The behaviour tier MUST assert through what a user perceives. Reaching into component
@@ -518,4 +554,4 @@ gates above. Complexity MUST be justified, never assumed. Agent-specific runtime
 lives in agent context files at the repository root and MUST NOT restate or contradict
 this constitution — it points here instead.
 
-**Version**: 1.6.0 | **Ratified**: 2026-08-07 | **Last Amended**: 2026-08-19
+**Version**: 1.6.1 | **Ratified**: 2026-08-07 | **Last Amended**: 2026-08-22

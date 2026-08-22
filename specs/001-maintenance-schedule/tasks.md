@@ -790,3 +790,21 @@ changed**, not because the code did: v1.5.0 added Principles IV and V an hour be
   **Scoped to `.form`**, because the detail view's date field sits in `.detail__record-row` beside the Add button and must go on filling it. `e2e/layout.spec.ts` now measures both halves — the form's field must stop stretching, the detail row's must go on absorbing the space — since a scoping change has two ways to be wrong and jsdom can see neither.
 
   **One honest limit of that pair, found by sabotage.** Widening the new rule from `.form .form__field` to `.form__field`, so it matches the detail view too, leaves all 58 layout tests green. The reason is CSS rather than a weak test: `flex: 1 1 auto` on the record row's field means `flex-grow` decides its width and the `width` declaration never gets a say. So the `.form ` prefix is **defensive rather than load-bearing today**, and the guard test cannot distinguish the two scopings. It is not a vacuous check — changing that field to `flex: 0 0 auto; width: fit-content` reddens it in both engines — but what it defends is the row's arrangement, not the selector's precision. Recorded rather than papered over.
+
+---
+
+## Phase 8: The browser tier is the wrong shape
+
+Recorded 2026-08-22 after Sherrylene reviewed it. The tier has eight spec files and **seven are
+visual sweeps** — contrast, fonts, icons, focus rings, layout. Only `row-tap.spec.ts` drives
+anything a user would recognise. Nobody can add a job, tick it off, undo, or delete one in a real
+browser, which was already recorded twice as issues #96 and #97 and never fixed.
+
+The sweeps are not wasted — they caught the dropdown that was 25px in Safari, the mark that could be
+invisible, and the font that was never precached. They are simply not end-to-end tests, and calling
+them that is what let the absence of real journeys go unnoticed for so long.
+
+- [ ] T122 **Move the visual sweeps out of `e2e/` into a tier of their own.** `accessibility`, `colour-independence`, `contrast`, `focus-visibility`, `layout`, `mark` and `typeface` assert about *rendering*, not about journeys. Give them a name that says so — they run in the same browsers, they are just not the same kind of check. The point is not tidiness: while they sit in `e2e/`, the tier looks covered and is not
+- [ ] T123 **Write the journeys that do not exist** (issue #96). At minimum: add a job and see it listed; tick one off and see the schedule move; undo within the window; remove a completion from the history; edit a job; delete one. Each must **reload** at the end — a reload in a real browser is what proves the write reached real storage rather than a jsdom shim, and it is the one thing 001's remount-based tests cannot establish
+- [ ] T124 **Use Playwright fixtures.** There are none — `grep -rn "test.extend" e2e/` returns nothing. `e2e/support/app.ts` does fixture work through a seeding function and an `APP_STATES` array, which is the shape you reach for when you have no fixtures. A `seededApp` fixture would delete the boilerplate at the top of every spec. **Page object models are deliberately not proposed**: Playwright's own guidance is lukewarm on them, and a class hierarchy tends to hide which element a test actually touched. Locators plus small helpers first; revisit if the journeys in T123 turn out to repeat themselves
+- [ ] T125 **Decide whether to adopt `playwright-bdd`, in a plan and not in a task.** Sherrylene has asked for BDD. Playwright has **no first-party BDD framework**; `playwright-bdd` is the community package, it generates Playwright tests from Gherkin `.feature` files, and it is therefore a dependency plus a build step. Principle I requires it justified in the plan that introduces it. **What it would genuinely buy**: traceability. Four requirements in this project have gone stale or outright false without a test noticing — FR-007a promised a correction the app could not make, FR-007b still points at an edit form with no date field. A feature file naming the scenario it covers would make a spec change fail a test. **What it costs**: a third test tool, and failures that point at a generated path rather than at source. **Note also** that the specs have used Given/When/Then since 001 — the vocabulary is already there and never reached the tests, so the style is available without the tooling

@@ -13,7 +13,7 @@
 
 ## Requirement Completeness
 
-- [ ] No [NEEDS CLARIFICATION] markers remain
+- [x] No [NEEDS CLARIFICATION] markers remain
 - [x] Requirements are testable and unambiguous
 - [x] Success criteria are measurable
 - [x] Success criteria are technology-agnostic (no implementation details)
@@ -31,7 +31,9 @@
 
 ## Notes
 
-**15 of 16 passing. The one failure is deliberate** — three clarification markers remain, which is
+**16 of 16 passing.** The three clarification markers were answered on 2026-08-22 — ready-made resizable pieces, no overlap, no export, and suggestions left out as a separate feature. The original note follows, kept because the reasoning still applies to what was built.
+
+**Previously 15 of 16, and the one failure was deliberate** — three clarification markers remain, which is
 the mechanism working rather than a gap. Each is a question whose answer changes the feature
 materially, and answering them on Sherrylene's behalf would be guessing with the authority of a
 specification.

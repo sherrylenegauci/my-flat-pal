@@ -17,6 +17,11 @@ see it in three dimensions. The point is deciding: whether the sofa fits under t
 there is room to open the wardrobe, what the place would look like with the bed against the other
 wall. Today you do that with a tape measure and imagination, or you buy something and find out.
 
+**How you fill a room:** you pick from a set of ready-made pieces — a sofa, a bed, a wardrobe —
+each of which already knows roughly what size it is. If yours is a different size, you change its
+measurements. A ready-made sofa resized to your sofa is your sofa; there is no separate "describe
+your own object" to learn.
+
 **One thing to know up front:** everything you can do by dragging something around in the 3D view,
 you can also do from an ordinary list. That is not a fallback for a rainy day — it is how the
 feature is built, because someone using VoiceOver on a phone must be able to lay out a room too, and
@@ -111,8 +116,8 @@ the description, and confirm someone who never opens it is unaffected.
 - **A room with nothing in it** shows as an empty room, not as an error or a blank screen.
 - **An object bigger than the room** is refused with a reason, in the same way an impossible
   measurement is.
-- **Two objects in the same place.** Real furniture cannot overlap; whether the app enforces that or
-  allows it while saying so is [NEEDS CLARIFICATION: see Q2].
+- **Two objects in the same place.** Refused, with a reason (FR-005a). Real furniture cannot
+  overlap, and a plan that allows it cannot answer whether something fits.
 - **A room deleted while its 3D view is open** — the same class of problem the maintenance schedule
   already solved for a job deleted in another window, and it resolves the same way.
 - **A device that cannot show 3D at all.** Some phones and some settings refuse hardware rendering.
@@ -130,11 +135,18 @@ the description, and confirm someone who never opens it is unaffected.
 - **FR-001**: Users MUST be able to record a room with a name and its dimensions.
 - **FR-002**: The system MUST refuse dimensions that cannot describe a real room, with a reason, and
   save nothing.
-- **FR-003**: Users MUST be able to place objects in a room, each with its own dimensions and a
-  position within the room.
+- **FR-003**: Users MUST be able to place objects in a room by choosing from a set of ready-made
+  pieces the app provides. Each piece MUST arrive with sensible default dimensions, and MUST be
+  placed at a position within the room.
+- **FR-003a**: Users MUST be able to change any placed object's dimensions. A ready-made piece
+  resized is how a user describes something the set does not cover, so there is no separate path
+  for a custom object.
 - **FR-004**: Users MUST be able to move and remove objects, and to change a room's dimensions.
 - **FR-005**: The system MUST NOT allow an object to be positioned outside the room that contains
   it, and MUST say so rather than silently correcting or silently accepting it.
+- **FR-005a**: The system MUST NOT allow two objects to occupy the same space, and MUST say so.
+  Real furniture cannot overlap, and a room plan that permits it cannot answer the question the
+  feature exists for — whether the thing fits.
 - **FR-006**: **Every operation in FR-003 and FR-004 MUST be possible without touching the screen.**
   Direct manipulation in the 3D view MAY exist as an additional way to do them; it MUST NOT be the
   only way to do any of them. *(Constitution: model-first rule.)*
@@ -217,7 +229,9 @@ the description, and confirm someone who never opens it is unaffected.
 
 ## Out of Scope
 
-- Importing furniture models, textures, or anything from a catalogue
+- Importing furniture models or textures from anywhere outside the app. The ready-made pieces are a
+  small built-in set of boxes with sensible default sizes; they are not a catalogue, they are not
+  downloaded, and nothing is fetched at runtime
 - Photorealism, lighting design, or materials
 - Measuring a room using the phone's camera
 - Sharing a room, exporting an image of one, or collaborating on one
@@ -226,14 +240,27 @@ the description, and confirm someone who never opens it is unaffected.
 
 ---
 
-## Open questions
+## Decisions taken, 2026-08-22
 
-Three, each of which changes the feature materially. See the questions posed alongside this
-specification.
+The three questions this specification opened with are answered.
 
-1. [NEEDS CLARIFICATION: Q1 — is this one feature with the LLM decor suggestions already recorded in
-   the constitution, or two separate features?]
-2. [NEEDS CLARIFICATION: Q2 — must the app prevent objects overlapping each other, or allow it while
-   saying so?]
-3. [NEEDS CLARIFICATION: Q3 — does a room someone spent an hour arranging force the export question
-   that feature 001 deliberately closed?]
+**Ready-made pieces, not typed measurements.** You pick a sofa; it already knows roughly what a
+sofa measures. You change the measurements if yours differs. This reopens the catalogue exclusion
+below, so that line now says what is and is not included.
+
+**This is one feature, not two.** The decor suggestions recorded in the constitution stay
+planned-but-unbuilt and are out of scope here. They need a model, a model needs a key, and either
+the user pays per suggestion or the app needs a server the constitution forbids. Open-weight models
+do not avoid this — they move the compute onto the phone, where a model small enough to run would
+download hundreds of megabytes and suggest poorly, or onto a server, where someone still pays.
+`TODO(LLM_KEY_CUSTODY)` stays open and this feature does not depend on it.
+
+**Objects cannot overlap** (FR-005a). The app refuses a colliding position, exactly as it refuses
+one outside the walls. A plan that allows a wardrobe to sit inside a radiator cannot answer whether
+the wardrobe fits, which is the question the feature exists for.
+
+**No export** (FR-011 unchanged). Rooms live on the device with no backup, on the same terms as
+everything else in this app. This is worth stating plainly rather than leaving as an inherited
+default: **a room you spent an hour arranging can be lost, with no way back, and the app cannot even
+tell you it happened** — 001 established that detecting the loss is impossible. That closes
+`TODO(ROOM_3D_DURABILITY)` in the constitution.

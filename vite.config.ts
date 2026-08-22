@@ -12,7 +12,7 @@ export default defineConfig({
       registerType: 'prompt',
       includeAssets: ['icons/*.png'],
       manifest: {
-        name: 'my flat pal',
+        name: 'FlatPal',
         short_name: 'FlatPal',
         description: 'Keep track of the upkeep your flat needs.',
         // --surface and --surface-sunken from src/ui/tokens.css: the header the

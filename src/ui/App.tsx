@@ -146,12 +146,12 @@ export function App() {
             detail view where Back also shares this row. And in the accessibility
             tree it changes nothing at all: the mark is `aria-hidden`, so the
             heading's accessible name is computed from its text alone and is
-            still exactly "my flat pal". A sibling would have been equally silent
+            still exactly "FlatPal". A sibling would have been equally silent
             but would have had to be positioned against the heading rather than
             with it. */}
         <h1 className="app__title" ref={headingRef} tabIndex={-1}>
           <Mark />
-          my flat pal
+          FlatPal
         </h1>
       </header>
 

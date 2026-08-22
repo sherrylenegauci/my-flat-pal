@@ -16,7 +16,7 @@ import { FLAT_FILL_TOLERANCE, describeToken, readColourToken } from '../tests/su
  * ## Why none of this can live in jsdom
  *
  * `tests/ui/mark.test.tsx` holds the half of this change a screen reader meets:
- * the heading still says "my flat pal", once, and the mark announces nothing.
+ * the heading still says "FlatPal", once, and the mark announces nothing.
  * That is everything the tier below can honestly claim. It lays nothing out —
  * every element there reports a zero-sized box — and it resolves no cascaded
  * colour, so "the mark is drawn" and "the mark is visible against its ground"

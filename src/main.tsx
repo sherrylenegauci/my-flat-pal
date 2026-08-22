@@ -33,7 +33,7 @@ const updateSW = registerSW({
     // Deliberately a plain confirm for now. It is honest about the state and
     // it blocks nothing; a styled prompt in the notice surface replaces it.
     const accepted = window.confirm(
-      'A new version of my flat pal is ready. Reload to use it? Anything you are part-way through will be kept.',
+      'A new version of FlatPal is ready. Reload to use it? Anything you are part-way through will be kept.',
     )
     if (accepted) void updateSW(true)
   },

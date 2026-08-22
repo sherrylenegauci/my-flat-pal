@@ -19,7 +19,7 @@ import { MARK_BOX, MARK_LINECAP, MARK_LINEJOIN, MARK_SCALE, MARK_SHAPES, MARK_ST
  * ## It says nothing
  *
  * `aria-hidden="true"`, and no `<title>`, no `role`, no label. The `h1` it sits
- * inside already says "my flat pal"; a mark that repeats it makes a screen
+ * inside already says "FlatPal"; a mark that repeats it makes a screen
  * reader announce the app's name twice, and one that describes itself puts "A
  * block of flats" in front of the name. Both were tried and both are what
  * `tests/ui/mark.test.tsx` fails on — and **axe passes the first of them**, so

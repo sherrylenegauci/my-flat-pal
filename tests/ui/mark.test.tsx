@@ -9,8 +9,8 @@ import { YEARLY, anItem, seed } from './seed'
 /**
  * The app's mark, as a screen reader meets it.
  *
- * The header is about to stop being the words "my flat pal" and start being a
- * drawing followed by the words "my flat pal". To someone looking at it that is
+ * The header is about to stop being the words "FlatPal" and start being a
+ * drawing followed by the words "FlatPal". To someone looking at it that is
  * the whole point of the change. To someone listening to it, the correct
  * outcome is that **nothing happens at all**: the mark is decorative, it says
  * the same thing the words beside it already say, and a decorative graphic that
@@ -20,7 +20,7 @@ import { YEARLY, anItem, seed } from './seed'
  * about the header announcing no graphic. That is the entire contract this tier
  * can hold, and it is worth holding: the two obvious ways to draw an inline SVG
  * — `role="img"` with an `aria-label`, or a `<title>` element inside the `<svg>`
- * — both produce "my flat pal my flat pal" on the heading, which is what a user
+ * — both produce "FlatPal FlatPal" on the heading, which is what a user
  * would actually hear.
  *
  * ## What this file does not check, and which tier does
@@ -68,7 +68,7 @@ const launch = () => ({
 })
 
 /** The app's own name, exactly as it must be announced — once. */
-const APP_NAME = 'my flat pal'
+const APP_NAME = 'FlatPal'
 
 const appHeading = () => screen.getByRole('heading', { level: 1 })
 
@@ -101,8 +101,8 @@ describe('the app’s name in the header', () => {
 
     // Whole-string rather than a substring, because both failure modes this is
     // guarding against add words rather than remove them: a labelled mark makes
-    // the name "my flat pal my flat pal", and a mark whose `<title>` describes
-    // the drawing makes it "A block of flats my flat pal".
+    // the name "FlatPal FlatPal", and a mark whose `<title>` describes
+    // the drawing makes it "A block of flats FlatPal".
     expect(headingNamed(APP_NAME)).toBe(appHeading())
   })
 
@@ -129,9 +129,9 @@ describe('the app’s name in the header', () => {
 
     // Named separately from the equality above because it is a different bug
     // with a different cause, and because this is the one a reader recognises:
-    // "my flat pal my flat pal" is what you hear when a decorative mark is given
+    // "FlatPal FlatPal" is what you hear when a decorative mark is given
     // the wordmark as its label.
-    expect(screen.queryByRole('heading', { level: 1, name: /my flat pal.*my flat pal/i })).toBeNull()
+    expect(screen.queryByRole('heading', { level: 1, name: /FlatPal.*FlatPal/i })).toBeNull()
   })
 })
 

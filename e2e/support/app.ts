@@ -175,7 +175,7 @@ async function seed(
 async function open(page: Page): Promise<void> {
   await page.clock.setFixedTime(FIXED_NOW)
   await page.goto('/')
-  await page.getByRole('heading', { name: 'my flat pal', level: 1 }).waitFor()
+  await page.getByRole('heading', { name: 'FlatPal', level: 1 }).waitFor()
 }
 
 /**

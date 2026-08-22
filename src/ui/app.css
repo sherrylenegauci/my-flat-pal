@@ -226,6 +226,156 @@ body {
   color: var(--text-muted);
 }
 
+/* ---- The areas, along the bottom edge ----------------------------------
+
+   005 / FR-001. Only ever drawn when there is more than one area — `TabBar`
+   returns nothing below two, so with maintenance alone none of this applies and
+   the app looks exactly as it did.
+
+   **Sticky rather than fixed, and what that does and does not buy.** Sticky
+   keeps the bar at the bottom of the screen on a long list while leaving it in
+   the flex column, so it takes its own 45px out of `.app__main` rather than
+   being laid over the whole of it.
+
+   An earlier version of this note claimed that made FR-009 true by
+   construction. **It does not, and the correction is worth keeping**: a stuck
+   element is painted away from its in-flow slot and covers whatever is beneath
+   it, so while the page is scrolled up the bar does sit over content. Measured
+   with the four seeded jobs at 375x812: the document is 831px tall, the bar is
+   stuck 19px above its static position, and the last row's final pixel is under
+   it.
+
+   What in-flow *does* guarantee is the part that matters — nothing can be
+   permanently hidden. At full scroll the bar is back in its slot after the
+   content, so everything above it is reachable; here that is 19px of scrolling.
+   Whether a MUST NOT about obscuring content is satisfied by "reachable by
+   scrolling" is a judgement, and it is in the report rather than settled here.
+
+   **45px, and that is the floor rather than a choice.** 44px is the touch
+   target Principle II requires, plus the hairline that separates the bar from
+   the content above it. There is no vertical padding, because the list beneath
+   it has about 44px of headroom before a fourth job drops below the fold, and
+   every pixel here comes out of that. See T019.
+
+   **Reaching the bottom edge of the phone.** `.app` reserves the bottom safe
+   area (001, T041), so a bar laid out inside it stops short of the screen's
+   edge and leaves a strip of page showing beneath — which is what an iPhone 14
+   showed. It was written as `bottom: env(safe-area-inset-bottom)` on the
+   reasoning that a bar must not sit over the home indicator; the reasoning was
+   half right. What must not sit over the indicator is the *tappable* part. The
+   bar's *background* is expected to run to the edge, which is what every native
+   iOS tab bar does and what makes the bar read as part of the phone rather
+   than as a panel floating above it.
+
+   So the bar cancels the app's bottom inset for itself with a negative margin
+   and pays it back as padding: the background extends the whole way down, and
+   the 44px targets stay above the indicator, untouched. Self-contained — the
+   no-bar case, which still wants the app's inset, is not affected.
+
+   Whether a thumb comfortably reaches a target sitting that high is still a
+   device question, and still T022. */
+.tab-bar {
+  position: sticky;
+  bottom: 0;
+  margin-bottom: calc(-1 * env(safe-area-inset-bottom));
+  padding-bottom: env(safe-area-inset-bottom);
+  z-index: 2;
+  display: flex;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+}
+
+.tab-bar__tab {
+  flex: 1 1 0;
+  /* Principle II's floor, and the whole height of the bar. */
+  min-height: 44px;
+  display: flex;
+  /* Icon over label. The two together come to 41px, so the 44px floor is still
+     what sets the height and the bar did not grow when the icons arrived. */
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 3px var(--space-2) 0;
+  border: 0;
+  /* Zero-width here, three pixels when current: the indicator is the *width*
+     changing, not the colour appearing. See the rule below. */
+  border-top: 0 solid var(--accent);
+  background: none;
+  font-family: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-button);
+  line-height: 1.2;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+/* Which area you are in, said three ways, and two of them survive colour being
+   taken away (FR-004).
+
+   Weight, an indicator edge, and colour. The edge is a *border whose width
+   changes* rather than a coloured border that is always there: the check that
+   proves this claim flattens every colour in the page to one pair, which turns
+   a transparent border black along with everything else — so an indicator drawn
+   in colour alone would be invisible to the very test meant to catch it. The
+   3px is paid for by the 3px of padding every other tab carries, so the labels
+   do not move as the marking does.
+
+   `--accent` on `--surface` is 7.35:1 and `--text-muted` on `--surface` is
+   7.58:1, both already recorded in tokens.css. Neither is new; Principle V
+   allows no local colour. Those figures are what the tokens claim, and
+   `e2e/rendering/contrast.spec.ts` is what measures them in a real engine — on
+   a bar it cannot see until rooms exists.
+
+   Keyed off `aria-current`, not off a class, so what a sighted user sees and
+   what a screen reader announces cannot drift apart. */
+.tab-bar__tab[aria-current='page'] {
+  padding-top: 0;
+  border-top-width: 3px;
+  font-weight: var(--weight-button-strong);
+  color: var(--accent);
+}
+
+/* The icons.
+
+   `currentColor` throughout, so an icon cannot fall out of step with the label
+   beside it — the current tab's accent, the rest muted, all from the one rule
+   above. It is also why nothing here names a colour, which Principle V requires.
+
+   `stroke-width` and the caps are set on the element by `TabBar.tsx` rather than
+   here, because they are geometry: the same numbers have to reach any other
+   consumer of these shapes, and no stylesheet reaches a PNG. That is the split
+   `mark.ts` established. */
+.tab-bar__icon {
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+
+.tab-bar__icon-outline {
+  fill: none;
+  stroke: currentColor;
+}
+
+.tab-bar__icon-solid {
+  fill: currentColor;
+  stroke: none;
+}
+
+/* An area the app has no screens for. Reachable only from a test today — see
+   the note in App.tsx — and replaced by the real rooms area in 003. */
+.area-stub__title {
+  margin: 0 0 var(--space-2);
+  font-family: var(--font-heading);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-title);
+}
+
+.area-stub__body {
+  margin: 0;
+  color: var(--text-muted);
+}
+
 /* ---- Schedule ---------------------------------------------------------- */
 
 .app__main {

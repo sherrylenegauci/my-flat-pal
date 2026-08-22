@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright'
 import { test, expect } from '@playwright/test'
-import { APP_STATES } from './support/app'
+import { APP_STATES } from '../support/app'
 
 /**
  * T086 — axe against real rendering. Takes over the manual T070.

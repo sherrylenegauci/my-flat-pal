@@ -1,7 +1,58 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version change: 1.5.0 → 1.6.0
+Version change: 1.6.1 → 1.7.0
+Bump rationale: MINOR — the Testing Strategy gains a rule about how journeys are
+written. Nothing removed, no tier changed.
+
+Added:
+- Testing Strategy — the journey half of the real-browser tier MUST be expressed as
+  behaviour scenarios traceable to the acceptance scenario each covers, with
+  `playwright-bdd` recorded as the tool. The rendering sweeps MUST NOT be written
+  that way: Given/When/Then around a contrast measurement is ceremony, with no user,
+  no journey, and no scenario to trace to.
+
+Why: Sherrylene asked for BDD and chose the tool. The value recorded here is
+traceability rather than vocabulary — every spec in this project already writes
+acceptance scenarios as Given/When/Then and that has never reached a test. The cost
+has been paid four times: FR-007a promised a correction the app could not make and
+FR-007b pointed at an edit form with no date field, and neither made anything fail.
+
+What this deliberately does NOT do: discharge the dependency justification.
+`playwright-bdd` is a dependency and a build step, so the plan that introduces it
+still owes Principle I an argument, and a plan that finds the cost not worth paying
+must say so rather than adopt it because a governance line exists. That is recorded
+in the section itself, not only here.
+
+Templates requiring updates:
+- ✅ none — this constrains how tests are written, and adds no mandatory section or
+  gate to a spec, plan or task list.
+
+Prior: 1.6.0 → 1.6.1
+Bump rationale: PATCH — a clarification to the Testing Strategy, not a new rule.
+The three tiers are unchanged and nothing is added to what a change must satisfy.
+
+Clarified:
+- Testing Strategy — the real-browser tier covers journeys AND rendering, and those
+  are not the same thing. A contrast or font check asserts about rendering; adding a
+  job and reloading asserts about a journey. Both belong in a browser, neither
+  substitutes for the other, and they must be distinguishable.
+
+Why: for most of this project's life the browser tier had eight spec files, seven of
+which were rendering sweeps, and nothing could add a job in a real browser. It was
+recorded twice as a known gap (issues #96 and #97) and stayed open, because a tier
+full of sweeps reads as covered. Recorded 2026-08-22 after Sherrylene reviewed the
+tier and said the same thing.
+
+BDD is deliberately NOT recorded here. Sherrylene has asked for it and it is task
+T125, but Playwright has no first-party BDD framework and `playwright-bdd` is a
+dependency plus a build step, so it belongs in the plan that introduces it under
+Principle I — not in governance ahead of that decision.
+
+Templates requiring updates:
+- ✅ none — this clarifies an existing section and adds no gate.
+
+Prior: 1.5.0 → 1.6.0
 Bump rationale: MINOR — Technology Constraints materially expanded with a planned
 major feature and the constraints binding on it. No principle removed or redefined.
 
@@ -275,6 +326,38 @@ tier that applies to it is satisfied.
 | **Behaviour** | What a user can do and see — through roles, labels, and visible text | jsdom + Testing Library | MANDATORY |
 | **Real browser** | Contrast, focus visibility, installed behaviour, safe areas, platform gestures | A real browser and a real phone | MANDATORY, currently **manual** |
 
+**Journeys are written as behaviour scenarios, and traced to the specification.** Every
+specification in this project already writes its acceptance scenarios as Given / When / Then;
+that vocabulary has never reached the tests, and the cost has been paid four times over —
+FR-007a promised a correction the app could not make, FR-007b pointed at an edit form with no
+date field, and neither made a single test fail.
+
+- The journey half of the real-browser tier MUST be expressed as behaviour scenarios, each
+  traceable to the acceptance scenario it covers. **`playwright-bdd` is the recorded tool.**
+- It is a dependency and a build step, so the plan that introduces it MUST justify it under
+  Principle I like any other. This section records the *direction*; it does not discharge that
+  justification, and a plan that finds the cost is not worth paying MUST say so rather than
+  adopt it because this line exists.
+- **The rendering sweeps MUST NOT be written this way.** Given / When / Then around a contrast
+  measurement is ceremony: there is no user, no journey, and no scenario in the spec for it to
+  trace to. They stay plain Playwright.
+
+**Rationale**: the value here is traceability, not vocabulary. A feature file that names its
+scenario turns a specification change into a failing test. Nothing else in this project does
+that, and requirements have gone stale and outright false without anything noticing.
+
+**The real-browser tier is for journeys and for rendering, and those are not the same
+thing.** A check that measures contrast, a font, an icon or a focus ring is asserting about
+*rendering*; a check that adds a job, ticks it off and reloads is asserting about a *journey*.
+Both belong in a real browser and neither substitutes for the other. They MUST be
+distinguishable — by directory, name or project — because a tier full of rendering sweeps
+looks covered while no user journey has ever run in a browser at all.
+
+**Rationale**: that is not hypothetical. For most of this project's life the browser tier had
+eight spec files, seven of which were rendering sweeps, and nothing could add a job in a real
+browser. It was recorded twice as a known gap and stayed open, because the tier read as
+covered.
+
 - The domain tier MUST NOT touch React, storage, or the clock. Passing dates in as
   parameters is what makes date-dependent rules testable without fake timers.
 - The behaviour tier MUST assert through what a user perceives. Reaching into component
@@ -518,4 +601,4 @@ gates above. Complexity MUST be justified, never assumed. Agent-specific runtime
 lives in agent context files at the repository root and MUST NOT restate or contradict
 this constitution — it points here instead.
 
-**Version**: 1.6.0 | **Ratified**: 2026-08-07 | **Last Amended**: 2026-08-19
+**Version**: 1.7.0 | **Ratified**: 2026-08-07 | **Last Amended**: 2026-08-22

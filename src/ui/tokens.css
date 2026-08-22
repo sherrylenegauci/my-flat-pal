@@ -72,7 +72,19 @@
      fill or by its hairline, every control is bordered in --border-strong at
      7.02:1, and a status is identified by its word. --surface on
      --surface-sunken is 1.19:1; the hairline that actually separates the card
-     is 1.51:1, up from 1.39:1 in the palette this replaced. */
+     is 1.51:1, up from 1.39:1 in the palette this replaced.
+
+     **These two also ship outside every stylesheet, and they move together.**
+     --surface is the PWA manifest's `theme_color` in vite.config.ts and the
+     `theme-color` meta in index.html — the tint an installed app's status bar
+     takes, painted over the app header. --surface-sunken is the manifest's
+     `background_color`, the launch splash shown before a byte of the app has
+     run. Neither is reachable from CSS, and both held the app's *first* palette
+     through two complete design passes because the only thing holding them in
+     place was a comment saying to keep them in step. There is a check now:
+     tests/assets/palette-single-source.test.ts reads both files and compares
+     them against these two tokens. Change one of these and that test tells you
+     the other two files it lives in. */
   --surface: #ffffff;
   --surface-sunken: #e7ecf2;
   --border: #ccd3dc;
@@ -166,19 +178,51 @@
      4.5:1 as text on both surfaces, so one token does both jobs and cannot
      drift out of step with itself.
 
-     --accent       on --surface        →  7.35:1  ✅ AA body
-     --accent       on --surface-sunken →  6.19:1  ✅ AA body
-     #ffffff        on --accent         →  7.35:1  ✅ AA body (button label)
-     --accent-hover on --surface        →  9.93:1  ✅ AA body
-     #ffffff        on --accent-hover   →  9.93:1  ✅ AA body */
+     --accent         on --surface        →  7.35:1  ✅ AA body
+     --accent         on --surface-sunken →  6.19:1  ✅ AA body
+     --text-on-accent on --accent         →  7.35:1  ✅ AA body (button label)
+     --accent-hover   on --surface        →  9.93:1  ✅ AA body
+     --text-on-accent on --accent-hover   →  9.93:1  ✅ AA body */
   --accent: #0f5f68;
   --accent-hover: #0b4a52;
 
   /* Destructive confirmation. Same value as --overdue-text: one red in the app,
      because two nearly-identical reds meaning different things is how a palette
      starts to rot.
-     #ffffff on --danger → 6.54:1 ✅ AA body */
+     --text-on-accent on --danger → 6.54:1 ✅ AA body */
   --danger: #b3261e;
+
+  /* The word on a filled button — the primary action and the destructive
+     confirmation. It was `color: #fff` twice in app.css, which is how a fourth
+     and fifth white get into a palette that has one.
+
+     **Named for its job rather than reused from --surface**, even though the
+     two are the same white today. A card's fill and a button label's colour
+     answer different questions, and the first time they disagree — a dark mode
+     is the obvious one, and this file says one is deliberately not built yet —
+     a shared token would have to be split under pressure, with every call site
+     already assuming it means both. Cheaper to name it now.
+
+     Its ratios are recorded above and beside --danger, against the three fills
+     it is ever set on. */
+  --text-on-accent: #ffffff;
+
+  /* ---- Focus -----------------------------------------------------------
+     Moved here from focus.css, where they were declared locally against
+     Principle V — colour belongs in this file, and a ring that is 3px of a
+     colour is still a colour. The geometry stayed behind: --focus-ring-width
+     and --focus-ring-offset are component dimensions like the 2px border on an
+     invalid field, not the spacing scale, and putting them here would say they
+     were tunable when they are load-bearing for visibility.
+
+     **Why two colours.** No single one clears 3:1 against both a white page and
+     a deep teal button. The white ring hugs the element and the dark ring sits
+     outside it, so whichever surface the indicator lands on, one of the two
+     contrasts. The full table of seven measured pairs, and the story of the
+     3.6:1 that was really 2.69:1, stay in focus.css beside the rule that uses
+     them — that is where someone changing the ring will be standing. */
+  --focus-ring: #0b0f14;
+  --focus-ring-inner: #ffffff;
 
   /* ---- Type ------------------------------------------------------------
      ## The face is bundled now, not the system's
@@ -282,11 +326,37 @@
   --radius: 0.75rem;
   --radius-sm: 0.5rem;
 
-  /* Barely there, and that is the point: it separates a card from the page
-     without drawing a second line around it. Geometry and opacity are
-     untouched; only the hue moved, from --text's old warm near-black to its
-     new cool one, so the edge cools rather than yellowing. */
+  /* ---- Translucent, and therefore restated -----------------------------
+     The three values below write --text's channels out longhand instead of
+     reading the token, and that is the one exception this file makes to itself.
+
+     **It is irreducible, not laziness.** --text is a hex, and CSS gives no way
+     to take a hex custom property and add an alpha to it: `rgba(var(--text),
+     0.6)` is invalid, because var() substitutes the whole `#0e141b` rather than
+     three numbers. `color-mix()` can do it and is not used here — Principle I,
+     and it would trade a restatement anyone can read for a computation fewer
+     people can. Storing --text as bare channels instead would push the
+     restatement onto all seventeen ordinary uses to save it on three.
+
+     **So they live here rather than where they are used.** That is the actual
+     fix: the scrim and the dialog shadow were rgba() literals six hundred lines
+     into app.css, under a comment asking whoever moved --text to remember them.
+     Now they sit under --text's own nose, and
+     tests/assets/palette-single-source.test.ts asserts all three carry --text's
+     channels and are genuinely translucent — an opaque one would have no excuse
+     and should read var(--text).
+
+     Barely there, and that is the point for the card: it separates a card from
+     the page without drawing a second line around it. Geometry and opacity are
+     untouched from the palette before this one; only the hue moved, from
+     --text's old warm near-black to its new cool one, so the edge cools rather
+     than yellowing. */
   --shadow-card: 0 1px 2px rgba(14, 20, 27, 0.06);
+  --shadow-dialog: 0 8px 24px rgba(14, 20, 27, 0.3);
+
+  /* The dimmed page behind a dialog: --text's own hue at 60%, so the dimming
+     cools with the palette rather than staying warm behind a cool one. */
+  --scrim: rgba(14, 20, 27, 0.6);
 
   /* The constitution requires 44x44 CSS px minimum. */
   --touch-target: 44px;

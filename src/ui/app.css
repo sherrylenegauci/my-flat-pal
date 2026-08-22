@@ -79,7 +79,7 @@ body {
    as the home-screen icon rather than a second piece of branding. The mark on it
    is `--surface`, the same white the cards are.
 
-   **Measured, not estimated.** #ffffff on --accent is **7.35:1**, already
+   **Measured, not estimated.** --surface on --accent is **7.35:1**, already
    recorded in tokens.css for the button label that uses the same pair. WCAG
    1.4.11 asks 3:1 of a non-text interface component, so there is a wide margin —
    and it is not taken on trust: `e2e/mark.spec.ts` reads the `fill` and `stroke`
@@ -570,11 +570,11 @@ body {
      .app's own insets — otherwise the card can sit under the notch. */
   padding: calc(var(--space-4) + env(safe-area-inset-top)) calc(var(--space-4) + env(safe-area-inset-right))
     calc(var(--space-4) + env(safe-area-inset-bottom)) calc(var(--space-4) + env(safe-area-inset-left));
-  /* --text's own hue at 60%, so the dimmed page cools with the palette rather
-     than staying warm behind a cool one. Written out because --text is a hex
-     token and cannot be given an alpha without restating it; keep this and
-     --text (#0e141b) in step by hand. */
-  background: rgba(14, 20, 27, 0.6);
+  /* --text's own hue at 60%. The value is restated rather than derived, because
+     a hex custom property cannot be given an alpha — but the restatement now
+     lives in tokens.css beside --text, where someone moving the palette will see
+     it, and a test holds the two together. */
+  background: var(--scrim);
 }
 
 .dialog {
@@ -585,7 +585,7 @@ body {
   padding: var(--space-5) var(--space-4);
   background: var(--surface);
   border-radius: var(--radius);
-  box-shadow: 0 8px 24px rgba(14, 20, 27, 0.3);
+  box-shadow: var(--shadow-dialog);
 }
 
 .dialog__question {
@@ -649,22 +649,22 @@ body {
 .button--primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--text-on-accent);
   font-weight: var(--weight-button-strong);
 }
 
 .button--primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
 
 /* The destructive confirmation in ConfirmDialog, and nothing else yet.
-   #ffffff on --danger (#b3261e) → 6.54:1 ✅ AA body — computed with the same
+   --text-on-accent on --danger → 6.54:1 ✅ AA body — computed with the same
    arithmetic e2e/support/colour.ts uses, not estimated. Three palettes, three
-   recomputations: 7.46:1 on the original #a3231b, 7.67:1 on the warm #9b2a18,
-   6.54:1 now. The number moves with the token every time, by hand, because
-   nothing computes it for us at build time. */
+   recomputations: 7.46:1 on the original red, 7.67:1 on the warm one, 6.54:1
+   now. The number moves with the token every time, by hand, because nothing
+   computes it for us at build time. */
 .button--danger {
   background: var(--danger);
   border-color: var(--danger);
-  color: #fff;
+  color: var(--text-on-accent);
   font-weight: var(--weight-button-strong);
 }
 

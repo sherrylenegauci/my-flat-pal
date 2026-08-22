@@ -6,6 +6,7 @@ import {
   emptyDocument,
 } from './schema'
 import type { LoadOutcome, StoredDocument } from './schema'
+import type { IntervalUnit } from '../domain/types'
 
 export { STORAGE_KEY, RECOVERY_KEY_PREFIX }
 
@@ -43,6 +44,45 @@ export function resetReadOnlyForTests(): void {
   readOnly = false
 }
 
+/**
+ * T114 — an interval the domain cannot compute with.
+ *
+ * This used to be `typeof interval === 'object'` and nothing more, which let
+ * through anything with a shape. That is not a cosmetic gap: `addInterval`
+ * throws on a count that is not a whole number of at least 1, and its `switch`
+ * on `unit` has no `default`, so an unrecognised unit returns `undefined` and
+ * the date formatter throws `Not a calendar date: undefined`. Either way the
+ * app fails while working out what is due — on load, on the only document
+ * there is, with no way back in.
+ *
+ * The add form already refuses both, so the routes in are a hand-edited
+ * document and a future writer. Neither is far-fetched: this is a plain JSON
+ * blob in a store any browser lets you open, and it is the only copy of the
+ * user's data.
+ *
+ * **Rejecting is one of the two answers T114 permits, and the task requires
+ * exactly one of them.** The other is for the spec to say what a nonsense
+ * interval reads as, which would mean inventing an answer to "what does an
+ * interval of zero mean" in order to print it. Refusing the document asks
+ * nothing of the spec.
+ */
+function isAComputableInterval(value: unknown): boolean {
+  if (typeof value !== 'object' || value === null) return false
+  const interval = value as Record<string, unknown>
+
+  // `Number.isInteger` is what addInterval itself tests, deliberately: two
+  // different notions of "a valid count" in two layers is how one of them
+  // quietly stops protecting the other. It also rejects NaN and Infinity, and
+  // `count: null` — what NaN becomes once JSON.stringify has been over it —
+  // fails the typeof before reaching here.
+  if (!Number.isInteger(interval['count']) || (interval['count'] as number) < 1) return false
+
+  return INTERVAL_UNITS.includes(interval['unit'] as IntervalUnit)
+}
+
+/** The four `addInterval` has a case for. A fifth would be a domain change. */
+const INTERVAL_UNITS: readonly IntervalUnit[] = ['day', 'week', 'month', 'year']
+
 function looksLikeADocument(value: unknown): value is StoredDocument {
   if (typeof value !== 'object' || value === null) return false
   const doc = value as Record<string, unknown>
@@ -56,8 +96,7 @@ function looksLikeADocument(value: unknown): value is StoredDocument {
       typeof it['id'] === 'string' &&
       typeof it['name'] === 'string' &&
       typeof it['createdAt'] === 'string' &&
-      typeof it['interval'] === 'object' &&
-      it['interval'] !== null &&
+      isAComputableInterval(it['interval']) &&
       Array.isArray(it['completions'])
     )
   })

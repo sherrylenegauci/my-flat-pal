@@ -495,14 +495,42 @@ body {
   gap: var(--space-2);
 }
 
-/* Plain lines, not cards. A card is a container for something with parts — a
-   row on the list has a name, a status and a date, and the card is what holds
-   them together. A history entry is one date. Giving it a surface, a border, a
-   radius and a shadow spent four pieces of visual machinery on a single string
-   and made the history the heaviest thing on the page. */
+/* Plain lines, not cards. A card is a container for something with parts — a row
+   on the list has a name, a status and a date, and the card is what holds them
+   together. A history entry is one date, and giving it a surface, a border, a
+   radius and a shadow spent four pieces of visual machinery on a single string.
+
+   The flex row survives the card, because T103 puts a Remove control on each
+   entry and it belongs at the far end of the line rather than under it. That is
+   the whole reason these are rows at all now: not decoration, but two things on
+   one line. */
 .detail__history li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
   padding: var(--space-1) 0;
 }
+
+/* Plain `.button`, deliberately: it already carries `min-height:
+   var(--touch-target)`, and its colours are `--text` on `--surface`, a pair
+   e2e/contrast.spec.ts already walks and has measured. Introducing a quieter
+   variant here would add an unaudited pair to the palette while T100's design
+   refresh is still open, which is the decision that principle exists to defer.
+
+   It is not `--danger`. The confirmation is where the consequence is stated and
+   where the destructive styling belongs; a row of red buttons down a history
+   list would make the list itself read as dangerous to be near. */
+.detail__history-remove {
+  flex: none;
+}
+
+/* A trap worth naming, found while sabotaging this control's height. `.button`
+   is declared further down this file, so on equal specificity it wins on source
+   order — and its `min-height: var(--touch-target)` beats a `height` set here.
+   Anything that tries to change this control's height from its own rule will be
+   silently ignored. That is the right default for a destructive control on a
+   list (it cannot accidentally be shrunk below 44px), but it is not obvious. */
 
 .detail__empty {
   margin: 0;

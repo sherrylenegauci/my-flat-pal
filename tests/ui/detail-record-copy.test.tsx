@@ -1,3 +1,4 @@
+import { historyDates } from './history'
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { StrictMode } from 'react'
 import { render, screen, within } from '@testing-library/react'
@@ -166,10 +167,12 @@ describe('the button that records it', () => {
     await user.click(screen.getByRole('button', { name: 'Add' }))
 
     expect(storedCompletions().map((completion) => completion.completedOn)).toEqual(['2025-08-08'])
-    const history = within(await screen.findByRole('list', { name: /history/i }))
-      .getAllByRole('listitem')
-      .map((entry) => entry.textContent)
-    expect(history).toEqual(['8 August 2025'])
+    // Read through the helper rather than the row's raw text: since T103 every
+    // entry carries a Remove control whose accessible name repeats the date, so
+    // `textContent` reads "8 August 2025Remove the completion on 8 August 2025".
+    // Asserting on that would tie this test to the wording of a button it is not
+    // about.
+    expect(await historyDates()).toEqual(['8 August 2025'])
   })
 
   it('still refuses an empty date, and saves nothing', async () => {

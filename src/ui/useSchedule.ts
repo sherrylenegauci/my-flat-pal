@@ -6,6 +6,7 @@ import {
   completeItem as recordCompletion,
   mostRecentlyRecorded,
   orderForDisplay,
+  removeCompletion as removeCompletionFrom,
   undoCompletion,
 } from '../domain/schedule'
 import type { RecordedCompletion } from '../domain/schedule'
@@ -47,6 +48,14 @@ export interface Schedule {
   editItem: (itemId: string, changes: { name: string; interval: Interval }) => void
   /** Remove a job and everything recorded against it (FR-009). */
   deleteItem: (itemId: string) => void
+  /**
+   * Take one wrong entry out of a job's history, leaving the job and the rest
+   * of its history alone (FR-007a).
+   *
+   * The correction for anything undo can no longer reach, which is everything
+   * older than ten seconds or recorded in another session.
+   */
+  removeCompletion: (itemId: string, completionId: string) => void
   /**
    * The tick-off undo would remove, or null when there is nothing to undo.
    *
@@ -353,6 +362,49 @@ export function useSchedule(): Schedule {
   )
 
   /**
+   * Remove one entry from a job's history (FR-007a, T103).
+   *
+   * This is the correction for a mistake undo can no longer reach — which is
+   * every mistake more than ten seconds old, and every mistake made in a
+   * session that has since ended. Before this existed the only remedies were
+   * deleting the whole job, which threw away every correct entry to fix one
+   * wrong one, and clearing site storage, which threw away every job. Neither
+   * is a correction.
+   *
+   * **`recordedThisSession` is deliberately left alone**, on the same reasoning
+   * `deleteItem` records. If the removed entry is the one an offer names, it no
+   * longer exists in the document, so the identity check on the offer can never
+   * match again and the offer withdraws itself without help. If it is some
+   * other entry, the user's way back from their last tick-off should not
+   * disappear because they corrected an unrelated row.
+   *
+   * The removal is re-checked against the items as they are at the moment of
+   * writing, because `mutate` re-applies this after a lost race. A job that
+   * another context deleted in between, or an entry it removed first, both
+   * arrive here as "nothing to change" and decline the write rather than
+   * resurrecting anything.
+   */
+  const removeCompletion = useCallback(
+    (itemId: string, completionId: string) => {
+      setUndoRefusedFor(null)
+
+      mutate((items) => {
+        const target = items.find((item) => item.id === itemId)
+        if (target === undefined) return items
+
+        const corrected = removeCompletionFrom(target, completionId)
+        // Same object back means the entry was not there. Returning `items`
+        // unchanged is how `mutate` is told not to write at all, rather than
+        // bumping `revision` for a change with nothing in it.
+        if (corrected === target) return items
+
+        return items.map((item) => (item.id === itemId ? corrected : item))
+      })
+    },
+    [mutate],
+  )
+
+  /**
    * The tick-off the app is currently offering to take back (FR-007).
    *
    * Three things have to hold, and each refuses on its own. The entry must be
@@ -478,6 +530,7 @@ export function useSchedule(): Schedule {
     markDone,
     editItem,
     deleteItem,
+    removeCompletion,
     undoable,
     undoLast,
     undoRefusedFor,

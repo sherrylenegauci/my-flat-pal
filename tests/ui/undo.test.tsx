@@ -5,6 +5,7 @@ import userEvent from '@testing-library/user-event'
 import { App } from '../../src/ui/App'
 import { load } from '../../src/storage/repository'
 import { MONTHLY, YEARLY, aCompletion, anItem, seed } from './seed'
+import { historyDates } from './history'
 
 /**
  * T054 — US2 scenario 3, FR-007: undo a tick-off entered by mistake.
@@ -122,10 +123,8 @@ describe('undoing a tick-off', () => {
     // And the entry is reachable where corrections happen now that undo cannot
     // reach it: the job's own history, newest first.
     await user.click(screen.getByRole('button', { name: 'Boiler service' }))
-    const history = within(await screen.findByRole('list', { name: /history/i }))
-      .getAllByRole('listitem')
-      .map((entry) => entry.textContent)
-    expect(history).toEqual(['8 August 2026', '1 June 2026'])
+    await screen.findByRole('list', { name: /history/i })
+    expect(historyDates()).toEqual(['8 August 2026', '1 June 2026'])
   })
 
   it('returns a job to never done when its only tick-off is undone', async () => {

@@ -175,11 +175,27 @@ to be precise rather than friendly. Everything above is the readable version.
   clock says, and MUST NOT be offered for any completion this session did not record.
 - **FR-007a**: Undo MUST affect only the completion the user has just recorded. It MUST NOT
   remove any earlier completion, and repeated use MUST NOT walk backwards through history.
-  Correcting an older mistake is done from the item's history, not from the undo offer.
+  Correcting an older mistake is done from the item's history, not from the undo offer — and the
+  system MUST provide that correction: a user MUST be able to remove any single completion from an
+  item's history, after confirming. Removing one MUST NOT affect any other completion or any other
+  item. Because an item's next due date is derived from its last completion, removing one can move
+  the schedule, and the confirmation MUST say what it does to that item's schedule rather than
+  asking a generic "are you sure" — including saying so when the schedule does not move, for the
+  reason FR-006a already gives.
+
+  *This last part described the app for some time before it was true of it. The history was a
+  read-only list of dates, so between undo's ten-second window and deleting the whole item there
+  was no way to correct a mistaken completion at all. Made true by T103.*
 - **FR-007b**: Undo applies to marking an item done and to recording a past completion. It MUST
   NOT be offered for the completion created by adding a new item with a last-done date — the user
   added an item rather than completing one, and undo would strip the date while leaving the item.
-  A wrong date on a new item is corrected by editing it (FR-009).
+  A wrong date on a new item is corrected from the item's history under FR-007a — remove that entry
+  and record the right one — not by editing the item. FR-009's edit covers the name and the
+  interval; a Completion is immutable once saved (see Key Entities), so there is no last-done field
+  on the edit form to correct.
+
+  *This sentence used to say the correction was "done by editing it (FR-009)", which was never
+  something FR-009 provided. Reworded once FR-007a's route existed to point at (T111).*
 - **FR-008**: The system MUST retain the completion history of each item and present it in date
   order.
 - **FR-009**: Users MUST be able to edit an item's name and interval, and MUST be able to delete an
@@ -207,8 +223,9 @@ to be precise rather than friendly. Everything above is the readable version.
 
 - **Maintenance Item**: a job the flat needs doing repeatedly. Has a name, how often it recurs, a
   status, and — once it's been done at least once — a next due date. Owns its own history.
-- **Completion**: a record that a job was done on a particular date. Can't be edited once saved,
-  only undone.
+- **Completion**: a record that a job was done on a particular date. Can't be edited once saved —
+  it is undone within the undo window, or removed from the item's history after confirming
+  (FR-007a). Correcting one means removing it and recording the right one.
 - **Recurrence Interval**: how often a job comes round, in days, weeks, months, or years.
 
 ---

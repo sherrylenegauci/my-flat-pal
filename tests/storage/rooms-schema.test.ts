@@ -35,11 +35,6 @@ import v1Fixture from './fixtures/v1.json'
  * describe block, which is the single most consequential test in this file.
  */
 
-/**
- * A bridge until T010 adds `rooms` to `StoredDocument`. Delete it then.
- */
-type DocumentWithRooms = StoredDocument & { rooms: Room[] }
-
 beforeEach(() => {
   localStorage.clear()
   // `readOnly` is module state that is never cleared for the life of a session
@@ -47,7 +42,7 @@ beforeEach(() => {
   resetReadOnlyForTests()
 })
 
-function aDocumentWith(rooms: Room[]): DocumentWithRooms {
+function aDocumentWith(rooms: Room[]): StoredDocument {
   return { ...emptyDocument(), rooms }
 }
 
@@ -99,7 +94,7 @@ describe('a document holding rooms', () => {
 
     expect(outcome.kind).toBe('loaded')
     expect(
-      (outcome.document as DocumentWithRooms).rooms,
+      outcome.document.rooms,
       'a room came back different from the way it was stored. Names, dimensions, ' +
         'objects, positions and order are the whole of what the user arranged.',
     ).toEqual([livingRoom, bedroom])
@@ -108,7 +103,7 @@ describe('a document holding rooms', () => {
   it('keeps the rooms in the order they were saved in', () => {
     save(aDocumentWith([bedroom, livingRoom]))
 
-    expect((load().document as DocumentWithRooms).rooms.map((room) => room.id)).toEqual([
+    expect(load().document.rooms.map((room) => room.id)).toEqual([
       'rm_bedroom',
       'rm_living',
     ])
@@ -118,7 +113,7 @@ describe('a document holding rooms', () => {
     save(aDocumentWith([aRoom({ objects: [wardrobe, sofa] })]))
 
     expect(
-      (load().document as DocumentWithRooms).rooms[0]?.objects.map((object) => object.id),
+      load().document.rooms[0]?.objects.map((object) => object.id),
     ).toEqual(['obj_wardrobe', 'obj_sofa'])
   })
 
@@ -126,7 +121,7 @@ describe('a document holding rooms', () => {
     // The spec's edge case: an empty room is an empty room, not an absence.
     save(aDocumentWith([bedroom]))
 
-    expect((load().document as DocumentWithRooms).rooms[0]?.objects).toEqual([])
+    expect(load().document.rooms[0]?.objects).toEqual([])
   })
 
   it('keeps the maintenance schedule alongside the rooms', () => {
@@ -137,7 +132,7 @@ describe('a document holding rooms', () => {
     const outcome = load()
 
     expect(outcome.document.items).toEqual([anItem()])
-    expect((outcome.document as DocumentWithRooms).rooms).toEqual([livingRoom])
+    expect(outcome.document.rooms).toEqual([livingRoom])
   })
 
   it('stores an empty rooms collection for a flat with no rooms described yet', () => {
@@ -146,11 +141,11 @@ describe('a document holding rooms', () => {
     const outcome = load()
 
     expect(outcome.kind).toBe('loaded')
-    expect((outcome.document as DocumentWithRooms).rooms).toEqual([])
+    expect(outcome.document.rooms).toEqual([])
   })
 
   it('starts a fresh install with an empty rooms collection', () => {
-    expect((load().document as DocumentWithRooms).rooms).toEqual([])
+    expect(load().document.rooms).toEqual([])
   })
 })
 
@@ -269,6 +264,14 @@ describe('an object with impossible dimensions', () => {
     { why: 'no height at all', object: withoutKey(soundObject(), 'heightMm') },
     { why: 'no position', object: withoutKey(withoutKey(soundObject(), 'xMm'), 'yMm') },
     { why: 'no id', object: withoutKey(soundObject(), 'id') },
+    // A position is the same class of value as a dimension, and integers are
+    // the whole reason "exactly touching" has an exact answer. A fractional
+    // coordinate is something only a hand edit or a foreign writer can produce
+    // — the app cannot write one — so refusing it costs a real user nothing.
+    { why: 'a fractional x', object: { ...soundObject(), xMm: 500.5 } },
+    { why: 'a fractional y', object: { ...soundObject(), yMm: 0.0001 } },
+    { why: 'an x that is a string of digits', object: { ...soundObject(), xMm: '500' } },
+    { why: 'a y that is null', object: { ...soundObject(), yMm: null } },
   ]
 
   for (const { why, object } of impossible) {
@@ -371,7 +374,7 @@ describe('a corrupt rooms document', () => {
     const outcome = loadWithoutCrashing()
 
     expect(outcome.document.items).toEqual([])
-    expect((outcome.document as DocumentWithRooms).rooms).toEqual([])
+    expect(outcome.document.rooms).toEqual([])
   })
 
   it('parks the original rather than destroying it', () => {
@@ -435,7 +438,7 @@ describe('rooms the app must accept', () => {
         `a document describing ${what} was rejected. Rejecting everything is not ` +
           'validation, and this is a document the app itself writes.',
       ).toBe('loaded')
-      expect((outcome.document as DocumentWithRooms).rooms).toEqual(rooms)
+      expect(outcome.document.rooms).toEqual(rooms)
       expect(
         Object.keys(localStorage).filter((key) => key.startsWith(RECOVERY_KEY_PREFIX)),
         'a valid document was parked as if it were corrupt',
@@ -476,7 +479,7 @@ describe('a document written before rooms existed', () => {
   it('arrives with an empty rooms collection', () => {
     storeTheV1Fixture()
 
-    expect((load().document as DocumentWithRooms).rooms).toEqual([])
+    expect(load().document.rooms).toEqual([])
   })
 
   it('keeps every job and its history', () => {

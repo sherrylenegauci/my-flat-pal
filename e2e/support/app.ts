@@ -1,6 +1,6 @@
 import { expect } from '@playwright/test'
 import type { Page } from '@playwright/test'
-import { STORAGE_KEY } from '../../src/storage/schema'
+import { STORAGE_KEY, SCHEMA_VERSION } from '../../src/storage/schema'
 import type { StoredDocument } from '../../src/storage/schema'
 
 /**
@@ -45,8 +45,14 @@ interface SeedItem {
 
 function toDocument(items: SeedItem[]): StoredDocument {
   return {
-    schemaVersion: 1,
+    // Was a literal 1 until the room designer raised the schema to 2. A seed
+    // stamped with an old version is a seed the app migrates before the first
+    // assertion runs, which is not what this tier is here to exercise.
+    schemaVersion: SCHEMA_VERSION,
     revision: 1,
+    // No rooms. Every sweep in this tier is over the maintenance views, and a
+    // seeded room would be furniture nothing looks at.
+    rooms: [],
     items: items.map((item) => {
       const dates = item.history ?? (item.lastDone ? [item.lastDone] : [])
 

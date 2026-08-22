@@ -46,10 +46,10 @@ arithmetic over it.
 - [X] T004 [P] Failing tests in `tests/domain/rooms/pieces.test.ts`: the ready-made set is a table of names and default dimensions; every piece has a positive width, depth and height; ids are unique. It is data, not components (plan.md § D5)
 - [X] T005 [P] **Failing tests in `tests/domain/rooms/fits.test.ts` (FR-005, negative)**: an object wholly inside the walls fits; one crossing a wall does not; one exactly touching a wall does. **Prove it by sabotage**: make the check always return true and confirm this test fails
 - [X] T006 [P] **Failing tests in `tests/domain/rooms/collides.test.ts` (FR-005a, negative)**: two footprints that overlap collide; two that touch edge-to-edge do not; one entirely inside another does. Height is stored but takes no part (plan.md § D4). **Prove it by sabotage**: make the check always return false and confirm this test fails
-- [ ] T007 Implement `pieces`, `fitsInRoom` and `collidesWith` in `src/domain/rooms/geometry.ts` to pass T004–T006 (depends on T003)
+- [X] T007 Implement `pieces`, `fitsInRoom` and `collidesWith` in `src/domain/rooms/geometry.ts` to pass T004–T006 (depends on T003)
 - [X] T008 [P] Failing tests in `tests/storage/rooms-schema.test.ts`: a document holding rooms round-trips through save and load unchanged; a room with impossible dimensions makes the document **corrupt** rather than crashing on load. T114 taught that lesson — `addInterval` threw on a hand-edited count and took the whole app down
 - [X] T009 [P] Failing tests in `tests/storage/migrate-v2.test.ts` against a committed v1 fixture: a v1 document gains an empty `rooms` array and is otherwise byte-identical; the chain is the identity at v2. **This is the first migration that will ever run against a document on a real phone, with no export and no way back** (plan.md § Storage)
-- [ ] T010 Raise `SCHEMA_VERSION` to 2 and implement the additive migration in `src/storage/migrate.ts` and `src/storage/schema.ts` to pass T008–T009
+- [X] T010 Raise `SCHEMA_VERSION` to 2 and implement the additive migration in `src/storage/migrate.ts` and `src/storage/schema.ts` to pass T008–T009
 
 **Checkpoint**: the app knows what a room is and can store one. Nothing is on screen.
 
@@ -126,6 +126,8 @@ arithmetic over it.
 - [ ] T029 **Run every flow with VoiceOver on a real iPhone** — describing a room, placing and moving an object, and the 3D view. Constitution v1.4.0 makes this the check that discharges the accessibility gate; axe passing is supporting evidence and does not close it. **The canvas is the hardest thing in this app to operate without touch**, and if it cannot be, the model-first rule is what saves the feature. **Not automatable**
 - [ ] T030 [P] Add the room views to `APP_STATES` in `e2e/support/app.ts` so contrast, 375px overflow, 44x44 targets and focus visibility sweep them on both engines. A view missing from that list is a view no browser check covers — in 001 that is how a control 25px tall shipped
 - [ ] T031 [P] Prove T005 and T006 non-vacuous by running both named sabotages, confirming each breaks its own test and only its own, then restoring. Report which sabotage produced which failure
+  - **Run once already, on 2026-08-22, when T007 landed.** `fitsInRoom` returning `true` unconditionally broke 10 of the 17 tests in `fits.test.ts` and nothing else in the suite; `collidesWith` returning `false` unconditionally broke 8 of the 20 in `collides.test.ts` and nothing else. Both restored, suite back to 551 passing
+  - **Still to do at Phase 6, and not merely a repeat.** Today the two checks have no callers: nothing outside the domain tests uses them, so "only its own test" is a weak claim. Once US2 wires them into placing and moving (T021), a sabotage should also break the behaviour tests that promise a reason is shown — and if it does not, those tests are not really checking the refusal
 - [ ] T032 **Look at a room on a phone and judge whether it reads as a room.** No tier can check this: a scene can place every object at exactly the stored coordinates and still be unusable — camera inside a wall, scale unreadable, lighting flat. Also check the full-bleed canvas against the safe areas, and the frame rate. **Not automatable**
 - [ ] T033 Re-run `/speckit-analyze` across the three documents and confirm the findings are closed
 

@@ -1,8 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { migrate } from '../../src/storage/migrate'
 import { SCHEMA_VERSION } from '../../src/storage/schema'
-import type { StoredDocument } from '../../src/storage/schema'
-import type { Room } from '../../src/domain/rooms/types'
 import v1Fixture from './fixtures/v1.json'
 import v2Fixture from './fixtures/v2.json'
 
@@ -23,20 +21,13 @@ import v2Fixture from './fixtures/v2.json'
  * nothing else about it changes.
  */
 
-/**
- * A bridge until T010 adds `rooms` to `StoredDocument`. Delete it then — the
- * intersection becomes exactly `StoredDocument` and the casts below become
- * noise.
- */
-type DocumentWithRooms = StoredDocument & { rooms: Room[] }
-
 describe('migrating a v1 document', () => {
   it('brings it to the current schema version', () => {
     expect(migrate(v1Fixture).schemaVersion).toBe(SCHEMA_VERSION)
   })
 
   it('gives it an empty rooms collection', () => {
-    const result = migrate(v1Fixture) as DocumentWithRooms
+    const result = migrate(v1Fixture)
 
     expect(
       result.rooms,
@@ -95,7 +86,7 @@ describe('migrating a document already at v2', () => {
   })
 
   it('keeps its rooms, with their objects, in order', () => {
-    const result = migrate(v2Fixture) as DocumentWithRooms
+    const result = migrate(v2Fixture)
 
     expect(
       result.rooms,
@@ -107,7 +98,7 @@ describe('migrating a document already at v2', () => {
   it('keeps a room that has nothing in it', () => {
     // The spec's edge case: an empty room is an empty room, not an error and
     // not something to tidy away.
-    const result = migrate(v2Fixture) as DocumentWithRooms
+    const result = migrate(v2Fixture)
 
     expect(result.rooms.map((room) => room.objects.length)).toEqual(
       v2Fixture.rooms.map((room) => room.objects.length),

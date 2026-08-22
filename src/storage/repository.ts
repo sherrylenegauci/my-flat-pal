@@ -83,11 +83,92 @@ function isAComputableInterval(value: unknown): boolean {
 /** The four `addInterval` has a case for. A fifth would be a domain change. */
 const INTERVAL_UNITS: readonly IntervalUnit[] = ['day', 'week', 'month', 'year']
 
+/**
+ * A whole number of millimetres, greater than zero.
+ *
+ * Every dimension in the room model is one, and the reason is recorded in
+ * `src/domain/rooms/types.ts`: in floating-point centimetres two objects the
+ * user has pushed together differ by 0.0000001, and the collision check
+ * flickers. `Number.isInteger` is the same test the domain uses, deliberately —
+ * two notions of "a valid dimension" in two layers is how one of them quietly
+ * stops protecting the other. It also rejects NaN, Infinity and a string of
+ * digits, which is the shape a hand edit actually produces.
+ */
+function isASize(value: unknown): boolean {
+  return Number.isInteger(value) && (value as number) > 0
+}
+
+/** A whole number of millimetres. May be zero — a corner is a real position. */
+function isACoordinate(value: unknown): boolean {
+  return Number.isInteger(value)
+}
+
+/**
+ * An object the room designer can draw and compute with.
+ *
+ * Note what is *not* checked: whether the object is inside the room's walls,
+ * and whether it overlaps another. Both are refused at the form, with a reason
+ * (FR-005, FR-005a). Neither makes a document unreadable, and rejecting here
+ * rejects the *whole* document — the user's jobs, their history and every other
+ * room — over one misplaced sofa. FR-004 also lets a room be resized, and
+ * nothing yet says what becomes of the furniture when a room shrinks, so an
+ * object outside its walls is a state the app itself may come to write.
+ *
+ * The line is: refuse numbers the app cannot compute with, accept arrangements
+ * that are merely wrong. `tests/storage/rooms-schema.test.ts` holds it from
+ * both sides.
+ */
+function isAPlaceableObject(value: unknown): boolean {
+  if (typeof value !== 'object' || value === null) return false
+  const object = value as Record<string, unknown>
+
+  return (
+    typeof object['id'] === 'string' &&
+    typeof object['pieceId'] === 'string' &&
+    typeof object['name'] === 'string' &&
+    isASize(object['widthMm']) &&
+    isASize(object['depthMm']) &&
+    isASize(object['heightMm']) &&
+    isACoordinate(object['xMm']) &&
+    isACoordinate(object['yMm'])
+  )
+}
+
+/** A room the app can show and render. Same standard as an item (T114). */
+function isADescribableRoom(value: unknown): boolean {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false
+  const room = value as Record<string, unknown>
+
+  if (typeof room['id'] !== 'string' || typeof room['name'] !== 'string') return false
+  if (!isASize(room['widthMm']) || !isASize(room['depthMm']) || !isASize(room['heightMm'])) {
+    return false
+  }
+  if (!Array.isArray(room['objects'])) return false
+
+  return room['objects'].every(isAPlaceableObject)
+}
+
 function looksLikeADocument(value: unknown): value is StoredDocument {
   if (typeof value !== 'object' || value === null) return false
   const doc = value as Record<string, unknown>
 
   if (!Array.isArray(doc['items'])) return false
+
+  /**
+   * **Absent is fine; present and wrong is not.**
+   *
+   * This runs *before* `migrate`, so it meets documents written by v1, which
+   * predate rooms entirely and have no such key. Every existing user has one.
+   * Demanding it here would declare their document corrupt on the first launch
+   * after this upgrade, hand them an empty schedule, and park their history
+   * under a recovery key nobody will tell them to look in — with no export and
+   * no backup, that is the whole of their data. `migrate` supplies the empty
+   * array a moment later.
+   */
+  if (doc['rooms'] !== undefined) {
+    if (!Array.isArray(doc['rooms'])) return false
+    if (!doc['rooms'].every(isADescribableRoom)) return false
+  }
 
   return doc['items'].every((item) => {
     if (typeof item !== 'object' || item === null) return false

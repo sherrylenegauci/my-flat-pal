@@ -86,6 +86,7 @@ unreachable until this exists.
 
 - [X] T016 [US2] Mark the current area in `src/ui/components/TabBar.tsx` — by more than colour, and correctly in the accessibility tree
 - [X] T017 [US2] Move focus to the new area's heading on switch, in `src/ui/App.tsx`
+  - **Done, but not to the letter of the task.** Focus goes to the `<main>` region showing the new area, not to a heading inside it: the region is what every area has, including ones whose content is not built, and the app's own `<h1>` sits above the areas and is common to all of them. The reasoning is in `App.tsx`, and `tests/ui/tab-focus.test.tsx` deliberately asserts "inside main" rather than pinning the choice. Recorded because a ticked task reads as the record of what was built. What VoiceOver says on landing on an unnamed `<main>` is T022.
 
 **Checkpoint**: both stories work independently.
 
@@ -103,6 +104,37 @@ unreachable until this exists.
   - Done. The sabotage turns T008's two absence tests red, so they can fail. It also turned up a third: `tests/ui/read-only.test.tsx` asserts the read-only screen has zero buttons, and a tab is a button — so that assertion, and `noControlsBecause` in `e2e/support/app.ts`, break the day rooms exists. Recorded where the assertion lives. A tab navigates rather than writes, so this is a re-statement, not a fix.
 - [ ] T022 **Drive the shell with VoiceOver on a real iPhone.** Constitution v1.4.0 makes this the check that discharges the accessibility gate. Specifically: whether each tab is announced by name, whether the current one is announced as current, whether switching areas lands somewhere that makes sense, and **whether a thumb can comfortably reach a 44px target sitting above the home indicator**. **Not automatable**
 - [ ] T023 Re-run `/speckit-analyze` across the three documents and confirm the findings are closed
+
+---
+
+## Raised during implementation, and not settled here
+
+Three questions came out of building this that the specification does not answer. None of them
+blocks the feature today; each of them lands on whoever builds 003. They are written down because a
+question that lives only in a report is a question nobody finds.
+
+1. **Does a bar that paints over content while the page is scrolled satisfy FR-009's "MUST NOT
+   obscure content"?** The bar is sticky and in flow, so nothing can be *permanently* hidden — at
+   full scroll it sits after the content. But while scrolled up it does cover what is beneath it, and
+   with the four seeded jobs the fourth row's last pixel is under it at scroll 0. Either FR-009 means
+   "never permanently unreachable", which holds and should be said, or it means "never covered",
+   which does not and needs 45px of padding under the list.
+
+2. **How much of the fold is the bar allowed?** It is 45px — 44px of touch target plus a hairline,
+   which is Principle II's floor and cannot shrink without breaking a MUST. That costs the fourth job
+   its place above the fold at 375x812, measured in both engines. SC-002 is not breached and has
+   478px in hand. The choice is between accepting three jobs above the fold, tightening the list's
+   density, or deciding the fourth job was never a promise.
+
+3. **Where does a relaunch land once there is more than one area?** spec.md's Edge Cases say the app
+   opens at the first screen "of the area it was in"; plan.md § Data model decides the current area is
+   not persisted and reads that as the first area. Today they coincide, because there is one area.
+   The day rooms exists they do not, and nothing tests it.
+
+A fourth is recorded where it will be met rather than here: with two areas the tab bar appears on the
+read-only screen, and `tests/ui/read-only.test.tsx` asserts that screen has no buttons at all
+(FR-010a). A tab navigates rather than writes, so the assertion probably wants re-stating rather than
+the bar hiding — but that is a decision, and it is written beside the assertion it breaks.
 
 ---
 

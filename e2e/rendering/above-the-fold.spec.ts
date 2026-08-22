@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { openScheduleList } from '../support/app'
+import { APP_STATES } from '../support/app'
 
 /**
  * T019 — SC-002, with the bar's space spent.
@@ -103,49 +103,65 @@ function addTheTabBar() {
   }
 }
 
-test('whether anything is overdue is visible without scrolling, with the bar on screen', async ({
-  page,
-}) => {
-  await openScheduleList(page)
-  const layout = await page.evaluate(addTheTabBar)
+/**
+ * Two states, because the first launch on a real iPhone is the second one.
+ *
+ * Both engines refuse `navigator.storage.persist()` headless, and iOS refuses it
+ * until the app is installed — so a first-time user meets the list with the
+ * durability warning sitting above it, which is the version of this screen with
+ * the least room to spare. Checking only the tidy one would guard SC-002 in the
+ * condition it is least likely to fail.
+ */
+const STATES = ['schedule list', 'storage durability warning'] as const
 
-  // The probe first. A bar that failed to be styled would sit at zero height and
-  // every assertion below would pass while measuring nothing.
-  expect(
-    {
-      barIsAtLeastATouchTarget: layout.bar.height >= 44,
-      barSpansTheScreen: layout.bar.width >= 375,
-      tabMeetsTheTouchTargetFloor: layout.tab.height >= 44 && layout.tab.width >= 44,
-    },
-    'the injected bar was not laid out by app.css, so nothing below is a measurement. ' +
-      `Bar ${layout.bar.width}x${layout.bar.height}, tab ${layout.tab.width}x${layout.tab.height}.`,
-  ).toEqual({
-    barIsAtLeastATouchTarget: true,
-    barSpansTheScreen: true,
-    tabMeetsTheTouchTargetFloor: true,
+for (const stateName of STATES) {
+  test(`whether anything is overdue is visible without scrolling, with the bar on screen: ${stateName}`, async ({
+    page,
+  }) => {
+    const state = APP_STATES.find((s) => s.name === stateName)
+    if (!state) throw new Error(`The "${stateName}" state has been renamed or removed`)
+    await state.go(page)
+
+    const layout = await page.evaluate(addTheTabBar)
+
+    // The probe first. A bar that failed to be styled would sit at zero height and
+    // every assertion below would pass while measuring nothing.
+    expect(
+      {
+        barIsAtLeastATouchTarget: layout.bar.height >= 44,
+        barSpansTheScreen: layout.bar.width >= 375,
+        tabMeetsTheTouchTargetFloor: layout.tab.height >= 44 && layout.tab.width >= 44,
+      },
+      'the injected bar was not laid out by app.css, so nothing below is a measurement. ' +
+        `Bar ${layout.bar.width}x${layout.bar.height}, tab ${layout.tab.width}x${layout.tab.height}.`,
+    ).toEqual({
+      barIsAtLeastATouchTarget: true,
+      barSpansTheScreen: true,
+      tabMeetsTheTouchTargetFloor: true,
+    })
+
+    const firstRow = layout.rows[0]
+    expect(firstRow, 'the seeded list did not render').toBeDefined()
+    if (firstRow === undefined) return
+
+    // The first row is the overdue one: `orderForDisplay` puts what needs
+    // attention first, and `SEEDED_STATUSES` records that as "Bleed the
+    // radiators — Overdue".
+    expect(firstRow.text, 'the first row is not the overdue job').toContain('Overdue')
+
+    const describe =
+      `heading ${layout.heading.top}–${layout.heading.bottom}, ` +
+      `first row ${firstRow.top}–${firstRow.bottom}, ` +
+      `bar top ${layout.bar.top} in a ${layout.viewportHeight}px viewport. ` +
+      `Rows: ${layout.rows.map((row) => `${row.bottom}`).join(', ')}.`
+
+    expect(
+      {
+        headingIsClear: layout.heading.bottom <= layout.bar.top,
+        firstRowIsWhole: firstRow.bottom <= layout.bar.top,
+        nothingIsOffTheTop: layout.heading.top >= 0,
+      },
+      `SC-002: what needs attention is no longer readable without scrolling. ${describe}`,
+    ).toEqual({ headingIsClear: true, firstRowIsWhole: true, nothingIsOffTheTop: true })
   })
-
-  const firstRow = layout.rows[0]
-  expect(firstRow, 'the seeded list did not render').toBeDefined()
-  if (firstRow === undefined) return
-
-  // The first row is the overdue one: `orderForDisplay` puts what needs
-  // attention first, and `SEEDED_STATUSES` records that as "Bleed the
-  // radiators — Overdue".
-  expect(firstRow.text, 'the first row is not the overdue job').toContain('Overdue')
-
-  const describe =
-    `heading ${layout.heading.top}–${layout.heading.bottom}, ` +
-    `first row ${firstRow.top}–${firstRow.bottom}, ` +
-    `bar top ${layout.bar.top} in a ${layout.viewportHeight}px viewport. ` +
-    `Rows: ${layout.rows.map((row) => `${row.bottom}`).join(', ')}.`
-
-  expect(
-    {
-      headingIsClear: layout.heading.bottom <= layout.bar.top,
-      firstRowIsWhole: firstRow.bottom <= layout.bar.top,
-      nothingIsOffTheTop: layout.heading.top >= 0,
-    },
-    `SC-002: what needs attention is no longer readable without scrolling. ${describe}`,
-  ).toEqual({ headingIsClear: true, firstRowIsWhole: true, nothingIsOffTheTop: true })
-})
+}

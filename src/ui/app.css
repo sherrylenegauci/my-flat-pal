@@ -232,11 +232,24 @@ body {
    returns nothing below two, so with maintenance alone none of this applies and
    the app looks exactly as it did.
 
-   **Sticky rather than fixed.** Sticky keeps the bar at the bottom of the
-   screen on a long list *and* keeps it in the flex column, so it takes its own
-   45px out of `.app__main` instead of being laid over it. FR-009 says the
-   structure must not obscure content, and in-flow is what makes that true by
-   construction rather than by remembering to pad something.
+   **Sticky rather than fixed, and what that does and does not buy.** Sticky
+   keeps the bar at the bottom of the screen on a long list while leaving it in
+   the flex column, so it takes its own 45px out of `.app__main` rather than
+   being laid over the whole of it.
+
+   An earlier version of this note claimed that made FR-009 true by
+   construction. **It does not, and the correction is worth keeping**: a stuck
+   element is painted away from its in-flow slot and covers whatever is beneath
+   it, so while the page is scrolled up the bar does sit over content. Measured
+   with the four seeded jobs at 375x812: the document is 831px tall, the bar is
+   stuck 19px above its static position, and the last row's final pixel is under
+   it.
+
+   What in-flow *does* guarantee is the part that matters — nothing can be
+   permanently hidden. At full scroll the bar is back in its slot after the
+   content, so everything above it is reachable; here that is 19px of scrolling.
+   Whether a MUST NOT about obscuring content is satisfied by "reachable by
+   scrolling" is a judgement, and it is in the report rather than settled here.
 
    **45px, and that is the floor rather than a choice.** 44px is the touch
    target Principle II requires, plus the hairline that separates the bar from

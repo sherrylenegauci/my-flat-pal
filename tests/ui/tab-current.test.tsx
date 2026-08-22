@@ -189,13 +189,21 @@ const COLOUR_ONLY = new Set([
   'filter',
 ])
 
-/** Every declaration inside rules whose selector mentions `aria-current`. */
+/**
+ * Every declaration inside rules that mark **a tab** as current.
+ *
+ * Both halves of that are load-bearing. `aria-current` alone was too loose: any
+ * rule anywhere in the stylesheet using the attribute satisfied it, so the day a
+ * second component adopts `aria-current` the tab bar's own indicator could be
+ * reduced to a colour change with this still green. Verification pointed that
+ * out; the selector must now mention the bar as well.
+ */
 function currentAreaDeclarations(css: string): { selector: string; property: string }[] {
   const found: { selector: string; property: string }[] = []
 
   for (const [, selector, body] of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
     if (selector === undefined || body === undefined) continue
-    if (!selector.includes('aria-current')) continue
+    if (!selector.includes('aria-current') || !selector.includes('tab-bar')) continue
 
     for (const declaration of body.split(';')) {
       const property = declaration.split(':')[0]?.trim().toLowerCase()
@@ -221,8 +229,8 @@ describe('the current area is marked by more than colour (FR-004)', () => {
 
     expect(
       currentAreaDeclarations(css).map((d) => d.selector),
-      'no rule in src/ui/app.css keys off [aria-current], so nothing about the current ' +
-        'area is styled differently from any other tab',
+      'no rule in src/ui/app.css marks a tab-bar tab with [aria-current], so nothing ' +
+        'about the current area is styled differently from any other tab',
     ).not.toEqual([])
   })
 
@@ -233,7 +241,7 @@ describe('the current area is marked by more than colour (FR-004)', () => {
 
     expect(
       nonColour.map((d) => d.property),
-      'the current area is distinguished only by colour. Declared under [aria-current]: ' +
+      'the current area is distinguished only by colour. Declared on the current tab: ' +
         `${declared.map((d) => d.property).join(', ') || 'nothing'}. FR-004 requires the ` +
         'indication not to rely on colour alone — weight, border width, or an indicator ' +
         'edge with a size to it.',

@@ -208,11 +208,15 @@ async function open(page: Page): Promise<void> {
  * for a component that was never on the page.
  *
  * What that leaves unchecked, plainly: the bar's contrast, its focus ring, its
- * place in the Tab order, and whether it overflows 375px have **no browser-tier
- * coverage at all**. Its height and its 44x44 touch target do — see
+ * place in the Tab order, whether it overflows 375px, and the axe scan in
+ * `e2e/rendering/accessibility.spec.ts` have **no browser-tier coverage at
+ * all**. Two things do. Its height and its 44x44 touch target are measured by
  * `e2e/rendering/above-the-fold.spec.ts`, which puts the bar's markup into the
  * real page and lets `app.css` size it, because SC-002 could not be left
- * unguarded through the one feature most likely to break it.
+ * unguarded through the one feature most likely to break it. And its roles,
+ * names and ARIA are scanned in jsdom by `tests/ui/axe-shell.test.tsx`, which
+ * exists because every other axe test renders `<App />` with the default one
+ * area and therefore has never seen a tab bar.
  *
  * **This is 003's first job.** Adding rooms turns the bar on, and the state to
  * add here is the app with two areas — at which point these sweeps cover it and

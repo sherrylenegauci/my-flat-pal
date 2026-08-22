@@ -81,8 +81,16 @@ test('US1/AC2 — I am taken to another area in one tap', async ({ page }) => {
   })
 
   await test.step('Then I am in it, and it is marked as the one I am in', async () => {
-    const tab = page.getByRole('navigation', { name: 'Areas' }).getByRole('button', { name: otherArea?.label ?? '' })
+    const tab = page
+      .getByRole('navigation', { name: 'Areas' })
+      .getByRole('button', { name: otherArea?.label ?? '' })
     await expect(tab).toHaveAttribute('aria-current', 'page')
+
+    // The marking is not the arrival. Without these two, this scenario would go
+    // green on a tab that highlights itself and does nothing — which is exactly
+    // what verification found it doing before it had ever run.
+    await expect(page.getByRole('heading', { name: otherArea?.label ?? '' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: /needing attention|Nothing due/ })).toHaveCount(0)
   })
 })
 

@@ -184,14 +184,25 @@ export function useNavigation(areas: readonly Area[] = AREAS): Navigation {
          * spent, so there is nothing above its first screen to return to — the
          * user must not be handed the screen that entry belonged to (FR-007).
          *
-         * **Belt and braces, and worth saying so.** An area's entries are
-         * contiguous at the top of the history, because only `go` pushes and
-         * only ever in the current area, so this branch can be reached only
-         * when the stack is already at its root and the guard above has
-         * returned. It is kept because the invariant it defends is one line
-         * away from being broken — by `switchTo` pushing an entry, or by stacks
-         * being preserved across a switch instead of reset — and neither change
-         * would look like it was about the back gesture.
+         * **Belt and braces, and worth being exact about why.** This branch is
+         * reachable with more than one view on the stack — open a job in
+         * maintenance, switch to rooms, open a job there, then swipe back: the
+         * destination entry is maintenance's while rooms' stack holds two. What
+         * cannot currently happen is the two arms of this expression disagreeing.
+         * An area's own entries are contiguous at the top of the history,
+         * because only `go` pushes and only ever in the current area, so landing
+         * on a foreign entry means exactly one of this area's entries was left —
+         * and at that depth `slice(0, 1)` and `slice(0, -1)` are the same list.
+         *
+         * (An earlier version of this note said the branch was unreachable above
+         * the root. That was wrong, and verification caught it. The behaviour was
+         * right either way, which is precisely why a false proof is worth more
+         * than no proof to correct.)
+         *
+         * It is kept because the property it defends is one line away from being
+         * broken — by `switchTo` pushing an entry, or by stacks being preserved
+         * across a switch instead of reset — and neither change would look like
+         * it was about the back gesture.
          */
         const next =
           destination !== undefined && destination !== current.area
